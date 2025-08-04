@@ -1,0 +1,41 @@
+{
+  "name": "mdm-backend-api",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "nodemon src/index.ts",
+    "migrate": "ts-node src/scripts/migrate.ts",
+    "reset": "ts-node src/scripts/reset.ts",
+    "db:setup": "npm run migrate",
+    "db:reset": "ts-node scripts/reset.ts"
+  },
+  "keywords": [
+    "mdm",
+    "device-management",
+    "typescript",
+    "mysql"
+  ],
+  "author": "MDM Team",
+  "license": "ISC",
+  "description": "MDM Backend API for device management with TypeScript, Express, MySQL and JWT.",
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2",
+    "mysql2": "^3.14.1"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.17",
+    "@types/jsonwebtoken": "^9.0.9",
+    "@types/node": "^20.19.9",
+    "nodemon": "^3.1.10",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
+  }
+}
