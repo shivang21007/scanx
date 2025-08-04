@@ -1,0 +1,65 @@
+# OSQuery SQL queries for system information collection
+# TODO: Add specific queries for different data types
+
+platform:
+  darwin:
+    system_info:
+      query: "SELECT s.*, o.version as os_version FROM system_info s, os_version o;"
+      description: "System information with OS version"
+    
+    screen_lock_info:
+      query: "SELECT CASE WHEN enabled = '1' THEN 'true' ELSE 'false' END AS screen_lock, grace_period FROM screenlock;"
+      description: "Screen lock information"
+    
+    disk_encryption_info:
+      query: "SELECT CASE WHEN COUNT(*) > 0 THEN 'true' ELSE 'false' END AS disk_encryption FROM disk_encryption WHERE uid != '' AND encrypted = '1';"
+      description: "Disk encryption information"
+
+    password_manager_info:
+      query: "SELECT CASE WHEN COUNT(*) > 0 THEN 'true' ELSE 'false' END AS password_manager FROM apps WHERE bundle_name IN ('MacPass','KeyPassXC','KeyPass');"
+      description: "Password manager information"
+
+    antivirus_info:
+      query:  "SELECT CASE WHEN global_state > 0 THEN 'true' ELSE 'false' END AS antivirus_status FROM alf;"
+      description: "Gatekeeper information for macOS"
+
+    apps_info:
+      query: "SELECT bundle_identifier, bundle_name, bundle_short_version, bundle_version, category, display_name, last_opened_time, minimum_system_version FROM apps;"
+      description: "Installed apps information"
+    
+  windows:
+    system_info:
+      query: "SELECT s.*, o.version as os_version FROM system_info s, os_version o;"
+      description: "System information with OS version"
+
+    screen_lock_info:
+      query: "select * from screen_lock;"
+      description: "Screen lock information"
+
+    disk_encryption_info:
+      query: "SELECT CASE WHEN COUNT(*) > 0 THEN 'true' ELSE 'false' END AS disk_encryption FROM bitlocker_info WHERE protection_status = 1 OR percentage_encrypted > 0;"
+      description: "Disk encryption information"
+
+    # anti_virus
+    antivirus_info:
+      query: "SELECT CASE WHEN antivirus = 'Good' THEN 'true' ELSE 'false' END AS antivirus_status FROM windows_security_center;"
+      description: "this is antivirus info ."
+      
+    apps_info:
+      query: "SELECT name, version, language, publisher, install_date, identifying_number, package_family_name, upgrade_code FROM programs;"
+      description: "list all prgrams"
+
+
+  linux:
+    system_info:
+      query: "SELECT s.*, o.version as os_version FROM system_info s, os_version o;"
+      description: "System information with OS version"
+
+    disk_encryption_info:
+      query: "SELECT CASE WHEN COUNT(*) > 0 THEN 'true' ELSE 'false' END AS disk_encryption FROM disk_encryption WHERE uid != '' AND encrypted = '1';"
+      description: "Disk encryption information"
+      
+
+
+
+
