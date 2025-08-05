@@ -9,4 +9,6 @@ export const env = {
     MYSQL_PASSWORD: process.env.MYSQL_PASSWORD,
     MYSQL_DATABASE: process.env.MYSQL_DATABASE,
     JWT_SECRET: process.env.JWT_SECRET,
+    NODE_ENV: process.env.NODE_ENV,
+    FRONTEND_URL: process.env.FRONTEND_URL,
 }

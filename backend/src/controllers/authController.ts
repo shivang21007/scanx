@@ -52,10 +52,29 @@ export const register = async (req: Request, res: Response) => {
       password: hashedPassword, 
       name 
     });
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { id: adminId, email }, 
+      env.JWT_SECRET as string, 
+      { expiresIn: '12h' }
+    );
+    
+    // Set secure httpOnly cookie
+    res.cookie('scanx_token', token, {
+      httpOnly: true,
+      secure: env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 12 * 60 * 60 * 1000,
+      path: '/'
+    });
+
+    // Return admin data (without password)
+    const adminData = { id: adminId, email, name };
     
     res.status(201).json({ 
       message: 'Admin registered successfully',
-      id: adminId 
+      admin: adminData
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -87,15 +106,23 @@ export const login = async (req: Request, res: Response) => {
     const token = jwt.sign(
       { id: admin.id, email: admin.email }, 
       env.JWT_SECRET as string, 
-      { expiresIn: '24h' }
+      { expiresIn: '12h' }
     );
+    
+    // Set secure httpOnly cookie
+    res.cookie('scanx_token', token, {
+      httpOnly: true,
+      secure: env.NODE_ENV === 'production', // Only over HTTPS in production
+      sameSite: 'lax', // Prevent CSRF attacks
+      maxAge: 12 * 60 * 60 * 1000, // 12 hours in milliseconds
+      path: '/'
+    });
     
     // Remove password from response
     const { password: _, ...adminData } = admin;
     
     res.json({ 
       message: 'Login successful',
-      token,
       admin: adminData
     });
   } catch (err: any) {
@@ -104,8 +131,14 @@ export const login = async (req: Request, res: Response) => {
 };
 
 export const logout = async (req: Request, res: Response) => {
-  // Since we're using stateless JWT, logout is handled client-side
-  // In a production app, you might maintain a blacklist of tokens
+  // Clear the httpOnly cookie
+  res.clearCookie('scanx_token', {
+    httpOnly: true,
+    secure: env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/'
+  });
+  
   res.json({ message: 'Logged out successfully' });
 };
 

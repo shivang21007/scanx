@@ -11,8 +11,9 @@ interface AuthRequest extends Request {
 }
 
 export const auth = (req: AuthRequest, res: Response, next: NextFunction) => {
-  const authHeader = req.header('Authorization');
-  const token = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+  // Try to get token from cookie first, then fall back to Authorization header for backwards compatibility
+  const token = req.cookies?.scanx_token || 
+    (req.header('Authorization')?.startsWith('Bearer ') ? req.header('Authorization')!.split(' ')[1] : null);
   
   if (!token) {
     return res.status(401).json({ 

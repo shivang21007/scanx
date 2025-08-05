@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import authRoutes from './routes/authRoutes';
 import deviceRoutes from './routes/deviceRoutes';
 import { initializeDatabase } from './db';
@@ -8,7 +9,11 @@ import { env } from './env/env';
 const app = express();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: env.FRONTEND_URL || 'http://localhost:5173',
+  credentials: true // Allow cookies to be sent
+}));
+app.use(cookieParser());
 app.use(express.json({ limit: '10mb' })); // Increase limit for agent data
 app.use(express.urlencoded({ extended: true }));
 
@@ -52,7 +57,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   console.error('Error:', err);
   res.status(500).json({ 
     message: 'Internal server error',
-    error: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
+    error: env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
   });
 });
 
