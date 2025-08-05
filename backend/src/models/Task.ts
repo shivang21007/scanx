@@ -217,7 +217,7 @@ export class DeviceSummaryModel {
              security_info = VALUES(security_info),
              apps_count = VALUES(apps_count),
              last_report = VALUES(last_report),
-             updated_at = CURRENT_TIMESTAMP`,
+             updated_at = CONVERT_TZ(NOW(), 'UTC', '+05:30')`,
             [
                 summary.device_id,
                 JSON.stringify(summary.system_info),

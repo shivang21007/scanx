@@ -1,5 +1,6 @@
 import { DeviceModel, DeviceSummaryModel, IndividualDataModel, AgentPayload } from '../models/Device';
 import { Request, Response } from 'express';
+import { parseToIST, getCurrentISTString } from '../utils/timezone';
 
 // Agent data ingestion endpoint
 export const receiveAgentData = async (req: Request, res: Response) => {
@@ -15,19 +16,22 @@ export const receiveAgentData = async (req: Request, res: Response) => {
 
     console.log(`Received agent data from device: ${agentData.serial_no} (${agentData.user})`);
 
+    // Parse agent timestamp to IST
+    const istTimestamp = parseToIST(agentData.timestamp);
+    
     // Create or update device record
     const deviceId = await DeviceModel.createOrUpdate({
       user_email: agentData.user,
       serial_no: agentData.serial_no,
       os_type: agentData.os_type,
       os_version: agentData.os_version || 'unknown',
-      last_seen: new Date(agentData.timestamp),
+      last_seen: istTimestamp,
       status: 'online',
       agent_version: agentData.version
     });
 
     // Store detailed data for each query type
-    const timestamp = new Date(agentData.timestamp);
+    const timestamp = istTimestamp;
     
     for (const [dataType, data] of Object.entries(agentData.data)) {
       if (data && data.length > 0) {
@@ -57,7 +61,7 @@ export const receiveAgentData = async (req: Request, res: Response) => {
     res.status(200).json({ 
       message: 'Agent data received successfully',
       device_id: deviceId,
-      timestamp: timestamp.toISOString()
+      timestamp: getCurrentISTString()
     });
 
   } catch (err: any) {
@@ -80,7 +84,7 @@ export const getDevices = async (req: Request, res: Response) => {
         total: (await DeviceModel.findByUser(search)).length 
       };
     } else {
-      devices = await DeviceModel.findAll(page, limit);
+      devices = await DeviceModel.findAll();
     }
 
     res.json(devices);

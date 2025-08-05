@@ -88,22 +88,15 @@ export class DeviceModel {
         }
     }
 
-    // Get all devices with pagination
-    static async findAll(page: number = 1, limit: number = 20): Promise<{ devices: Device[], total: number }> {
+    // Get all devices (simplified for dashboard)
+    static async findAll(): Promise<Device[]> {
         const connection = getConnection();
-        const offset = (page - 1) * limit;
         
-        // Get total count
-        const [countRows] = await connection.execute<RowDataPacket[]>('SELECT COUNT(*) as total FROM devices');
-        const total = countRows[0].total;
-        
-        // Get devices with pagination
         const [rows] = await connection.execute<RowDataPacket[]>(
-            `SELECT * FROM devices ORDER BY last_seen DESC, created_at DESC LIMIT ? OFFSET ?`,
-            [limit, offset]
+            'SELECT * FROM devices ORDER BY last_seen DESC, created_at DESC'
         );
         
-        return { devices: rows as Device[], total };
+        return rows as Device[];
     }
 
     // Find device by serial number
@@ -166,27 +159,109 @@ export class DeviceModel {
 }
 
 export class IndividualDataModel {
-    // Get data from specific table
+    // Get LATEST data from specific table
     static async getDeviceDataByType(device_id: number, dataType: string): Promise<any> {
         const connection = getConnection();
+        console.log('Getting LATEST data for device:', device_id, 'and type:', dataType);
         
         try {
             const [rows] = await connection.execute<RowDataPacket[]>(
-                `SELECT * FROM ${dataType} WHERE device_id = ?`,
+                `SELECT * FROM ${dataType} WHERE device_id = ? ORDER BY timestamp DESC LIMIT 1`,
                 [device_id]
             );
             
             if (rows.length > 0) {
                 const row = rows[0];
+                
+                // Handle data field - it might already be parsed or be a JSON string
+                let parsedData = null;
+                if (row.data) {
+                    if (typeof row.data === 'string') {
+                        try {
+                            parsedData = JSON.parse(row.data);
+                        } catch (error) {
+                            console.warn(`Failed to parse data as JSON for ${dataType}:`, row.data);
+                            parsedData = row.data; // Use as-is if can't parse
+                        }
+                    } else {
+                        parsedData = row.data; // Already an object
+                    }
+                }
+                
                 return {
                     ...row,
-                    data: row.data ? JSON.parse(row.data) : null
+                    data: parsedData
                 };
             }
             return null;
         } catch (error) {
-            console.error(`Error fetching ${dataType} for device ${device_id}:`, error);
+            console.error(`Error fetching latest ${dataType} for device ${device_id}:`, error);
             return null;
+        }
+    }
+
+    // Get HISTORICAL data from specific table with pagination
+    static async getDeviceDataHistory(device_id: number, dataType: string, page: number = 1, limit: number = 10): Promise<{data: any[], total: number, page: number, limit: number, totalPages: number}> {
+        const connection = getConnection();
+        console.log('Getting HISTORICAL data for device:', device_id, 'type:', dataType, 'page:', page, 'limit:', limit);
+        
+        try {
+            // Get total count
+            const [countRows] = await connection.execute<RowDataPacket[]>(
+                `SELECT COUNT(*) as total FROM ${dataType} WHERE device_id = ?`,
+                [device_id]
+            );
+            const total = countRows[0].total;
+            
+            // Calculate offset
+            const offset = (page - 1) * limit;
+            
+            // Get paginated data
+            const [rows] = await connection.execute<RowDataPacket[]>(
+                `SELECT * FROM ${dataType} WHERE device_id = ? ORDER BY timestamp DESC LIMIT ? OFFSET ?`,
+                [device_id, limit, offset]
+            );
+            
+            // Process each row
+            const processedData = rows.map(row => {
+                let parsedData = null;
+                if (row.data) {
+                    if (typeof row.data === 'string') {
+                        try {
+                            parsedData = JSON.parse(row.data);
+                        } catch (error) {
+                            console.warn(`Failed to parse data as JSON for ${dataType}:`, row.data);
+                            parsedData = row.data; // Use as-is if can't parse
+                        }
+                    } else {
+                        parsedData = row.data; // Already an object
+                    }
+                }
+                
+                return {
+                    ...row,
+                    data: parsedData
+                };
+            });
+            
+            const totalPages = Math.ceil(total / limit);
+            
+            return {
+                data: processedData,
+                total,
+                page,
+                limit,
+                totalPages
+            };
+        } catch (error) {
+            console.error(`Error fetching historical ${dataType} for device ${device_id}:`, error);
+            return {
+                data: [],
+                total: 0,
+                page,
+                limit,
+                totalPages: 0
+            };
         }
     }
 
@@ -232,7 +307,7 @@ export class DeviceSummaryModel {
              antivirus_info = VALUES(antivirus_info),
              disk_encryption_info = VALUES(disk_encryption_info),
              apps_info = VALUES(apps_info),
-             updated_at = CURRENT_TIMESTAMP`,
+             updated_at = CONVERT_TZ(NOW(), 'UTC', '+05:30')`,
             [
                 summary.device_id,
                 summary.last_report,

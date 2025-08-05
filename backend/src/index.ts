@@ -5,13 +5,17 @@ import authRoutes from './routes/authRoutes';
 import deviceRoutes from './routes/deviceRoutes';
 import { initializeDatabase } from './db';
 import { env } from './env/env';
+import { getCurrentISTString } from './utils/timezone';
 
 const app = express();
 
 // Middleware
 app.use(cors({
   origin: env.FRONTEND_URL || 'http://localhost:5173',
-  credentials: true // Allow cookies to be sent
+  credentials: true, // Allow cookies to be sent
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['Set-Cookie']
 }));
 app.use(cookieParser());
 app.use(express.json({ limit: '10mb' })); // Increase limit for agent data
@@ -39,7 +43,7 @@ app.get('/', (req, res) => {
 app.get('/health', (req, res) => {
   res.status(200).json({ 
     message: 'Server is healthy 🚀',
-    timestamp: new Date().toISOString()
+    timestamp: getCurrentISTString()
   });
 });
 
@@ -57,7 +61,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   console.error('Error:', err);
   res.status(500).json({ 
     message: 'Internal server error',
-    error: env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
+    error: env.NODE_ENV === 'development' ? err.message : err.message
   });
 });
 

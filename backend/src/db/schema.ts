@@ -16,7 +16,10 @@ export const TABLES = {
 // Create admins table
 export const createAdminsTable = async () => {
     const connection = getConnection();
-    
+    // set time zone to IST in database
+    await connection.execute(`SET time_zone = '+05:30';`);
+    console.log("✅ Time zone set to IST");
+
     await connection.execute(`
         CREATE TABLE IF NOT EXISTS ${TABLES.ADMINS} (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -65,12 +68,14 @@ export const createSystemInfoTable = async () => {
     
     await connection.execute(`
         CREATE TABLE IF NOT EXISTS ${TABLES.SYSTEM_INFO} (
-            device_id INT PRIMARY KEY,
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            device_id INT NOT NULL,
             timestamp TIMESTAMP NOT NULL,
             data JSON,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             FOREIGN KEY (device_id) REFERENCES ${TABLES.DEVICES}(id) ON DELETE CASCADE,
+            UNIQUE KEY idx_device_timestamp (device_id, timestamp),
             INDEX idx_timestamp (timestamp)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
@@ -83,12 +88,14 @@ export const createDiskEncryptionInfoTable = async () => {
     
     await connection.execute(`
         CREATE TABLE IF NOT EXISTS ${TABLES.DISK_ENCRYPTION_INFO} (
-            device_id INT PRIMARY KEY,
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            device_id INT NOT NULL,
             timestamp TIMESTAMP NOT NULL,
             data JSON,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             FOREIGN KEY (device_id) REFERENCES ${TABLES.DEVICES}(id) ON DELETE CASCADE,
+            UNIQUE KEY idx_device_timestamp (device_id, timestamp),
             INDEX idx_timestamp (timestamp)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
@@ -101,12 +108,14 @@ export const createPasswordManagerInfoTable = async () => {
     
     await connection.execute(`
         CREATE TABLE IF NOT EXISTS ${TABLES.PASSWORD_MANAGER_INFO} (
-            device_id INT PRIMARY KEY,
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            device_id INT NOT NULL,
             timestamp TIMESTAMP NOT NULL,
             data JSON,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             FOREIGN KEY (device_id) REFERENCES ${TABLES.DEVICES}(id) ON DELETE CASCADE,
+            UNIQUE KEY idx_device_timestamp (device_id, timestamp),
             INDEX idx_timestamp (timestamp)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
@@ -119,12 +128,14 @@ export const createAntivirusInfoTable = async () => {
     
     await connection.execute(`
         CREATE TABLE IF NOT EXISTS ${TABLES.ANTIVIRUS_INFO} (
-            device_id INT PRIMARY KEY,
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            device_id INT NOT NULL,
             timestamp TIMESTAMP NOT NULL,
             data JSON,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             FOREIGN KEY (device_id) REFERENCES ${TABLES.DEVICES}(id) ON DELETE CASCADE,
+            UNIQUE KEY idx_device_timestamp (device_id, timestamp),
             INDEX idx_timestamp (timestamp)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
@@ -137,12 +148,14 @@ export const createScreenLockInfoTable = async () => {
     
     await connection.execute(`
         CREATE TABLE IF NOT EXISTS ${TABLES.SCREEN_LOCK_INFO} (
-            device_id INT PRIMARY KEY,
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            device_id INT NOT NULL,
             timestamp TIMESTAMP NOT NULL,
             data JSON,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             FOREIGN KEY (device_id) REFERENCES ${TABLES.DEVICES}(id) ON DELETE CASCADE,
+            UNIQUE KEY idx_device_timestamp (device_id, timestamp),
             INDEX idx_timestamp (timestamp)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
@@ -155,12 +168,14 @@ export const createAppsInfoTable = async () => {
     
     await connection.execute(`
         CREATE TABLE IF NOT EXISTS ${TABLES.APPS_INFO} (
-            device_id INT PRIMARY KEY,
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            device_id INT NOT NULL,
             timestamp TIMESTAMP NOT NULL,
             data JSON,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             FOREIGN KEY (device_id) REFERENCES ${TABLES.DEVICES}(id) ON DELETE CASCADE,
+            UNIQUE KEY idx_device_timestamp (device_id, timestamp),
             INDEX idx_timestamp (timestamp)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
@@ -196,7 +211,6 @@ export const createDeviceSummaryTable = async () => {
 export const initializeSchema = async () => {
     try {
         console.log("🔧 Initializing database schema...");
-        
         await createAdminsTable();
         await createDevicesTable();
         await createSystemInfoTable();

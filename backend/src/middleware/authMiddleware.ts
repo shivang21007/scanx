@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { env } from '../env/env';
 import { Request, Response, NextFunction } from 'express';
+import { getCurrentIST } from '../utils/timezone';
 
 // Extend Request interface to include admin info
 interface AuthRequest extends Request {
@@ -15,7 +16,12 @@ export const auth = (req: AuthRequest, res: Response, next: NextFunction) => {
   const token = req.cookies?.scanx_token || 
     (req.header('Authorization')?.startsWith('Bearer ') ? req.header('Authorization')!.split(' ')[1] : null);
   
+  console.log('Auth middleware called for:', req.path);
+  console.log('Cookies received:', Object.keys(req.cookies || {}));
+  console.log('Token found:', !!token);
+  
   if (!token) {
+    console.log('No token provided, returning 401');
     return res.status(401).json({ 
       message: 'Access denied. No token provided.',
       logout: true 
@@ -24,10 +30,12 @@ export const auth = (req: AuthRequest, res: Response, next: NextFunction) => {
 
   try {
     const decoded = jwt.verify(token, env.JWT_SECRET as string) as any;
+    console.log('Token decoded successfully for user:', decoded.email);
     
-    // Check if token is expired (24 hours)
-    const currentTime = Math.floor(Date.now() / 1000);
+    // Check if token is expired (using IST time)
+    const currentTime = Math.floor(getCurrentIST().getTime() / 1000);
     if (decoded.exp && decoded.exp < currentTime) {
+      console.log('Token expired for user:', decoded.email);
       return res.status(401).json({ 
         message: 'Token expired. Please sign in again.',
         logout: true,
@@ -36,8 +44,11 @@ export const auth = (req: AuthRequest, res: Response, next: NextFunction) => {
     }
     
     req.admin = { id: decoded.id, email: decoded.email };
+    console.log('Auth successful, proceeding to next middleware');
     next();
   } catch (err: any) {
+    console.log('Token verification failed:', err.message);
+    
     if (err.name === 'TokenExpiredError') {
       return res.status(401).json({ 
         message: 'Token expired. Please sign in again.',

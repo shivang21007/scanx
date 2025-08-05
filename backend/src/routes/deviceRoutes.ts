@@ -5,6 +5,7 @@ import {
   getDevices,
   getDeviceById,
   getDeviceData,
+  getDeviceDataHistory,
   getDashboardStats
 } from '../controllers/deviceController';
 
@@ -18,6 +19,7 @@ router.get('/dashboard/stats', auth, getDashboardStats);
 router.get('/', auth, getDevices);
 router.get('/:id', auth, getDeviceById);
 router.get('/:id/data/:type', auth, getDeviceData);
+router.get('/:id/data/:type/history', auth, getDeviceDataHistory);
 
 export default router;
 

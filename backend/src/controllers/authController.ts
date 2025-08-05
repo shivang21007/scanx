@@ -11,19 +11,25 @@ interface AuthRequest extends Request {
 
 export const getAdmin = async (req: AuthRequest, res: Response) => {
   try {
+    console.log('getAdmin called, req.admin:', req.admin);
+    
     if (!req.admin?.id) {
+      console.log('No admin ID in request, returning 401');
       return res.status(401).json({ message: 'Unauthorized' });
     }
     
     const admin = await AdminModel.findById(req.admin.id);
     if (!admin) {
+      console.log('Admin not found in database for ID:', req.admin.id);
       return res.status(404).json({ message: 'Admin not found' });
     }
     
+    console.log('Admin found, returning data:', admin.email);
     // Remove password from response
     const { password, ...adminData } = admin;
     res.json(adminData);
   } catch (err: any) {
+    console.error('getAdmin error:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -60,14 +66,17 @@ export const register = async (req: Request, res: Response) => {
       { expiresIn: '12h' }
     );
     
-    // Set secure httpOnly cookie
+    // Set secure httpOnly cookie  
     res.cookie('scanx_token', token, {
       httpOnly: true,
       secure: env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: env.NODE_ENV === 'production' ? 'strict' : 'lax',
       maxAge: 12 * 60 * 60 * 1000,
-      path: '/'
+      path: '/',
+      domain: env.NODE_ENV === 'production' ? undefined : undefined
     });
+    
+    console.log('Registration: Setting cookie with token:', token.substring(0, 20) + '...');
 
     // Return admin data (without password)
     const adminData = { id: adminId, email, name };
@@ -113,10 +122,13 @@ export const login = async (req: Request, res: Response) => {
     res.cookie('scanx_token', token, {
       httpOnly: true,
       secure: env.NODE_ENV === 'production', // Only over HTTPS in production
-      sameSite: 'lax', // Prevent CSRF attacks
+      sameSite: env.NODE_ENV === 'production' ? 'strict' : 'lax', // Prevent CSRF attacks
       maxAge: 12 * 60 * 60 * 1000, // 12 hours in milliseconds
-      path: '/'
+      path: '/',
+      domain: env.NODE_ENV === 'production' ? undefined : undefined // Allow for localhost in dev
     });
+    
+    console.log('Setting cookie with token:', token.substring(0, 20) + '...');
     
     // Remove password from response
     const { password: _, ...adminData } = admin;
@@ -135,10 +147,11 @@ export const logout = async (req: Request, res: Response) => {
   res.clearCookie('scanx_token', {
     httpOnly: true,
     secure: env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    sameSite: env.NODE_ENV === 'production' ? 'strict' : 'lax',
     path: '/'
   });
   
+  console.log('User logged out, cookie cleared');
   res.json({ message: 'Logged out successfully' });
 };
 

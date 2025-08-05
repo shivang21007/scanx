@@ -1,5 +1,6 @@
 import { DeviceModel, DeviceSummaryModel, IndividualDataModel, AgentPayload } from '../models/Device';
 import { Request, Response } from 'express';
+import { parseToIST, getCurrentISTString } from '../utils/timezone';
 
 // Agent data ingestion endpoint
 export const receiveAgentData = async (req: Request, res: Response) => {
@@ -15,19 +16,22 @@ export const receiveAgentData = async (req: Request, res: Response) => {
 
     console.log(`Received agent data from device: ${agentData.serial_no} (${agentData.user})`);
 
+    // Parse agent timestamp to IST
+    const istTimestamp = parseToIST(agentData.timestamp);
+    
     // Create or update device record
     const deviceId = await DeviceModel.createOrUpdate({
       user_email: agentData.user,
       serial_no: agentData.serial_no,
       os_type: agentData.os_type,
       os_version: agentData.os_version || 'unknown',
-      last_seen: new Date(agentData.timestamp),
+      last_seen: istTimestamp,
       status: 'online',
       agent_version: agentData.version
     });
 
     // Store data in individual tables
-    const timestamp = new Date(agentData.timestamp);
+    const timestamp = istTimestamp;
     const { getConnection } = require('../db');
     const connection = getConnection();
     
@@ -46,14 +50,10 @@ export const receiveAgentData = async (req: Request, res: Response) => {
         const tableName = dataType; // matches our table names
         
         try {
-          // Insert/update data in respective table
+          // Insert new historical record (no update - keep all historical data)
           await connection.execute(
             `INSERT INTO ${tableName} (device_id, timestamp, data) 
-             VALUES (?, ?, ?) 
-             ON DUPLICATE KEY UPDATE 
-             timestamp = VALUES(timestamp), 
-             data = VALUES(data), 
-             updated_at = CURRENT_TIMESTAMP`,
+             VALUES (?, ?, ?)`,
             [deviceId, timestamp, JSON.stringify(data)]
           );
           
@@ -78,7 +78,7 @@ export const receiveAgentData = async (req: Request, res: Response) => {
     res.status(200).json({ 
       message: 'Agent data received successfully',
       device_id: deviceId,
-      timestamp: timestamp.toISOString()
+      timestamp: getCurrentISTString()
     });
 
   } catch (err: any) {
@@ -90,22 +90,10 @@ export const receiveAgentData = async (req: Request, res: Response) => {
 // Get all devices (admin dashboard)
 export const getDevices = async (req: Request, res: Response) => {
   try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
-    const search = req.query.search as string;
-
-    let devices;
-    if (search) {
-      devices = { 
-        devices: await DeviceModel.findByUser(search), 
-        total: (await DeviceModel.findByUser(search)).length 
-      };
-    } else {
-      devices = await DeviceModel.findAll(page, limit);
-    }
-
+    const devices = await DeviceModel.findAll();
     res.json(devices);
   } catch (err: any) {
+    console.error('Error getting devices:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -129,11 +117,12 @@ export const getDeviceById = async (req: Request, res: Response) => {
       data: allData
     });
   } catch (err: any) {
+    console.error('Error getting device by ID:', err);
     res.status(500).json({ error: err.message });
   }
 };
 
-// Get device data by type
+// Get device data by type (LATEST only)
 export const getDeviceData = async (req: Request, res: Response) => {
   try {
     const deviceId = parseInt(req.params.id);
@@ -141,6 +130,28 @@ export const getDeviceData = async (req: Request, res: Response) => {
     
     const deviceData = await IndividualDataModel.getDeviceDataByType(deviceId, dataType);
     res.json(deviceData);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Get device data history by type (PAGINATED)
+export const getDeviceDataHistory = async (req: Request, res: Response) => {
+  try {
+    const deviceId = parseInt(req.params.id);
+    const dataType = req.params.type;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    
+    // Validate pagination parameters
+    if (page < 1 || limit < 1 || limit > 100) {
+      return res.status(400).json({ 
+        error: 'Invalid pagination parameters. Page must be >= 1, limit must be 1-100' 
+      });
+    }
+    
+    const historyData = await IndividualDataModel.getDeviceDataHistory(deviceId, dataType, page, limit);
+    res.json(historyData);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
