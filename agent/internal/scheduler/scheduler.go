@@ -74,7 +74,7 @@ func (s *Scheduler) Stop() {
 
 // runCollection performs a single data collection cycle
 func (s *Scheduler) runCollection() {
-	utils.Info("Starting data collection at %v", time.Now().Format(time.RFC3339))
+	utils.Info("Starting data collection at %v", utils.GetCurrentISTString())
 
 	// Collect data
 	data, err := s.collector.CollectData()

@@ -97,10 +97,10 @@ func NewLogger(levelStr string) (*Logger, error) {
 	multiWriter := io.MultiWriter(os.Stdout, logFile)
 
 	logger := &Logger{
-		debugLogger:   log.New(multiWriter, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile),
-		infoLogger:    log.New(multiWriter, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile),
-		warningLogger: log.New(multiWriter, "WARNING: ", log.Ldate|log.Ltime|log.Lshortfile),
-		errorLogger:   log.New(multiWriter, "ERROR: ", log.Ldate|log.Ltime|log.Lshortfile),
+		debugLogger:   log.New(multiWriter, "DEBUG: ", 0), // We'll add timestamp manually
+		infoLogger:    log.New(multiWriter, "INFO: ", 0),
+		warningLogger: log.New(multiWriter, "WARNING: ", 0),
+		errorLogger:   log.New(multiWriter, "ERROR: ", 0),
 		logFile:       logFile,
 		level:         parseLogLevel(levelStr),
 	}
@@ -136,31 +136,35 @@ func ensureLogDir(logPath string) error {
 	return nil
 }
 
-// Debug logs a debug message
+// Debug logs a debug message with IST timestamp
 func (l *Logger) Debug(format string, v ...interface{}) {
 	if l.level >= LogLevelDebug {
-		l.debugLogger.Printf(format, v...)
+		timestampedFormat := FormatISTForLog(GetCurrentIST()) + " " + format
+		l.debugLogger.Printf(timestampedFormat, v...)
 	}
 }
 
-// Info logs an informational message
+// Info logs an informational message with IST timestamp
 func (l *Logger) Info(format string, v ...interface{}) {
 	if l.level >= LogLevelInfo {
-		l.infoLogger.Printf(format, v...)
+		timestampedFormat := FormatISTForLog(GetCurrentIST()) + " " + format
+		l.infoLogger.Printf(timestampedFormat, v...)
 	}
 }
 
-// Warning logs a warning message
+// Warning logs a warning message with IST timestamp
 func (l *Logger) Warning(format string, v ...interface{}) {
 	if l.level >= LogLevelWarning {
-		l.warningLogger.Printf(format, v...)
+		timestampedFormat := FormatISTForLog(GetCurrentIST()) + " " + format
+		l.warningLogger.Printf(timestampedFormat, v...)
 	}
 }
 
-// Error logs an error message
+// Error logs an error message with IST timestamp
 func (l *Logger) Error(format string, v ...interface{}) {
 	if l.level >= LogLevelError {
-		l.errorLogger.Printf(format, v...)
+		timestampedFormat := FormatISTForLog(GetCurrentIST()) + " " + format
+		l.errorLogger.Printf(timestampedFormat, v...)
 	}
 }
 

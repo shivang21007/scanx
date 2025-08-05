@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"runtime"
 	"strings"
-	"time"
 
 	"mdm-agent/internal/config"
+	"mdm-agent/internal/utils"
 )
 
 // SystemInfo represents system metadata
@@ -154,7 +154,7 @@ func (c *Collector) CollectData() (*CollectedData, error) {
 		OSType:    c.sysInfo.OSType,
 		OSVersion: c.sysInfo.OSVersion,
 		SerialNo:  c.sysInfo.SerialNo,
-		Timestamp: time.Now().UTC().Format(time.RFC3339),
+		Timestamp: utils.GetCurrentISTString(),
 		Data:      data,
 	}
 
