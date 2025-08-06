@@ -1,0 +1,40 @@
+[Unit]
+Description=MDM Agent - System Monitoring and Device Management
+Documentation=https://github.com/company/mdm-agent
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+ExecStart=/usr/local/bin/mdm-agent -daemon
+WorkingDirectory=/etc/mdm-agent
+Restart=always
+RestartSec=10
+KillMode=process
+TimeoutStopSec=30
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=mdm-agent
+
+# Security settings
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/etc/mdm-agent /var/log
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=4096
+
+# Environment
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+[Install]
+WantedBy=multi-user.target

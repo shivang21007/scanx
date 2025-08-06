@@ -19,12 +19,22 @@ import (
 func main() {
 	// Parse command line flags
 	var (
-		email   = flag.String("email", "", "Employee email for device identification")
-		install = flag.Bool("install", false, "Install mode: generate config files and setup")
-		daemon  = flag.Bool("daemon", false, "Run as daemon with periodic data collection")
-		test    = flag.Bool("test", false, "Test mode: run single data collection and exit")
+		email      = flag.String("email", "", "Employee email for device identification")
+		install    = flag.Bool("install", false, "Install mode: generate config files and setup")
+		daemon     = flag.Bool("daemon", false, "Run as daemon with periodic data collection")
+		test       = flag.Bool("test", false, "Test mode: run single data collection and exit")
+		service    = flag.String("service", "", "Service management: install, uninstall, start, stop, status")
+		configPath = flag.String("config", "", "Custom configuration directory path")
 	)
 	flag.Parse()
+
+	// Service management mode
+	if *service != "" {
+		if err := handleServiceCommand(*service); err != nil {
+			log.Fatalf("Service command failed: %v", err)
+		}
+		return
+	}
 
 	// Installation mode: generate config files
 	if *install {
@@ -45,7 +55,15 @@ func main() {
 	}
 
 	// Load configuration first (needed for log level)
-	cfg, err := config.LoadConfig()
+	var cfg *config.Config
+	var err error
+
+	if *configPath != "" {
+		cfg, err = config.LoadConfigFromPath(*configPath)
+	} else {
+		cfg, err = config.LoadConfig()
+	}
+
 	if err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
@@ -103,7 +121,7 @@ func main() {
 
 		// Test backend transmission
 		utils.Info("📡 Testing backend transmission...")
-		backendURL := "http://localhost:3000" // Default backend URL
+		backendURL := "http://172.0.10.183:3000" // Default backend URL
 		backendSender := sender.NewBackendSender(backendURL)
 
 		// Test connection first
@@ -231,5 +249,103 @@ func getExpectedOSQueryPath() string {
 		return "/usr/local/bin/osqueryi"
 	default:
 		return "/usr/local/bin/osqueryi"
+	}
+}
+
+// handleServiceCommand handles service management commands
+func handleServiceCommand(command string) error {
+	switch command {
+	case "install":
+		return installService()
+	case "uninstall":
+		return uninstallService()
+	case "start":
+		return startService()
+	case "stop":
+		return stopService()
+	case "status":
+		return statusService()
+	default:
+		return fmt.Errorf("unknown service command: %s (available: install, uninstall, start, stop, status)", command)
+	}
+}
+
+// installService installs the agent as a system service
+func installService() error {
+	fmt.Println("Installing MDM Agent as system service...")
+
+	switch runtime.GOOS {
+	case "darwin":
+		return installMacOSService()
+	case "linux":
+		return installLinuxService()
+	case "windows":
+		return installWindowsService()
+	default:
+		return fmt.Errorf("unsupported platform: %s", runtime.GOOS)
+	}
+}
+
+// uninstallService removes the agent system service
+func uninstallService() error {
+	fmt.Println("Uninstalling MDM Agent system service...")
+
+	switch runtime.GOOS {
+	case "darwin":
+		return uninstallMacOSService()
+	case "linux":
+		return uninstallLinuxService()
+	case "windows":
+		return uninstallWindowsService()
+	default:
+		return fmt.Errorf("unsupported platform: %s", runtime.GOOS)
+	}
+}
+
+// startService starts the system service
+func startService() error {
+	fmt.Println("Starting MDM Agent service...")
+
+	switch runtime.GOOS {
+	case "darwin":
+		return startMacOSService()
+	case "linux":
+		return startLinuxService()
+	case "windows":
+		return startWindowsService()
+	default:
+		return fmt.Errorf("unsupported platform: %s", runtime.GOOS)
+	}
+}
+
+// stopService stops the system service
+func stopService() error {
+	fmt.Println("Stopping MDM Agent service...")
+
+	switch runtime.GOOS {
+	case "darwin":
+		return stopMacOSService()
+	case "linux":
+		return stopLinuxService()
+	case "windows":
+		return stopWindowsService()
+	default:
+		return fmt.Errorf("unsupported platform: %s", runtime.GOOS)
+	}
+}
+
+// statusService checks the status of the system service
+func statusService() error {
+	fmt.Println("Checking MDM Agent service status...")
+
+	switch runtime.GOOS {
+	case "darwin":
+		return statusMacOSService()
+	case "linux":
+		return statusLinuxService()
+	case "windows":
+		return statusWindowsService()
+	default:
+		return fmt.Errorf("unsupported platform: %s", runtime.GOOS)
 	}
 }

@@ -20,7 +20,7 @@ platform:
       description: "Password manager information"
 
     antivirus_info:
-      query:  "SELECT CASE WHEN global_state > 0 THEN 'true' ELSE 'false' END AS antivirus_status FROM alf;"
+      query:  "SELECT CASE WHEN (SELECT assessments_enabled FROM gatekeeper LIMIT 1) = 1 THEN 'true' WHEN (SELECT global_state FROM alf LIMIT 1) = 1 THEN 'true' ELSE 'false' END AS antivirus_info;"
       description: "Gatekeeper information for macOS"
 
     apps_info:

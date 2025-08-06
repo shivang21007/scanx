@@ -41,17 +41,22 @@ type Config struct {
 
 // LoadConfig loads both agent.conf and queries.yml
 func LoadConfig() (*Config, error) {
+	return LoadConfigFromPath("config")
+}
+
+// LoadConfigFromPath loads configuration from a custom path
+func LoadConfigFromPath(configDir string) (*Config, error) {
 	config := &Config{}
 
 	// Load agent configuration
-	agentConfig, err := loadAgentConfig()
+	agentConfig, err := loadAgentConfigFromPath(configDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load agent config: %w", err)
 	}
 	config.Agent = *agentConfig
 
 	// Load queries configuration
-	queriesConfig, err := loadQueriesConfig()
+	queriesConfig, err := loadQueriesConfigFromPath(configDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load queries config: %w", err)
 	}
@@ -62,7 +67,12 @@ func LoadConfig() (*Config, error) {
 
 // loadAgentConfig loads the agent.conf file
 func loadAgentConfig() (*AgentConfig, error) {
-	configPath := filepath.Join("config", "agent.conf")
+	return loadAgentConfigFromPath("config")
+}
+
+// loadAgentConfigFromPath loads the agent.conf file from a custom path
+func loadAgentConfigFromPath(configDir string) (*AgentConfig, error) {
+	configPath := filepath.Join(configDir, "agent.conf")
 
 	data, err := os.ReadFile(configPath)
 	if err != nil {
@@ -79,7 +89,12 @@ func loadAgentConfig() (*AgentConfig, error) {
 
 // loadQueriesConfig loads the queries.yml file
 func loadQueriesConfig() (*QueriesConfig, error) {
-	configPath := filepath.Join("config", "queries.yml")
+	return loadQueriesConfigFromPath("config")
+}
+
+// loadQueriesConfigFromPath loads the queries.yml file from a custom path
+func loadQueriesConfigFromPath(configDir string) (*QueriesConfig, error) {
+	configPath := filepath.Join(configDir, "queries.yml")
 
 	data, err := os.ReadFile(configPath)
 	if err != nil {

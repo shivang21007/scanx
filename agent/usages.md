@@ -1,11 +1,30 @@
-# Test mode - single data collection
-go run cmd/agent/main.go -test
+# Test single run
+go run ./cmd/agent -test
 
-# Daemon mode - periodic collection (1-hour intervals)  
-go run cmd/agent/main.go -daemon
+# Run daemon mode (foreground)
+go run ./cmd/agent -daemon
 
-# Installation mode - setup with email
-go run cmd/agent/main.go -install -email="employee@company.com"
+# Run with custom config
+go run ./cmd/agent -daemon -config /custom/path
 
-# Update email only
-go run cmd/agent/main.go -email="new-email@company.com"
+# Service management
+go run ./cmd/agent -service status
+
+
+
+
+# Build binary
+go build -o mdm-agent ./cmd/agent
+
+# Run built binary
+./mdm-agent -daemon
+./mdm-agent -test
+./mdm-agent -service install
+
+
+
+# Install as service
+sudo ./mdm-agent -service install
+
+# Or use installation package
+sudo ./install/install-linux.sh --email "user@company.com

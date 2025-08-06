@@ -11,20 +11,22 @@ import (
 
 // SystemInfo represents system metadata
 type SystemInfo struct {
-	OSType    string `json:"os_type"`
-	OSVersion string `json:"os_version"`
-	SerialNo  string `json:"serial_no"`
+	OSType       string `json:"os_type"`
+	OSVersion    string `json:"os_version"`
+	SerialNo     string `json:"serial_no"`
+	ComputerName string `json:"computer_name"`
 }
 
 // CollectedData represents the complete data collection result
 type CollectedData struct {
-	User      string                              `json:"user"`
-	Version   string                              `json:"version"`
-	OSType    string                              `json:"os_type"`
-	OSVersion string                              `json:"os_version"`
-	SerialNo  string                              `json:"serial_no"`
-	Timestamp string                              `json:"timestamp"`
-	Data      map[string][]map[string]interface{} `json:"data"`
+	User         string                              `json:"user"`
+	Version      string                              `json:"version"`
+	OSType       string                              `json:"os_type"`
+	OSVersion    string                              `json:"os_version"`
+	SerialNo     string                              `json:"serial_no"`
+	ComputerName string                              `json:"computer_name"`
+	Timestamp    string                              `json:"timestamp"`
+	Data         map[string][]map[string]interface{} `json:"data"`
 }
 
 // Collector handles data collection from osquery
@@ -111,12 +113,19 @@ func (c *Collector) extractSystemInfo() error {
 	// Extract serial number - different field names per platform
 	if serial, ok := result["hardware_serial"].(string); ok && serial != "" {
 		c.sysInfo.SerialNo = serial
-	} else if serial, ok := result["computer_name"].(string); ok && serial != "" {
-		c.sysInfo.SerialNo = serial
 	} else if serial, ok := result["uuid"].(string); ok && serial != "" {
 		c.sysInfo.SerialNo = serial
 	} else {
 		c.sysInfo.SerialNo = "unknown"
+	}
+
+	// Extract computer name
+	if computerName, ok := result["computer_name"].(string); ok && computerName != "" {
+		c.sysInfo.ComputerName = computerName
+	} else if hostname, ok := result["hostname"].(string); ok && hostname != "" {
+		c.sysInfo.ComputerName = hostname
+	} else {
+		c.sysInfo.ComputerName = "unknown"
 	}
 
 	return nil
@@ -149,13 +158,14 @@ func (c *Collector) CollectData() (*CollectedData, error) {
 
 	// Build final payload
 	collectedData := &CollectedData{
-		User:      c.config.Agent.UserEmail,
-		Version:   c.config.Agent.Version,
-		OSType:    c.sysInfo.OSType,
-		OSVersion: c.sysInfo.OSVersion,
-		SerialNo:  c.sysInfo.SerialNo,
-		Timestamp: utils.GetCurrentISTString(),
-		Data:      data,
+		User:         c.config.Agent.UserEmail,
+		Version:      c.config.Agent.Version,
+		OSType:       c.sysInfo.OSType,
+		OSVersion:    c.sysInfo.OSVersion,
+		SerialNo:     c.sysInfo.SerialNo,
+		ComputerName: c.sysInfo.ComputerName,
+		Timestamp:    utils.GetCurrentISTString(),
+		Data:         data,
 	}
 
 	return collectedData, nil

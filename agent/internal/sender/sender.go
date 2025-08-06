@@ -115,5 +115,5 @@ func (s *BackendSender) TestConnection() error {
 func GetBackendURLFromConfig(cfg *config.Config) string {
 	// For now, we'll use a default URL
 	// In production, this should come from agent.conf
-	return "http://localhost:3000"
+	return "http://172.0.10.183:3000"
 }
