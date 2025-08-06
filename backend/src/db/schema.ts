@@ -44,6 +44,7 @@ export const createDevicesTable = async () => {
             id INT AUTO_INCREMENT PRIMARY KEY,
             user_email VARCHAR(255) NOT NULL,
             serial_no VARCHAR(255) UNIQUE NOT NULL,
+            computer_name VARCHAR(255),
             os_type VARCHAR(50) NOT NULL,
             os_version VARCHAR(100),
             last_seen TIMESTAMP NULL,
@@ -53,6 +54,7 @@ export const createDevicesTable = async () => {
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             INDEX idx_user_email (user_email),
             INDEX idx_serial_no (serial_no),
+            INDEX idx_computer_name (computer_name),
             INDEX idx_last_seen (last_seen),
             INDEX idx_status (status),
             INDEX idx_os_type (os_type)

@@ -1,10 +1,12 @@
 import { getConnection } from '../db/connection';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
+import { getDeviceStatus } from '../utils/timezone';
 
 export interface Device {
     id?: number;
     user_email: string;
     serial_no: string;
+    computer_name?: string;
     os_type: string;
     os_version?: string;
     last_seen?: Date;
@@ -33,6 +35,7 @@ export interface AgentPayload {
     os_type: string;
     os_version: string;
     serial_no: string;
+    computer_name: string;
     timestamp: string;
     data: {
         [key: string]: any[];
@@ -55,15 +58,16 @@ export class DeviceModel {
             const deviceId = existing[0].id;
             await connection.execute<ResultSetHeader>(
                 `UPDATE devices SET 
-                 user_email = ?, os_type = ?, os_version = ?, last_seen = ?, 
+                 user_email = ?, computer_name = ?, os_type = ?, os_version = ?, last_seen = ?, 
                  status = ?, agent_version = ?, updated_at = CURRENT_TIMESTAMP 
                  WHERE id = ?`,
                 [
                     deviceData.user_email,
+                    deviceData.computer_name,
                     deviceData.os_type,
                     deviceData.os_version,
                     deviceData.last_seen,
-                    deviceData.status || 'online',
+                    getDeviceStatus(deviceData.last_seen || null),
                     deviceData.agent_version,
                     deviceId
                 ]
@@ -72,15 +76,16 @@ export class DeviceModel {
         } else {
             // Create new device
             const [result] = await connection.execute<ResultSetHeader>(
-                `INSERT INTO devices (user_email, serial_no, os_type, os_version, last_seen, status, agent_version) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                `INSERT INTO devices (user_email, serial_no, computer_name, os_type, os_version, last_seen, status, agent_version) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
                 [
                     deviceData.user_email,
                     deviceData.serial_no,
+                    deviceData.computer_name,
                     deviceData.os_type,
                     deviceData.os_version,
                     deviceData.last_seen,
-                    deviceData.status || 'online',
+                    getDeviceStatus(deviceData.last_seen || null),
                     deviceData.agent_version
                 ]
             );
@@ -97,6 +102,81 @@ export class DeviceModel {
         );
         
         return rows as Device[];
+    }
+
+    // Get all devices with enriched data for devices table
+    static async findAllEnriched(searchTerm?: string, osTypeFilter?: string): Promise<any[]> {
+        const connection = getConnection();
+        
+        let query = `
+            SELECT 
+                d.*,
+                ds.system_info as has_system_info,
+                ds.password_manager_info as has_password_manager,
+                ds.screen_lock_info as has_screen_lock,
+                ds.antivirus_info as has_antivirus,
+                ds.disk_encryption_info as has_disk_encryption,
+                ds.apps_info as has_apps_info,
+                ds.last_report
+            FROM devices d
+            LEFT JOIN device_summary ds ON d.id = ds.device_id
+            WHERE 1=1
+        `;
+        
+        const params: any[] = [];
+        
+        // Add search functionality - now using direct fields from devices table
+        if (searchTerm && searchTerm.trim() !== '') {
+            query += ` AND (
+                d.serial_no LIKE ? OR
+                d.user_email LIKE ? OR
+                d.computer_name LIKE ?
+            )`;
+            const searchPattern = `%${searchTerm.trim()}%`;
+            params.push(searchPattern, searchPattern, searchPattern);
+        }
+        
+        // Add OS type filter
+        if (osTypeFilter && osTypeFilter.trim() !== '') {
+            query += ` AND d.os_type = ?`;
+            params.push(osTypeFilter.trim());
+        }
+        
+        query += ` ORDER BY d.last_seen DESC, d.created_at DESC`;
+        
+        const [rows] = await connection.execute<RowDataPacket[]>(query, params);
+        
+        // Process the results - much simpler now
+        return rows.map((row: any) => {
+            // Format owner name from email
+            const email = row.user_email || '';
+            let ownerName = 'Unknown';
+            if (email) {
+                // Try to extract name by splitting on . first, then fallback to @ split
+                const beforeAt = email.split('@')[0];
+                if (beforeAt.includes('.')) {
+                    ownerName = beforeAt.split('.').map((part: string) => 
+                        part.charAt(0).toUpperCase() + part.slice(1)
+                    ).join(' ');
+                } else {
+                    ownerName = beforeAt.charAt(0).toUpperCase() + beforeAt.slice(1);
+                }
+            }
+            
+            return {
+                ...row,
+                owner_name: ownerName,
+                // Calculate status dynamically based on last_seen
+                status: getDeviceStatus(row.last_seen),
+                // Convert boolean flags from device_summary to proper boolean values
+                security_status: {
+                    password_manager: Boolean(row.has_password_manager),
+                    screen_lock: Boolean(row.has_screen_lock),
+                    antivirus: Boolean(row.has_antivirus),
+                    disk_encryption: Boolean(row.has_disk_encryption)
+                }
+            };
+        });
     }
 
     // Find device by serial number
@@ -137,8 +217,9 @@ export class DeviceModel {
             'SELECT COUNT(*) as total FROM devices'
         );
         
+        // Calculate online devices based on last_seen within 24 hours (dynamic status)
         const [onlineDevices] = await connection.execute<RowDataPacket[]>(
-            'SELECT COUNT(*) as online FROM devices WHERE status = "online"'
+            'SELECT COUNT(*) as online FROM devices WHERE last_seen >= DATE_SUB(NOW(), INTERVAL 24 HOUR)'
         );
         
         const [recentActivity] = await connection.execute<RowDataPacket[]>(

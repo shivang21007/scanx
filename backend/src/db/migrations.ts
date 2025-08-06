@@ -126,6 +126,43 @@ export const migration_003_add_device_categories = async () => {
     await markMigrationExecuted(migrationName);
 };
 
+// // Migration: Add computer_name column to devices table
+// export const migration_004_add_computer_name = async () => {
+//     const migrationName = '004_add_computer_name';
+    
+//     if (await isMigrationExecuted(migrationName)) {
+//         console.log(`⏭️  Migration '${migrationName}' already executed`);
+//         return;
+//     }
+    
+//     console.log(`🔧 Executing migration: ${migrationName}`);
+    
+//     const connection = getConnection();
+    
+//     try {
+//         // Check if column already exists
+//         const [columns] = await connection.execute(
+//             `SHOW COLUMNS FROM devices LIKE 'computer_name'`
+//         );
+        
+//         if ((columns as any[]).length === 0) {
+//             await connection.execute(`
+//                 ALTER TABLE devices 
+//                 ADD COLUMN computer_name VARCHAR(255) AFTER serial_no,
+//                 ADD INDEX idx_computer_name (computer_name)
+//             `);
+//             console.log('✅ Added computer_name column to devices table');
+//         } else {
+//             console.log('ℹ️  computer_name column already exists in devices table');
+//         }
+        
+//     } catch (err: any) {
+//         console.log("ℹ️  Computer name column might already exist, continuing...");
+//     }
+    
+//     await markMigrationExecuted(migrationName);
+// };
+
 // Run all migrations
 export const runMigrations = async () => {
     try {

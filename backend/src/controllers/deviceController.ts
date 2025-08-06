@@ -23,6 +23,7 @@ export const receiveAgentData = async (req: Request, res: Response) => {
     const deviceId = await DeviceModel.createOrUpdate({
       user_email: agentData.user,
       serial_no: agentData.serial_no,
+      computer_name: agentData.computer_name || 'unknown',
       os_type: agentData.os_type,
       os_version: agentData.os_version || 'unknown',
       last_seen: istTimestamp,
@@ -66,6 +67,23 @@ export const receiveAgentData = async (req: Request, res: Response) => {
       }
     }
 
+    // Special validation for screen_lock_info: check grace_period
+    if (agentData.data.screen_lock_info && agentData.data.screen_lock_info.length > 0) {
+      try {
+        const screenLockData = agentData.data.screen_lock_info[0];
+        const gracePeriod = parseInt(screenLockData.grace_period || '0', 10);
+        
+        // If grace period is more than 1 hour (3600 seconds), mark as false
+        if (gracePeriod > 3600) {
+          receivedDataTypes.screen_lock_info = false;
+          console.log(`⚠️  Screen lock grace period (${gracePeriod}s) exceeds 1 hour - marking as non-compliant`);
+        }
+      } catch (error: any) {
+        console.error(`❌ Failed to validate screen_lock grace_period:`, error.message);
+        // Keep the original receivedDataTypes value on error
+      }
+    }
+
     // Update device summary with received data types
     await DeviceSummaryModel.createOrUpdate({
       device_id: deviceId,
@@ -94,6 +112,34 @@ export const getDevices = async (req: Request, res: Response) => {
     res.json(devices);
   } catch (err: any) {
     console.error('Error getting devices:', err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Get enriched devices data for devices table page
+export const getDevicesTable = async (req: Request, res: Response) => {
+  try {
+    const { search, os_type } = req.query;
+    
+    console.log('Fetching enriched devices data with filters:', { search, os_type });
+    
+    const devices = await DeviceModel.findAllEnriched(
+      search as string,
+      os_type as string
+    );
+    
+    console.log(`Found ${devices.length} devices with enriched data`);
+    
+    res.json({
+      devices,
+      total: devices.length,
+      filters: {
+        search: search || '',
+        os_type: os_type || ''
+      }
+    });
+  } catch (err: any) {
+    console.error('Error getting enriched devices:', err);
     res.status(500).json({ error: err.message });
   }
 };

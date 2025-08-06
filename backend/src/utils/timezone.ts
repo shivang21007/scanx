@@ -99,3 +99,21 @@ export function logWithIST(message: string, ...args: any[]): void {
     const istTime = formatForDisplay(getCurrentIST());
     console.log(`[${istTime}] ${message}`, ...args);
 }
+
+/**
+ * Calculate device status based on last seen timestamp
+ * Device is offline if last seen is older than 24 hours
+ */
+export function getDeviceStatus(lastSeenTimestamp: Date | string | null): 'online' | 'offline' {
+    if (!lastSeenTimestamp) {
+        return 'offline';
+    }
+    
+    const lastSeen = lastSeenTimestamp instanceof Date ? lastSeenTimestamp : new Date(lastSeenTimestamp);
+    const now = getCurrentIST();
+    const diffMs = now.getTime() - lastSeen.getTime();
+    const diffHours = diffMs / (1000 * 60 * 60); // Convert to hours
+    
+    // Device is offline if last seen is older than 24 hours
+    return diffHours > 24 ? 'offline' : 'online';
+}

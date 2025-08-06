@@ -1,5 +1,6 @@
 import { getConnection } from '../db';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
+import { getDeviceStatus } from '../utils/timezone';
 
 export interface Device {
     id?: number;
@@ -69,7 +70,7 @@ export class DeviceModel {
                     deviceData.os_type,
                     deviceData.os_version,
                     deviceData.last_seen,
-                    deviceData.status || 'online',
+                    getDeviceStatus(deviceData.last_seen || null),
                     deviceData.agent_version,
                     deviceId
                 ]
@@ -86,7 +87,7 @@ export class DeviceModel {
                     deviceData.os_type,
                     deviceData.os_version,
                     deviceData.last_seen,
-                    deviceData.status || 'online',
+                    getDeviceStatus(deviceData.last_seen || null),
                     deviceData.agent_version
                 ]
             );
@@ -150,8 +151,9 @@ export class DeviceModel {
             'SELECT COUNT(*) as total FROM devices'
         );
         
+        // Calculate online devices based on last_seen within 24 hours (dynamic status)
         const [onlineDevices] = await connection.execute<RowDataPacket[]>(
-            'SELECT COUNT(*) as online FROM devices WHERE status = "online"'
+            'SELECT COUNT(*) as online FROM devices WHERE last_seen >= DATE_SUB(NOW(), INTERVAL 24 HOUR)'
         );
         
         const [recentActivity] = await connection.execute<RowDataPacket[]>(
