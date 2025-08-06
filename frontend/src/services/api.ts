@@ -1,7 +1,7 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import Cookies from 'js-cookie';
 import { LoginRequest, RegisterRequest, LoginResponse, RegisterResponse, Admin, ErrorResponse } from '../types/auth';
-import { Device, DashboardStats, DeviceDetails, DeviceData } from '../types/device';
+import { Device, DashboardStats, DeviceDetails, DevicesTableResponse, DevicesTableFilters } from '../types/device';
 
 class ApiService {
   private api: AxiosInstance;
@@ -135,6 +135,26 @@ class ApiService {
     }
   }
 
+  async getDevicesTable(filters?: DevicesTableFilters): Promise<DevicesTableResponse> {
+    try {
+      const params = new URLSearchParams();
+      if (filters?.search) {
+        params.append('search', filters.search);
+      }
+      if (filters?.os_type) {
+        params.append('os_type', filters.os_type);
+      }
+      
+      const url = `/api/devices/table${params.toString() ? `?${params.toString()}` : ''}`;
+      console.log('Fetching devices table data from:', url);
+      
+      const response: AxiosResponse<DevicesTableResponse> = await this.api.get(url);
+      return response.data;
+    } catch (error: any) {
+      throw this.handleError(error);
+    }
+  }
+
   async getDeviceById(id: number): Promise<DeviceDetails> {
     try {
       const response: AxiosResponse<DeviceDetails> = await this.api.get(`/api/devices/${id}`);
@@ -144,14 +164,7 @@ class ApiService {
     }
   }
 
-  async getDeviceData(id: number, type: string): Promise<DeviceData> {
-    try {
-      const response: AxiosResponse<DeviceData> = await this.api.get(`/api/devices/${id}/data/${type}`);
-      return response.data;
-    } catch (error: any) {
-      throw this.handleError(error);
-    }
-  }
+
 }
 
 export const apiService = new ApiService();

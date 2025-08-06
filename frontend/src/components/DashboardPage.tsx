@@ -1,10 +1,12 @@
 
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { LogOut, Monitor, Shield, Users, Activity, AlertTriangle } from 'lucide-react';
 import { apiService } from '../services/api';
 import { DashboardStats, Device } from '../types/device';
 import { LoadingSpinner } from './LoadingSpinner';
+import { getDeviceStatus } from '../utils/timezone';
 
 export function DashboardPage() {
   const { admin, logout } = useAuth();
@@ -44,7 +46,7 @@ export function DashboardPage() {
 
   // Calculate secure devices (devices with disk encryption)
   const secureDevices = devices.filter(device => 
-    device.status === 'online' && device.os_type // You can add more security criteria
+    getDeviceStatus(device.last_seen) === 'online' && device.os_type // You can add more security criteria
   ).length;
 
   return (
@@ -118,15 +120,17 @@ export function DashboardPage() {
         {/* Stats Cards */}
         {!loading && !error && stats && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center">
-                <Monitor className="h-8 w-8 text-blue-600" />
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Total Devices</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+            <Link to="/devices" className="block">
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md hover:border-blue-300 transition-all cursor-pointer">
+                <div className="flex items-center">
+                  <Monitor className="h-8 w-8 text-blue-600" />
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Total Devices</p>
+                    <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+                  </div>
                 </div>
               </div>
-            </div>
+            </Link>
 
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <div className="flex items-center">
@@ -176,17 +180,18 @@ export function DashboardPage() {
                         <div className="flex items-center">
                           <Monitor className="h-5 w-5 text-gray-400 mr-3" />
                           <div>
-                            <p className="text-sm font-medium text-gray-900">{device.user_email}</p>
-                            <p className="text-xs text-gray-500">{device.serial_no}</p>
+                            <p className="text-sm font-medium text-gray-900">{device.computer_name || 'Unknown Device'}</p>
+                            <p className="text-xs text-gray-500">{device.user_email}</p>
+                            <p className="text-xs text-gray-400">{device.serial_no}</p>
                           </div>
                         </div>
                         <div className="flex items-center">
                           <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                            device.status === 'online' 
+                            getDeviceStatus(device.last_seen) === 'online' 
                               ? 'bg-green-100 text-green-800' 
                               : 'bg-red-100 text-red-800'
                           }`}>
-                            {device.status}
+                            {getDeviceStatus(device.last_seen)}
                           </span>
                           <span className="text-xs text-gray-500 ml-2">{device.os_type}</span>
                         </div>

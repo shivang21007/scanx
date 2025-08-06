@@ -6,6 +6,8 @@ import { PublicRoute } from './components/PublicRoute';
 import { LoginPage } from './components/LoginPage';
 import { RegisterPage } from './components/RegisterPage';
 import { DashboardPage } from './components/DashboardPage';
+import { DevicesPage } from './components/DevicesPage';
+import { DeviceDetailPage } from './components/DeviceDetailPage';
 
 function App() {
   return (
@@ -39,6 +41,22 @@ function App() {
                   <DashboardPage />
                 </ProtectedRoute>
               } 
+            />
+                        <Route
+              path="/devices"
+              element={
+                <ProtectedRoute>
+                  <DevicesPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/devices/:id"
+              element={
+                <ProtectedRoute>
+                  <DeviceDetailPage />
+                </ProtectedRoute>
+              }
             />
 
             {/* Default redirect */}
