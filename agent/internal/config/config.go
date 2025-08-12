@@ -13,10 +13,11 @@ import (
 
 // AgentConfig represents the agent configuration from agent.conf
 type AgentConfig struct {
-	UserEmail string `json:"user_email"`
-	Version   string `json:"version"`
-	Interval  string `json:"interval"`
-	LogLevel  string `json:"log_level"`
+	UserEmail  string `json:"user_email"`
+	Version    string `json:"version"`
+	Interval   string `json:"interval"`
+	LogLevel   string `json:"log_level"`
+	BackendURL string `json:"backend_url"`
 }
 
 // QueryConfig represents a single query configuration
@@ -65,11 +66,6 @@ func LoadConfigFromPath(configDir string) (*Config, error) {
 	return config, nil
 }
 
-// loadAgentConfig loads the agent.conf file
-func loadAgentConfig() (*AgentConfig, error) {
-	return loadAgentConfigFromPath("config")
-}
-
 // loadAgentConfigFromPath loads the agent.conf file from a custom path
 func loadAgentConfigFromPath(configDir string) (*AgentConfig, error) {
 	configPath := filepath.Join(configDir, "agent.conf")
@@ -85,11 +81,6 @@ func loadAgentConfigFromPath(configDir string) (*AgentConfig, error) {
 	}
 
 	return &config, nil
-}
-
-// loadQueriesConfig loads the queries.yml file
-func loadQueriesConfig() (*QueriesConfig, error) {
-	return loadQueriesConfigFromPath("config")
 }
 
 // loadQueriesConfigFromPath loads the queries.yml file from a custom path

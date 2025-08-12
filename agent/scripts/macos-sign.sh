@@ -6,9 +6,12 @@
 set -e
 
 # Configuration
-BINARY_PATH="builds/mdm-agent-darwin-amd64"
+BINARY_PATH="dist/builds/mdm-agent-darwin-amd64"
 DEVELOPER_ID="${1:-}"
 ENTITLEMENTS_FILE="scripts/entitlements.plist"
+VERSION=$(cat config/agent.conf | grep -o '"version": "[^"]*"' | cut -d'"' -f4)
+PKG_NAME="MDMAgent-${VERSION}"
+BUILD_DIR="dist/macos-build"
 
 echo "🍎 macOS Code Signing for MDM Agent"
 echo "=================================="

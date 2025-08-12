@@ -113,7 +113,9 @@ func (s *BackendSender) TestConnection() error {
 
 // GetBackendURLFromConfig returns the backend URL from configuration
 func GetBackendURLFromConfig(cfg *config.Config) string {
-	// For now, we'll use a default URL
-	// In production, this should come from agent.conf
+	if cfg.Agent.BackendURL != "" {
+		return cfg.Agent.BackendURL
+	}
+	// Fallback to default URL if not configured
 	return "http://172.0.10.183:3000"
 }

@@ -36,9 +36,10 @@ done
 
 AGENT_NAME="mdm-agent"
 INSTALL_DIR="/usr/local/bin"
-CONFIG_DIR="/etc/mdm-agent"
+CONFIG_DIR="/etc/mdmagent"
+DATA_DIR="/var/lib/mdmagent"
+LOG_DIR="/var/log/mdmagent"
 SERVICE_FILE="/etc/systemd/system/mdm-agent.service"
-LOG_DIR="/var/log"
 
 echo "🐧 Installing MDM Agent on Linux..."
 
@@ -87,9 +88,10 @@ if systemctl is-enabled --quiet mdm-agent 2>/dev/null; then
     systemctl disable mdm-agent
 fi
 
-# Create directories
+# Create directories with standardized paths
 echo "📁 Creating directories..."
 mkdir -p "$CONFIG_DIR"
+mkdir -p "$DATA_DIR"
 mkdir -p "$LOG_DIR"
 
 # Copy binary
@@ -125,27 +127,26 @@ else
     echo ""
     echo "⏱️  Data collection interval examples:"
     echo "   - 5m   (5 minutes)"
-    echo "   - 10m  (10 minutes - default)"
+    echo "   - 10m  (10 minutes)"
     echo "   - 1h   (1 hour)"
-    echo "   - 2h   (2 hours)"
-    read -p "⏱️  Enter collection interval [10m]: " user_interval
+    echo "   - 2h   (2 hours - default)"
+    read -p "⏱️  Enter collection interval [2h]: " user_interval
     if [[ -z "$user_interval" ]]; then
-        user_interval="10m"
+        user_interval="2h"
     fi
 fi
 
 # Copy configuration files
 echo ""
 echo "⚙️  Installing configuration..."
-mkdir -p "$CONFIG_DIR/config"
-cp -r ./config/* "$CONFIG_DIR/config/"
+cp -r ./config/* "$CONFIG_DIR/"
 
 # Update agent.conf with user input
 echo "📝 Updating configuration with your settings..."
-sed -i "s/\"user_email\": \"[^\"]*\"/\"user_email\": \"$user_email\"/" "$CONFIG_DIR/config/agent.conf"
-sed -i "s/\"interval\": \"[^\"]*\"/\"interval\": \"$user_interval\"/" "$CONFIG_DIR/config/agent.conf"
+sed -i "s/\"user_email\": \"[^\"]*\"/\"user_email\": \"$user_email\"/" "$CONFIG_DIR/agent.conf"
+sed -i "s/\"interval\": \"[^\"]*\"/\"interval\": \"$user_interval\"/" "$CONFIG_DIR/agent.conf"
 
-chmod 644 "$CONFIG_DIR/config"/*
+chmod 644 "$CONFIG_DIR/"*
 
 echo "✅ Configuration updated:"
 echo "   📧 Email: $user_email"
@@ -156,8 +157,14 @@ echo "🔧 Installing service configuration..."
 cp "./services/mdm-agent.service" "$SERVICE_FILE"
 chmod 644 "$SERVICE_FILE"
 
+# Create log file and set proper permissions
+touch "$LOG_DIR/mdm-agent-std.log"
+chmod 644 "$LOG_DIR/mdm-agent-std.log"
+
 # Set proper permissions
 chown -R root:root "$CONFIG_DIR"
+chown -R root:root "$DATA_DIR"
+chown -R root:root "$LOG_DIR"
 chown root:root "$INSTALL_DIR/$AGENT_NAME"
 chown root:root "$SERVICE_FILE"
 
@@ -189,7 +196,10 @@ echo "   Logs:    sudo journalctl -u mdm-agent -f"
 echo "   Enable:  sudo systemctl enable mdm-agent"
 echo "   Disable: sudo systemctl disable mdm-agent"
 echo ""
-echo "📁 Configuration: $CONFIG_DIR"
-echo "📁 Binary: $INSTALL_DIR/$AGENT_NAME"
+echo "📁 File locations:"
+echo "   Binary:  $INSTALL_DIR/$AGENT_NAME"
+echo "   Config:  $CONFIG_DIR/"
+echo "   Logs:    $LOG_DIR/mdm-agent-std.log"
+echo "   Data:    $DATA_DIR/"
 echo ""
 echo "ℹ️  The agent will now run automatically on system startup"
