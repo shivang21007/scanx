@@ -8,6 +8,7 @@ import { RegisterPage } from './components/RegisterPage';
 import { DashboardPage } from './components/DashboardPage';
 import { DevicesPage } from './components/DevicesPage';
 import { DeviceDetailPage } from './components/DeviceDetailPage';
+import { UsersPage } from './components/UsersPage';
 
 function App() {
   return (
@@ -42,7 +43,7 @@ function App() {
                 </ProtectedRoute>
               } 
             />
-                        <Route
+            <Route
               path="/devices"
               element={
                 <ProtectedRoute>
@@ -55,6 +56,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <DeviceDetailPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/users"
+              element={
+                <ProtectedRoute>
+                  <UsersPage />
                 </ProtectedRoute>
               }
             />

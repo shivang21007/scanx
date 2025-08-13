@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { LogOut, Monitor, Shield, Users, Activity, AlertTriangle } from 'lucide-react';
 import { apiService } from '../services/api';
 import { DashboardStats, Device } from '../types/device';
+
 import { LoadingSpinner } from './LoadingSpinner';
 import { getDeviceStatus } from '../utils/timezone';
 
@@ -12,6 +13,7 @@ export function DashboardPage() {
   const { admin, logout } = useAuth();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [devices, setDevices] = useState<Device[]>([]);
+  const [totalUsers, setTotalUsers] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,14 +23,16 @@ export function DashboardPage() {
         setLoading(true);
         setError(null);
         
-        // Fetch dashboard stats and devices in parallel
-        const [dashboardStats, devicesList] = await Promise.all([
+        // Fetch dashboard stats, devices, and total users in parallel
+        const [dashboardStats, devicesList, usersCount] = await Promise.all([
           apiService.getDashboardStats(),
-          apiService.getDevices()
+          apiService.getDevices(),
+          apiService.getTotalUsers()
         ]);
         
         setStats(dashboardStats);
         setDevices(devicesList);
+        setTotalUsers(usersCount.total);
       } catch (err: any) {
         console.error('Failed to fetch dashboard data:', err);
         setError(err.message || 'Failed to load dashboard data');
@@ -44,10 +48,7 @@ export function DashboardPage() {
     await logout();
   };
 
-  // Calculate secure devices (devices with disk encryption)
-  const secureDevices = devices.filter(device => 
-    getDeviceStatus(device.last_seen) === 'online' && device.os_type // You can add more security criteria
-  ).length;
+
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -131,6 +132,18 @@ export function DashboardPage() {
                 </div>
               </div>
             </Link>
+            
+            <Link to="/users" className="block">
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md hover:border-purple-300 transition-all cursor-pointer">
+                <div className="flex items-center">
+                  <Users className="h-8 w-8 text-purple-600" />
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Total Users</p>
+                    <p className="text-2xl font-bold text-gray-900">{totalUsers}</p>
+                  </div>
+                </div>
+              </div>
+            </Link>
 
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <div className="flex items-center">
@@ -144,17 +157,7 @@ export function DashboardPage() {
 
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <div className="flex items-center">
-                <Shield className="h-8 w-8 text-purple-600" />
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Secure Devices</p>
-                  <p className="text-2xl font-bold text-gray-900">{secureDevices}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center">
-                <Users className="h-8 w-8 text-orange-600" />
+                <Shield className="h-8 w-8 text-orange-600" />
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Recent Activity</p>
                   <p className="text-2xl font-bold text-gray-900">{stats.recent_activity}</p>
@@ -202,9 +205,6 @@ export function DashboardPage() {
                   <div className="text-center py-8">
                     <Monitor className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <p className="text-gray-500">No devices found</p>
-                    <p className="text-sm text-gray-400 mt-1">
-                      Devices will appear here once agents start reporting
-                    </p>
                   </div>
                 )}
               </div>
@@ -216,63 +216,28 @@ export function DashboardPage() {
                 <h3 className="text-lg font-medium text-gray-900">OS Distribution</h3>
               </div>
               <div className="p-6">
-                {stats && stats.by_os.length > 0 ? (
+                {stats && stats.by_os && stats.by_os.length > 0 ? (
                   <div className="space-y-4">
-                    {stats.by_os.map((os, index) => (
-                      <div key={index} className="flex items-center justify-between">
+                    {stats.by_os.map((os) => (
+                      <div key={os.os_type} className="flex items-center justify-between">
                         <div className="flex items-center">
-                          <div className="w-4 h-4 rounded bg-blue-500 mr-3"></div>
-                          <span className="text-sm text-gray-600 capitalize">{os.os_type}</span>
+                          <div className="w-3 h-3 bg-blue-500 rounded-full mr-3"></div>
+                          <span className="text-sm font-medium text-gray-900 capitalize">{os.os_type}</span>
                         </div>
-                        <div className="flex items-center">
-                          <span className="text-sm font-medium text-gray-900 mr-2">{os.count}</span>
-                          <span className="text-xs text-gray-500">
-                            ({stats.total > 0 ? Math.round((os.count / stats.total) * 100) : 0}%)
-                          </span>
-                        </div>
+                        <span className="text-sm text-gray-500">{os.count}</span>
                       </div>
                     ))}
                   </div>
                 ) : (
                   <div className="text-center py-8">
-                    <Shield className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <Activity className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <p className="text-gray-500">No OS data available</p>
-                    <p className="text-sm text-gray-400 mt-1">
-                      OS distribution will appear here once devices are connected
-                    </p>
                   </div>
                 )}
               </div>
             </div>
           </div>
         )}
-
-        {/* Admin Info */}
-        <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-          <h3 className="text-lg font-medium text-blue-900 mb-4">Account Information</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm text-blue-700 font-medium">Email</p>
-              <p className="text-blue-900">{admin?.email}</p>
-            </div>
-            <div>
-              <p className="text-sm text-blue-700 font-medium">Name</p>
-              <p className="text-blue-900">{admin?.name || 'Not set'}</p>
-            </div>
-            <div>
-              <p className="text-sm text-blue-700 font-medium">Account Created</p>
-              <p className="text-blue-900">
-                {admin?.created_at ? new Date(admin.created_at).toLocaleDateString() : 'Unknown'}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-blue-700 font-medium">Last Updated</p>
-              <p className="text-blue-900">
-                {admin?.updated_at ? new Date(admin.updated_at).toLocaleDateString() : 'Unknown'}
-              </p>
-            </div>
-          </div>
-        </div>
       </main>
     </div>
   );

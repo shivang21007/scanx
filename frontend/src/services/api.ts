@@ -2,6 +2,7 @@ import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import Cookies from 'js-cookie';
 import { LoginRequest, RegisterRequest, LoginResponse, RegisterResponse, Admin, ErrorResponse } from '../types/auth';
 import { Device, DashboardStats, DeviceDetails, DevicesTableResponse, DevicesTableFilters } from '../types/device';
+import { UsersResponse, TotalUsersResponse, UsersTableFilters } from '../types/user';
 
 class ApiService {
   private api: AxiosInstance;
@@ -164,6 +165,52 @@ class ApiService {
     }
   }
 
+  // User endpoints
+  async getTotalUsers(): Promise<TotalUsersResponse> {
+    try {
+      const response: AxiosResponse<TotalUsersResponse> = await this.api.get('/api/users/totalusers');
+      return response.data;
+    } catch (error: any) {
+      throw this.handleError(error);
+    }
+  }
+
+  async getUsers(filters?: UsersTableFilters): Promise<UsersResponse> {
+    try {
+      const params = new URLSearchParams();
+      if (filters?.search) {
+        params.append('search', filters.search);
+      }
+      if (filters?.page) {
+        params.append('page', filters.page.toString());
+      }
+      if (filters?.pageSize) {
+        params.append('pageSize', filters.pageSize.toString());
+      }
+      
+      const url = `/api/users${params.toString() ? `?${params.toString()}` : ''}`;
+      const response: AxiosResponse<UsersResponse> = await this.api.get(url);
+      return response.data;
+    } catch (error: any) {
+      throw this.handleError(error);
+    }
+  }
+
+  async updateUserAccountType(gid: number, accountType: 'user' | 'service'): Promise<void> {
+    try {
+      await this.api.put(`/api/users/${gid}/account-type`, { account_type: accountType });
+    } catch (error: any) {
+      throw this.handleError(error);
+    }
+  }
+
+  async deleteUser(gid: number): Promise<void> {
+    try {
+      await this.api.delete(`/api/users/${gid}`);
+    } catch (error: any) {
+      throw this.handleError(error);
+    }
+  }
 
 }
 
