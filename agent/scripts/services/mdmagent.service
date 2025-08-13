@@ -1,6 +1,6 @@
 [Unit]
 Description=MDM Agent - System Monitoring and Device Management
-Documentation=https://github.com/company/mdm-agent
+Documentation=https://github.com/company/mdmagent
 After=network.target
 Wants=network.target
 
@@ -8,7 +8,7 @@ Wants=network.target
 Type=simple
 User=root
 Group=root
-ExecStart=/usr/local/bin/mdm-agent -daemon
+ExecStart=/usr/local/bin/mdmagent -daemon
 WorkingDirectory=/etc/mdmagent
 Restart=always
 RestartSec=10
@@ -18,7 +18,7 @@ TimeoutStopSec=30
 # Logging
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=mdm-agent
+SyslogIdentifier=mdmagent
 
 # Security settings
 NoNewPrivileges=yes

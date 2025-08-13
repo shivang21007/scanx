@@ -34,12 +34,12 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-AGENT_NAME="mdm-agent"
+AGENT_NAME="mdmagent"
 INSTALL_DIR="/usr/local/bin"
 CONFIG_DIR="/etc/mdmagent"
 DATA_DIR="/var/lib/mdmagent"
 LOG_DIR="/var/log/mdmagent"
-PLIST_PATH="/Library/LaunchDaemons/com.company.mdm-agent.plist"
+PLIST_PATH="/Library/LaunchDaemons/com.company.mdmagent.plist"
 
 echo "🍎 Installing MDM Agent on macOS..."
 
@@ -59,7 +59,7 @@ fi
 echo "✅ OSQuery found: $(which osqueryi)"
 
 # Stop existing service if running
-if launchctl list | grep -q "com.company.mdm-agent"; then
+if launchctl list | grep -q "com.company.mdmagent"; then
     echo "🔄 Stopping existing MDM Agent service..."
     launchctl unload "$PLIST_PATH" 2>/dev/null || true
 fi
@@ -135,13 +135,13 @@ echo "   ⏱️  Interval: $user_interval"
 
 # Install launchd plist
 echo "🔧 Installing service configuration..."
-cp "./services/com.company.mdm-agent.plist" "$PLIST_PATH"
+cp "./services/com.company.mdmagent.plist" "$PLIST_PATH"
 chmod 644 "$PLIST_PATH"
 chown root:wheel "$PLIST_PATH"
 
 # Create log file and set proper permissions
-touch "$LOG_DIR/mdm-agent-std.log"
-chmod 644 "$LOG_DIR/mdm-agent-std.log"
+touch "$LOG_DIR/mdmagent-std.log"
+chmod 644 "$LOG_DIR/mdmagent-std.log"
 
 # Set proper permissions
 chown -R root:wheel "$CONFIG_DIR"
@@ -155,11 +155,11 @@ launchctl load "$PLIST_PATH"
 
 # Wait a moment and check status
 sleep 2
-if launchctl list | grep -q "com.company.mdm-agent"; then
+if launchctl list | grep -q "com.company.mdmagent"; then
     echo "✅ MDM Agent service started successfully!"
 else
     echo "⚠️  Service may not have started. Check logs:"
-    echo "   tail -f /var/log/mdm-agent.log"
+    echo "   tail -f /var/log/mdmagent.log"
 fi
 
 echo ""
@@ -168,13 +168,13 @@ echo ""
 echo "📋 Service Management Commands:"
 echo "   Start:   sudo launchctl load $PLIST_PATH"
 echo "   Stop:    sudo launchctl unload $PLIST_PATH"
-echo "   Status:  sudo launchctl list | grep mdm-agent"
-echo "   Logs:    tail -f $LOG_DIR/mdm-agent-std.log"
+echo "   Status:  sudo launchctl list | grep mdmagent"
+echo "   Logs:    tail -f $LOG_DIR/mdmagent-std.log"
 echo ""
 echo "📁 File locations:"
 echo "   Binary:  $INSTALL_DIR/$AGENT_NAME"
 echo "   Config:  $CONFIG_DIR/"
-echo "   Logs:    $LOG_DIR/mdm-agent-std.log"
+echo "   Logs:    $LOG_DIR/mdmagent-std.log"
 echo "   Data:    $DATA_DIR/"
 echo ""
 echo "ℹ️  The agent will now run automatically on system startup"

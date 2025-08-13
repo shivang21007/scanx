@@ -9,11 +9,11 @@ import (
 	"runtime"
 	"syscall"
 
-	"mdm-agent/internal/collector"
-	"mdm-agent/internal/config"
-	"mdm-agent/internal/scheduler"
-	"mdm-agent/internal/sender"
-	"mdm-agent/internal/utils"
+	"mdmagent/internal/collector"
+	"mdmagent/internal/config"
+	"mdmagent/internal/scheduler"
+	"mdmagent/internal/sender"
+	"mdmagent/internal/utils"
 )
 
 func main() {
@@ -235,7 +235,7 @@ func installAgent(email string) error {
 	// TODO: Set appropriate permissions
 
 	fmt.Println("Configuration files generated at current location")
-	fmt.Println("Note: In production, these should be at system paths like /etc/mdm-agent/")
+	fmt.Println("Note: In production, these should be at system paths like /etc/mdmagent/")
 
 	return nil
 }

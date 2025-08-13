@@ -6,7 +6,7 @@
 set -e
 
 # Configuration
-BINARY_NAME="mdm-agent"
+BINARY_NAME="mdmagent"
 VERSION=$(cat config/agent.conf | grep -o '"version": "[^"]*"' | cut -d'"' -f4)
 DIST_DIR="dist"
 BUILD_DIR="$DIST_DIR/builds"
@@ -120,15 +120,15 @@ create_package() {
     case $platform in
         "darwin")
             cp "scripts/install/install-macos.sh" "$pkg_dir/install/"
-            cp "scripts/services/com.company.mdm-agent.plist" "$pkg_dir/services/"
+            cp "scripts/services/com.company.mdmagent.plist" "$pkg_dir/services/"
             ;;
         "linux")
             cp "scripts/install/install-linux.sh" "$pkg_dir/install/"
-            cp "scripts/services/mdm-agent.service" "$pkg_dir/services/"
+            cp "scripts/services/mdmagent.service" "$pkg_dir/services/"
             ;;
         "windows")
             cp "scripts/install/install-windows.ps1" "$pkg_dir/install/"
-            cp "scripts/services/mdm-agent-service.xml" "$pkg_dir/services/"
+            cp "scripts/services/mdmagent-service.xml" "$pkg_dir/services/"
             ;;
     esac
     
@@ -162,13 +162,13 @@ Edit \`config/agent.conf\` to set your email and preferences.
 ## Service Management
 
 ### Start the service:
-- macOS: \`sudo launchctl load /Library/LaunchDaemons/com.company.mdm-agent.plist\`
-- Linux: \`sudo systemctl start mdm-agent\`
+- macOS: \`sudo launchctl load /Library/LaunchDaemons/com.company.mdmagent.plist\`
+- Linux: \`sudo systemctl start mdmagent\`
 - Windows: \`sc start MDMAgent\`
 
 ### Check status:
-- macOS: \`sudo launchctl list | grep mdm-agent\`
-- Linux: \`sudo systemctl status mdm-agent\`
+- macOS: \`sudo launchctl list | grep mdmagent\`
+- Linux: \`sudo systemctl status mdmagent\`
 - Windows: \`sc query MDMAgent\`
 EOF
     

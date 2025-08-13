@@ -39,8 +39,8 @@ cd agent
 ### Install on Target System
 ```bash
 # Extract and install
-tar -xzf dist/packages/mdm-agent-<platform>-<arch>-v1.0.0.tar.gz
-cd mdm-agent-<platform>-<arch>-v1.0.0
+tar -xzf dist/packages/mdmagent-<platform>-<arch>-v1.0.0.tar.gz
+cd mdmagent-<platform>-<arch>-v1.0.0
 sudo ./install/install-<platform>.sh
 ```
 
@@ -95,10 +95,10 @@ dist/
 **RPM Installation Options:**
 ```bash
 # Install with default values
-sudo rpm -i mdm-agent-1.0.0-1.el9.x86_64.rpm
+sudo rpm -i mdmagent-1.0.0-1.el9.x86_64.rpm
 
 # Install with custom email and interval
-MDM_EMAIL="user@company.com" MDM_INTERVAL="1h" sudo -E rpm -i mdm-agent-1.0.0-1.el9.x86_64.rpm
+MDM_EMAIL="user@company.com" MDM_INTERVAL="1h" sudo -E rpm -i mdmagent-1.0.0-1.el9.x86_64.rpm
 ```
 
 **Building RPM on CentOS9:**
@@ -107,7 +107,7 @@ MDM_EMAIL="user@company.com" MDM_INTERVAL="1h" sudo -E rpm -i mdm-agent-1.0.0-1.
 /tmp/
 ├── dist/
 │   ├── builds/
-│   │   └── mdm-agent-linux-amd64          # Linux binary
+│   │   └── mdmagent-linux-amd64          # Linux binary
 │   └── linux-packages/
 │       ├── deb/
 │       └── rpm/
@@ -116,7 +116,7 @@ MDM_EMAIL="user@company.com" MDM_INTERVAL="1h" sudo -E rpm -i mdm-agent-1.0.0-1.
 │   └── queries.yml                         # OSQuery queries
 ├── scripts/
 │   └── services/
-│       └── mdm-agent.service               # Systemd service file
+│       └── mdmagent.service               # Systemd service file
 └── create-linux-packages.sh                # Build script
 
 # Transfer files to CentOS9:
@@ -164,8 +164,8 @@ cd /tmp && chmod +x create-linux-packages.sh
 ### Method 1: Distribution Packages
 ```bash
 # Extract package
-tar -xzf mdm-agent-<platform>-<arch>-v1.0.0.tar.gz
-cd mdm-agent-<platform>-<arch>-v1.0.0
+tar -xzf mdmagent-<platform>-<arch>-v1.0.0.tar.gz
+cd mdmagent-<platform>-<arch>-v1.0.0
 
 # Install
 sudo ./install/install-<platform>.sh
@@ -177,24 +177,24 @@ sudo ./install/install-<platform>.sh
 sudo installer -pkg MDMAgent-1.0.0.pkg -target /
 
 # Ubuntu/Debian
-sudo dpkg -i mdm-agent_1.0.0_amd64.deb
+sudo dpkg -i mdmagent_1.0.0_amd64.deb
 
 # CentOS/RHEL
-sudo rpm -i mdm-agent-1.0.0-1.el9.x86_64.rpm
+sudo rpm -i mdmagent-1.0.0-1.el9.x86_64.rpm
 ```
 
 ### Method 3: Manual Installation
 ```bash
 # Copy files
-sudo cp mdm-agent /usr/local/bin/
+sudo cp mdmagent /usr/local/bin/
 sudo mkdir -p /etc/mdmagent/config
 sudo cp config/* /etc/mdmagent/config/
 
 # Install service
-sudo cp services/mdm-agent.service /etc/systemd/system/
+sudo cp services/mdmagent.service /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable mdm-agent
-sudo systemctl start mdm-agent
+sudo systemctl enable mdmagent
+sudo systemctl start mdmagent
 ```
 
 ## 🛠️ Service Management
@@ -202,34 +202,34 @@ sudo systemctl start mdm-agent
 ### macOS (launchd)
 ```bash
 # Start service
-sudo launchctl load /Library/LaunchDaemons/com.company.mdm-agent.plist
+sudo launchctl load /Library/LaunchDaemons/com.company.mdmagent.plist
 
 # Stop service
-sudo launchctl unload /Library/LaunchDaemons/com.company.mdm-agent.plist
+sudo launchctl unload /Library/LaunchDaemons/com.company.mdmagent.plist
 
 # Check status
-sudo launchctl list | grep mdm-agent
+sudo launchctl list | grep mdmagent
 
 # View logs
-tail -f /var/log/mdm-agent.log
+tail -f /var/log/mdmagent.log
 ```
 
 ### Linux (systemd)
 ```bash
 # Start service
-sudo systemctl start mdm-agent
+sudo systemctl start mdmagent
 
 # Stop service
-sudo systemctl stop mdm-agent
+sudo systemctl stop mdmagent
 
 # Check status
-sudo systemctl status mdm-agent
+sudo systemctl status mdmagent
 
 # View logs
-sudo journalctl -u mdm-agent -f
+sudo journalctl -u mdmagent -f
 
 # Enable auto-start
-sudo systemctl enable mdm-agent
+sudo systemctl enable mdmagent
 ```
 
 ### Windows (Windows Service)
@@ -283,7 +283,7 @@ platform:
 /tmp/
 ├── dist/
 │   ├── builds/
-│   │   └── mdm-agent-linux-amd64          # Linux binary (required)
+│   │   └── mdmagent-linux-amd64          # Linux binary (required)
 │   └── linux-packages/
 │       ├── deb/                           # Created during build
 │       └── rpm/                           # Created during build
@@ -292,25 +292,25 @@ platform:
 │   └── queries.yml                         # OSQuery queries (required)
 ├── scripts/
 │   └── services/
-│       └── mdm-agent.service               # Systemd service file (required)
+│       └── mdmagent.service               # Systemd service file (required)
 └── create-linux-packages.sh                # Build script (required)
 ```
 
 **Required Files for RPM Build:**
-- `dist/builds/mdm-agent-linux-amd64` - Linux binary
+- `dist/builds/mdmagent-linux-amd64` - Linux binary
 - `config/agent.conf` - Agent configuration
 - `config/queries.yml` - OSQuery queries
-- `scripts/services/mdm-agent.service` - Systemd service
+- `scripts/services/mdmagent.service` - Systemd service
 - `create-linux-packages.sh` - Build script
 
 ### File Locations
 | Component | macOS | Linux | Windows |
 |-----------|-------|-------|---------|
-| **Binary** | `/usr/local/bin/mdm-agent` | `/usr/local/bin/mdm-agent` | `C:\Program Files\MDMAgent\mdm-agent.exe` |
+| **Binary** | `/usr/local/bin/mdmagent` | `/usr/local/bin/mdmagent` | `C:\Program Files\MDMAgent\mdmagent.exe` |
 | **Config** | `/etc/mdmagent/config/` | `/etc/mdmagent/config/` | `C:\Program Files\MDMAgent\config\` |
-| **Logs** | `/var/log/mdm-agent.log` | `/var/log/mdmagent/mdm-agent-std.log` | `C:\Program Files\MDMAgent\logs\` |
+| **Logs** | `/var/log/mdmagent.log` | `/var/log/mdmagent/mdmagent-std.log` | `C:\Program Files\MDMAgent\logs\` |
 | **Data** | `/var/lib/mdmagent/` | `/var/lib/mdmagent/` | `C:\Program Files\MDMAgent\data\` |
-| **Service** | `/Library/LaunchDaemons/com.company.mdm-agent.plist` | `/etc/systemd/system/mdm-agent.service` | Windows Service |
+| **Service** | `/Library/LaunchDaemons/com.company.mdmagent.plist` | `/etc/systemd/system/mdmagent.service` | Windows Service |
 
 ## 🔍 Troubleshooting
 
@@ -324,8 +324,8 @@ platform:
 ./scripts/macos-sign.sh
 
 # Option 2: Remove quarantine and sign
-xattr -rd com.apple.quarantine mdm-agent
-codesign --force --deep --sign - mdm-agent
+xattr -rd com.apple.quarantine mdmagent
+codesign --force --deep --sign - mdmagent
 ```
 
 #### 2. Service Won't Start
@@ -333,13 +333,13 @@ codesign --force --deep --sign - mdm-agent
 **Solution**:
 ```bash
 # Check logs
-sudo journalctl -u mdm-agent --no-pager -n 20
+sudo journalctl -u mdmagent --no-pager -n 20
 
 # Verify config
 sudo cat /etc/mdmagent/config/agent.conf
 
 # Check permissions
-ls -la /usr/local/bin/mdm-agent
+ls -la /usr/local/bin/mdmagent
 ls -la /etc/mdmagent/config/
 ```
 
@@ -378,14 +378,14 @@ tree /tmp/
 # /tmp/
 # ├── dist/
 # │   ├── builds/
-# │   │   └── mdm-agent-linux-amd64
+# │   │   └── mdmagent-linux-amd64
 # │   └── linux-packages/
 # ├── config/
 # │   ├── agent.conf
 # │   └── queries.yml
 # ├── scripts/
 # │   └── services/
-# │       └── mdm-agent.service
+# │       └── mdmagent.service
 # └── create-linux-packages.sh
 
 # Build RPM:
@@ -404,22 +404,22 @@ ls -la /etc/mdmagent/config/
 # - queries.yml
 
 # Check working directory in service file
-cat /etc/systemd/system/mdm-agent.service | grep WorkingDirectory
+cat /etc/systemd/system/mdmagent.service | grep WorkingDirectory
 ```
 
 ### Debug Mode
 Run agent in debug mode for troubleshooting:
 ```bash
 # Stop service first
-sudo systemctl stop mdm-agent
+sudo systemctl stop mdmagent
 
 # Run manually with debug
-sudo /usr/local/bin/mdm-agent -daemon -debug
+sudo /usr/local/bin/mdmagent -daemon -debug
 ```
 
 ### Log Locations
-- **macOS**: `/var/log/mdm-agent.log`
-- **Linux**: `/var/log/mdmagent/mdm-agent-std.log` + `journalctl -u mdm-agent`
+- **macOS**: `/var/log/mdmagent.log`
+- **Linux**: `/var/log/mdmagent/mdmagent-std.log` + `journalctl -u mdmagent`
 - **Windows**: Event Viewer → Windows Logs → Application
 
 ## 📚 Additional Resources

@@ -3,11 +3,11 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.company.mdm-agent</string>
+    <string>com.company.mdmagent</string>
     
     <key>ProgramArguments</key>
     <array>
-        <string>/usr/local/bin/mdm-agent</string>
+        <string>/usr/local/bin/mdmagent</string>
         <string>-daemon</string>
     </array>
     
@@ -15,10 +15,10 @@
     <string>/etc/mdmagent</string>
     
     <key>StandardOutPath</key>
-    <string>/var/log/mdmagent/mdm-agent-std.log</string>
+    <string>/var/log/mdmagent/mdmagent-std.log</string>
     
     <key>StandardErrorPath</key>
-    <string>/var/log/mdmagent/mdm-agent-error.log</string>
+    <string>/var/log/mdmagent/mdmagent-error.log</string>
     
     <key>RunAtLoad</key>
     <true/>

@@ -20,7 +20,7 @@ if ($Help) {
 
 $ErrorActionPreference = "Stop"
 
-$AGENT_NAME = "mdm-agent.exe"
+$AGENT_NAME = "mdmagent.exe"
 $INSTALL_DIR = "C:\Program Files\MDMAgent"
 $CONFIG_DIR = "$INSTALL_DIR\config"
 $LOG_DIR = "$INSTALL_DIR\logs"
@@ -165,7 +165,7 @@ Write-Host "📋 Service Management Commands:" -ForegroundColor Cyan
 Write-Host "   Start:   sc start $SERVICE_NAME" -ForegroundColor White
 Write-Host "   Stop:    sc stop $SERVICE_NAME" -ForegroundColor White
 Write-Host "   Status:  sc query $SERVICE_NAME" -ForegroundColor White
-Write-Host "   Logs:    Get-Content `"$LOG_DIR\mdm-agent.log`" -Tail 50 -Wait" -ForegroundColor White
+Write-Host "   Logs:    Get-Content `"$LOG_DIR\mdmagent.log`" -Tail 50 -Wait" -ForegroundColor White
 Write-Host ""
 Write-Host "📁 Configuration: $CONFIG_DIR" -ForegroundColor Cyan
 Write-Host "📁 Binary: $INSTALL_DIR\$AGENT_NAME" -ForegroundColor Cyan

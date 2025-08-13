@@ -11,7 +11,7 @@ import (
 
 // macOS service management using launchd
 func installMacOSService() error {
-	plistPath := "/Library/LaunchDaemons/com.company.mdm-agent.plist"
+	plistPath := "/Library/LaunchDaemons/com.company.mdmagent.plist"
 
 	// Get current executable path
 	execPath, err := os.Executable()
@@ -25,7 +25,7 @@ func installMacOSService() error {
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.company.mdm-agent</string>
+    <string>com.company.mdmagent</string>
     <key>ProgramArguments</key>
     <array>
         <string>%s</string>
@@ -41,9 +41,9 @@ func installMacOSService() error {
         <true/>
     </dict>
     <key>StandardOutPath</key>
-    <string>/var/log/mdm-agent.log</string>
+    <string>/var/log/mdmagent.log</string>
     <key>StandardErrorPath</key>
-    <string>/var/log/mdm-agent.error.log</string>
+    <string>/var/log/mdmagent.error.log</string>
 </dict>
 </plist>`, execPath)
 
@@ -63,7 +63,7 @@ func installMacOSService() error {
 }
 
 func uninstallMacOSService() error {
-	plistPath := "/Library/LaunchDaemons/com.company.mdm-agent.plist"
+	plistPath := "/Library/LaunchDaemons/com.company.mdmagent.plist"
 
 	// Unload the service
 	cmd := exec.Command("launchctl", "unload", plistPath)
@@ -79,7 +79,7 @@ func uninstallMacOSService() error {
 }
 
 func startMacOSService() error {
-	plistPath := "/Library/LaunchDaemons/com.company.mdm-agent.plist"
+	plistPath := "/Library/LaunchDaemons/com.company.mdmagent.plist"
 	cmd := exec.Command("launchctl", "load", plistPath)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to start service: %w", err)
@@ -89,7 +89,7 @@ func startMacOSService() error {
 }
 
 func stopMacOSService() error {
-	plistPath := "/Library/LaunchDaemons/com.company.mdm-agent.plist"
+	plistPath := "/Library/LaunchDaemons/com.company.mdmagent.plist"
 	cmd := exec.Command("launchctl", "unload", plistPath)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to stop service: %w", err)
@@ -99,7 +99,7 @@ func stopMacOSService() error {
 }
 
 func statusMacOSService() error {
-	cmd := exec.Command("launchctl", "list", "com.company.mdm-agent")
+	cmd := exec.Command("launchctl", "list", "com.company.mdmagent")
 	output, err := cmd.Output()
 	if err != nil {
 		fmt.Println("❌ Service not running")
@@ -111,7 +111,7 @@ func statusMacOSService() error {
 
 // Linux service management using systemd
 func installLinuxService() error {
-	serviceFile := "/etc/systemd/system/mdm-agent.service"
+	serviceFile := "/etc/systemd/system/mdmagent.service"
 
 	// Get current executable path
 	execPath, err := os.Executable()
@@ -154,12 +154,12 @@ WantedBy=multi-user.target`, execPath, workDir)
 	}
 
 	// Enable and start service
-	cmd = exec.Command("systemctl", "enable", "mdm-agent")
+	cmd = exec.Command("systemctl", "enable", "mdmagent")
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to enable service: %w", err)
 	}
 
-	cmd = exec.Command("systemctl", "start", "mdm-agent")
+	cmd = exec.Command("systemctl", "start", "mdmagent")
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to start service: %w", err)
 	}
@@ -169,11 +169,11 @@ WantedBy=multi-user.target`, execPath, workDir)
 }
 
 func uninstallLinuxService() error {
-	serviceFile := "/etc/systemd/system/mdm-agent.service"
+	serviceFile := "/etc/systemd/system/mdmagent.service"
 
 	// Stop and disable service
-	exec.Command("systemctl", "stop", "mdm-agent").Run()
-	exec.Command("systemctl", "disable", "mdm-agent").Run()
+	exec.Command("systemctl", "stop", "mdmagent").Run()
+	exec.Command("systemctl", "disable", "mdmagent").Run()
 
 	// Remove service file
 	if err := os.Remove(serviceFile); err != nil && !os.IsNotExist(err) {
@@ -188,7 +188,7 @@ func uninstallLinuxService() error {
 }
 
 func startLinuxService() error {
-	cmd := exec.Command("systemctl", "start", "mdm-agent")
+	cmd := exec.Command("systemctl", "start", "mdmagent")
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to start service: %w", err)
 	}
@@ -197,7 +197,7 @@ func startLinuxService() error {
 }
 
 func stopLinuxService() error {
-	cmd := exec.Command("systemctl", "stop", "mdm-agent")
+	cmd := exec.Command("systemctl", "stop", "mdmagent")
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to stop service: %w", err)
 	}
@@ -206,7 +206,7 @@ func stopLinuxService() error {
 }
 
 func statusLinuxService() error {
-	cmd := exec.Command("systemctl", "status", "mdm-agent")
+	cmd := exec.Command("systemctl", "status", "mdmagent")
 	output, err := cmd.Output()
 	if err != nil {
 		fmt.Printf("❌ Service status check failed: %v\n", err)

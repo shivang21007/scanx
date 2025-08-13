@@ -7,7 +7,7 @@ The MDM Agent is a cross-platform system monitoring and device management daemon
 ## 🎯 Architecture
 
 ### Core Components
-- **Agent Binary**: Cross-platform Go application (`mdm-agent`)
+- **Agent Binary**: Cross-platform Go application (`mdmagent`)
 - **OSQuery Integration**: System information collection engine
 - **Service Layer**: Platform-specific daemon management
 - **Configuration**: JSON/YAML-based settings management
@@ -41,8 +41,8 @@ The MDM Agent is a cross-platform system monitoring and device management daemon
 #### 2. Deploy to Target Systems
 ```bash
 # Extract distribution package
-tar -xzf mdm-agent-<platform>-<arch>-v1.0.0.tar.gz
-cd mdm-agent-<platform>-<arch>-v1.0.0
+tar -xzf mdmagent-<platform>-<arch>-v1.0.0.tar.gz
+cd mdmagent-<platform>-<arch>-v1.0.0
 
 # Install with interactive configuration
 sudo ./install/install-<platform>.sh
@@ -52,10 +52,10 @@ sudo ./install/install-<platform>.sh
 ```bash
 # Check service status
 # macOS
-sudo launchctl list | grep mdm-agent
+sudo launchctl list | grep mdmagent
 
 # Linux
-sudo systemctl status mdm-agent
+sudo systemctl status mdmagent
 
 # Windows
 sc query MDMAgent
@@ -100,7 +100,7 @@ Edit `/etc/mdmagent/config/agent.conf`:
 ### File Permissions
 ```bash
 # Binary permissions
-chmod 755 /usr/local/bin/mdm-agent
+chmod 755 /usr/local/bin/mdmagent
 
 # Configuration permissions
 chmod 644 /etc/mdmagent/config/*
@@ -126,16 +126,16 @@ chown root:root /var/log/mdmagent/*
 ### Health Checks
 ```bash
 # Service status
-sudo systemctl status mdm-agent
+sudo systemctl status mdmagent
 
 # Process monitoring
-ps aux | grep mdm-agent
+ps aux | grep mdmagent
 
 # Log analysis
-sudo journalctl -u mdm-agent --since "1 hour ago"
+sudo journalctl -u mdmagent --since "1 hour ago"
 
 # Data transmission
-tail -f /var/log/mdmagent/mdm-agent-std.log
+tail -f /var/log/mdmagent/mdmagent-std.log
 ```
 
 ### Performance Metrics

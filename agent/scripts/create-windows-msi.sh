@@ -8,7 +8,7 @@ set -e
 VERSION=$(cat config/agent.conf | grep -o '"version": "[^"]*"' | cut -d'"' -f4)
 MSI_NAME="MDMAgent-${VERSION}"
 BUILD_DIR="dist/msi-build"
-WXS_FILE="$BUILD_DIR/mdm-agent.wxs"
+WXS_FILE="$BUILD_DIR/mdmagent.wxs"
 
 echo "🪟 Creating Windows MSI Installer"
 echo "================================"
@@ -69,7 +69,7 @@ cat > "$WXS_FILE" << EOF
     <!-- Components -->
     <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
       <Component Id="MainExecutable" Guid="11111111-1111-1111-1111-111111111111">
-        <File Id="mdm_agent.exe" Source="dist/builds/mdm-agent-windows-amd64.exe" KeyPath="yes" />
+        <File Id="mdm_agent.exe" Source="dist/builds/mdmagent-windows-amd64.exe" KeyPath="yes" />
       </Component>
       
       <Component Id="ConfigFiles" Guid="22222222-2222-2222-2222-222222222222" Directory="ConfigFolder">
@@ -229,11 +229,11 @@ cat > "$BUILD_DIR/build-msi.bat" << 'EOF'
 echo Building MDM Agent MSI...
 
 REM Compile WiX sources
-candle mdm-agent.wxs config-dialog.wxs
+candle mdmagent.wxs config-dialog.wxs
 if %ERRORLEVEL% neq 0 goto error
 
 REM Link to create MSI
-light -ext WixUIExtension mdm-agent.wixobj config-dialog.wixobj -o MDMAgent.msi
+light -ext WixUIExtension mdmagent.wixobj config-dialog.wixobj -o MDMAgent.msi
 if %ERRORLEVEL% neq 0 goto error
 
 echo MSI created successfully: MDMAgent.msi
@@ -254,7 +254,7 @@ echo "2. Copy $BUILD_DIR/ to Windows machine"
 echo "3. Run: cd $BUILD_DIR && build-msi.bat"
 echo ""
 echo "📋 Files created:"
-echo "   - mdm-agent.wxs (main installer definition)"
+echo "   - mdmagent.wxs (main installer definition)"
 echo "   - config-dialog.wxs (configuration UI)"
 echo "   - configure-agent.ps1 (PowerShell config script)"
 echo "   - build-msi.bat (build script)"

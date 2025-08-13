@@ -5,7 +5,7 @@
 set -e
 
 VERSION=$(cat config/agent.conf | grep -o '"version": "[^"]*"' | cut -d'"' -f4)
-PACKAGE_NAME="mdm-agent"
+PACKAGE_NAME="mdmagent"
 BUILD_DIR="dist/linux-packages"
 DEB_DIR="$BUILD_DIR/deb"
 RPM_DIR="$BUILD_DIR/rpm"
@@ -62,14 +62,14 @@ create_package_structure() {
     mkdir -p "$temp_dir/etc/systemd/system"
     
     # Copy files
-    cp "dist/builds/mdm-agent-linux-amd64" "$temp_dir/usr/local/bin/mdm-agent"
+    cp "dist/builds/mdmagent-linux-amd64" "$temp_dir/usr/local/bin/mdmagent"
     cp "config/"* "$temp_dir/etc/mdmagent/config/"
-    cp "scripts/services/mdm-agent.service" "$temp_dir/etc/systemd/system/"
+    cp "scripts/services/mdmagent.service" "$temp_dir/etc/systemd/system/"
     
     # Set permissions
-    chmod +x "$temp_dir/usr/local/bin/mdm-agent"
+    chmod +x "$temp_dir/usr/local/bin/mdmagent"
     chmod 644 "$temp_dir/etc/mdmagent/config/"*
-    chmod 644 "$temp_dir/etc/systemd/system/mdm-agent.service"
+    chmod 644 "$temp_dir/etc/systemd/system/mdmagent.service"
     chmod 755 "$temp_dir/var/log/mdmagent"
     chmod 755 "$temp_dir/var/lib/mdmagent"
     
@@ -102,7 +102,7 @@ if ! command -v osqueryi &> /dev/null; then
         echo "  Visit: https://osquery.io/downloads/linux"
     fi
     echo ""
-    echo "Then reconfigure the package: sudo dpkg-reconfigure mdm-agent"
+    echo "Then reconfigure the package: sudo dpkg-reconfigure mdmagent"
     exit 1
 fi
 
@@ -144,27 +144,27 @@ echo "   📧 Email: $user_email"
 echo "   ⏱️  Interval: $user_interval"
 
 # Create log file
-touch /var/log/mdmagent/mdm-agent-std.log
-chmod 644 /var/log/mdmagent/mdm-agent-std.log
+touch /var/log/mdmagent/mdmagent-std.log
+chmod 644 /var/log/mdmagent/mdmagent-std.log
 
 # Enable and start service
 systemctl daemon-reload
-systemctl enable mdm-agent
-systemctl start mdm-agent
+systemctl enable mdmagent
+systemctl start mdmagent
 
 echo ""
 echo "🎉 MDM Agent installed and started successfully!"
 echo ""
 echo "📋 File locations:"
-echo "   Binary:  /usr/local/bin/mdm-agent"
+echo "   Binary:  /usr/local/bin/mdmagent"
 echo "   Config:  /etc/mdmagent/config/"
-echo "   Logs:    /var/log/mdmagent/mdm-agent-std.log"
+echo "   Logs:    /var/log/mdmagent/mdmagent-std.log"
 echo "   Data:    /var/lib/mdmagent/"
 echo ""
 echo "📋 Service commands:"
-echo "   Status:  systemctl status mdm-agent"
-echo "   Logs:    journalctl -u mdm-agent -f"
-echo "   Stop:    systemctl stop mdm-agent"
+echo "   Status:  systemctl status mdmagent"
+echo "   Logs:    journalctl -u mdmagent -f"
+echo "   Stop:    systemctl stop mdmagent"
 
 exit 0
 EOF
@@ -178,8 +178,8 @@ create_preremove_script() {
 set -e
 
 # Stop and disable service
-systemctl stop mdm-agent || true
-systemctl disable mdm-agent || true
+systemctl stop mdmagent || true
+systemctl disable mdmagent || true
 
 exit 0
 EOF
@@ -238,7 +238,7 @@ Summary:        MDM Agent - System Monitoring and Device Management
 
 %global debug_package %{nil}
 License:        Proprietary
-URL:            https://github.com/your-company/mdm-agent
+URL:            https://github.com/your-company/mdmagent
 Source0:        %{name}-%{version}.tar.gz
 
 Requires:       systemd
@@ -262,14 +262,14 @@ mkdir -p \$RPM_BUILD_ROOT/var/log/mdmagent
 mkdir -p \$RPM_BUILD_ROOT/var/lib/mdmagent
 mkdir -p \$RPM_BUILD_ROOT/etc/systemd/system
 
-install -m 755 mdm-agent \$RPM_BUILD_ROOT/usr/local/bin/
+install -m 755 mdmagent \$RPM_BUILD_ROOT/usr/local/bin/
 install -m 644 config/* \$RPM_BUILD_ROOT/etc/mdmagent/config/
-install -m 644 mdm-agent.service \$RPM_BUILD_ROOT/etc/systemd/system/
+install -m 644 mdmagent.service \$RPM_BUILD_ROOT/etc/systemd/system/
 
 %files
-/usr/local/bin/mdm-agent
+/usr/local/bin/mdmagent
 /etc/mdmagent/config/*
-/etc/systemd/system/mdm-agent.service
+/etc/systemd/system/mdmagent.service
 %dir /var/log/mdmagent
 %dir /var/lib/mdmagent
 
@@ -323,34 +323,34 @@ echo "   📧 Email: \$user_email"
 echo "   ⏱️  Interval: \$user_interval"
 
 # Create log file
-touch /var/log/mdmagent/mdm-agent-std.log
-chmod 644 /var/log/mdmagent/mdm-agent-std.log
+touch /var/log/mdmagent/mdmagent-std.log
+chmod 644 /var/log/mdmagent/mdmagent-std.log
 
 # Enable and start service
-%systemd_post mdm-agent.service
+%systemd_post mdmagent.service
 systemctl daemon-reload
-systemctl enable mdm-agent
-systemctl start mdm-agent
+systemctl enable mdmagent
+systemctl start mdmagent
 
 echo ""
 echo "🎉 MDM Agent installed and started successfully!"
 echo ""
 echo "📋 File locations:"
-echo "   Binary:  /usr/local/bin/mdm-agent"
+echo "   Binary:  /usr/local/bin/mdmagent"
 echo "   Config:  /etc/mdmagent/config/"
-echo "   Logs:    /var/log/mdmagent/mdm-agent-std.log"
+echo "   Logs:    /var/log/mdmagent/mdmagent-std.log"
 echo "   Data:    /var/lib/mdmagent/"
 echo ""
 echo "📋 Service commands:"
-echo "   Status:  systemctl status mdm-agent"
-echo "   Logs:    journalctl -u mdm-agent -f"
-echo "   Stop:    systemctl stop mdm-agent"
+echo "   Status:  systemctl status mdmagent"
+echo "   Logs:    journalctl -u mdmagent -f"
+echo "   Stop:    systemctl stop mdmagent"
 
 %preun
-%systemd_preun mdm-agent.service
+%systemd_preun mdmagent.service
 
 %postun
-%systemd_postun_with_restart mdm-agent.service
+%systemd_postun_with_restart mdmagent.service
 
 %changelog
 * $(date '+%a %b %d %Y') Your Name <admin@company.com> - $VERSION-1
@@ -368,16 +368,16 @@ echo "🔴 Building RPM Package on CentOS/RHEL"
 echo "======================================"
 
 # Check if files exist
-if [[ ! -f "mdm-agent" ]] || [[ ! -d "config" ]] || [[ ! -f "mdm-agent.service" ]]; then
+if [[ ! -f "mdmagent" ]] || [[ ! -d "config" ]] || [[ ! -f "mdmagent.service" ]]; then
     echo "❌ Required files not found. Please ensure you have:"
-    echo "   - mdm-agent (binary)"
+    echo "   - mdmagent (binary)"
     echo "   - config/ (directory with agent.conf and queries.yml)"
-    echo "   - mdm-agent.service (systemd service file)"
+    echo "   - mdmagent.service (systemd service file)"
     exit 1
 fi
 
 VERSION=$(cat config/agent.conf | grep -o '"version": "[^"]*"' | cut -d'"' -f4)
-PACKAGE_NAME="mdm-agent"
+PACKAGE_NAME="mdmagent"
 
 # Setup RPM build environment
 if command -v rpmdev-setuptree &> /dev/null; then
@@ -388,9 +388,9 @@ fi
 
 # Create source directory and tarball
 mkdir -p ${PACKAGE_NAME}-${VERSION}
-cp mdm-agent ${PACKAGE_NAME}-${VERSION}/
+cp mdmagent ${PACKAGE_NAME}-${VERSION}/
 cp -r config ${PACKAGE_NAME}-${VERSION}/
-cp mdm-agent.service ${PACKAGE_NAME}-${VERSION}/
+cp mdmagent.service ${PACKAGE_NAME}-${VERSION}/
 
 tar -czf ~/rpmbuild/SOURCES/${PACKAGE_NAME}-${VERSION}.tar.gz ${PACKAGE_NAME}-${VERSION}
 rm -rf ${PACKAGE_NAME}-${VERSION}
@@ -416,9 +416,9 @@ EOF
         echo "📋 To build RPM on CentOS/RHEL:"
         echo "   1. Copy files to CentOS/RHEL system:"
         echo "      scp -r $RPM_DIR/* user@centos-server:/tmp/"
-        echo "      scp dist/builds/mdm-agent-linux-amd64 user@centos-server:/tmp/mdm-agent"
+        echo "      scp dist/builds/mdmagent-linux-amd64 user@centos-server:/tmp/mdmagent"
         echo "      scp -r config user@centos-server:/tmp/"
-        echo "      scp scripts/services/mdm-agent.service user@centos-server:/tmp/"
+        echo "      scp scripts/services/mdmagent.service user@centos-server:/tmp/"
         echo "   2. On CentOS/RHEL system:"
         echo "      cd /tmp && ./build-rpm.sh"
         
@@ -434,9 +434,9 @@ EOF
         rm -rf "$SOURCE_DIR"
         mkdir -p "$SOURCE_DIR"
         
-        cp "dist/builds/mdm-agent-linux-amd64" "$SOURCE_DIR/mdm-agent"
+        cp "dist/builds/mdmagent-linux-amd64" "$SOURCE_DIR/mdmagent"
         cp -r config "$SOURCE_DIR/"
-        cp "scripts/services/mdm-agent.service" "$SOURCE_DIR/"
+        cp "scripts/services/mdmagent.service" "$SOURCE_DIR/"
         
         cd /tmp
         tar -czf "$BUILD_ROOT/SOURCES/${PACKAGE_NAME}-${VERSION}.tar.gz" "${PACKAGE_NAME}-${VERSION}"
@@ -452,7 +452,7 @@ Summary:        MDM Agent - System Monitoring and Device Management
 
 %global debug_package %{nil}
 License:        Proprietary
-URL:            https://github.com/your-company/mdm-agent
+URL:            https://github.com/your-company/mdmagent
 Source0:        %{name}-%{version}.tar.gz
 
 Requires:       systemd
@@ -476,14 +476,14 @@ mkdir -p \$RPM_BUILD_ROOT/var/log/mdmagent
 mkdir -p \$RPM_BUILD_ROOT/var/lib/mdmagent
 mkdir -p \$RPM_BUILD_ROOT/etc/systemd/system
 
-install -m 755 mdm-agent \$RPM_BUILD_ROOT/usr/local/bin/
+install -m 755 mdmagent \$RPM_BUILD_ROOT/usr/local/bin/
 install -m 644 config/* \$RPM_BUILD_ROOT/etc/mdmagent/config/
-install -m 644 mdm-agent.service \$RPM_BUILD_ROOT/etc/systemd/system/
+install -m 644 mdmagent.service \$RPM_BUILD_ROOT/etc/systemd/system/
 
 %files
-/usr/local/bin/mdm-agent
+/usr/local/bin/mdmagent
 /etc/mdmagent/config/*
-/etc/systemd/system/mdm-agent.service
+/etc/systemd/system/mdmagent.service
 %dir /var/log/mdmagent
 %dir /var/lib/mdmagent
 
@@ -539,34 +539,34 @@ echo "   📧 Email: \$user_email"
 echo "   ⏱️  Interval: \$user_interval"
 
 # Create log file
-touch /var/log/mdmagent/mdm-agent-std.log
-chmod 644 /var/log/mdmagent/mdm-agent-std.log
+touch /var/log/mdmagent/mdmagent-std.log
+chmod 644 /var/log/mdmagent/mdmagent-std.log
 
 # Enable and start service
-%systemd_post mdm-agent.service
+%systemd_post mdmagent.service
 systemctl daemon-reload
-systemctl enable mdm-agent
-systemctl start mdm-agent
+systemctl enable mdmagent
+systemctl start mdmagent
 
 echo ""
 echo "🎉 MDM Agent installed and started successfully!"
 echo ""
 echo "📋 File locations:"
-echo "   Binary:  /usr/local/bin/mdm-agent"
+echo "   Binary:  /usr/local/bin/mdmagent"
 echo "   Config:  /etc/mdmagent/config/"
-echo "   Logs:    /var/log/mdmagent/mdm-agent-std.log"
+echo "   Logs:    /var/log/mdmagent/mdmagent-std.log"
 echo "   Data:    /var/lib/mdmagent/"
 echo ""
 echo "📋 Service commands:"
-echo "   Status:  systemctl status mdm-agent"
-echo "   Logs:    journalctl -u mdm-agent -f"
-echo "   Stop:    systemctl stop mdm-agent"
+echo "   Status:  systemctl status mdmagent"
+echo "   Logs:    journalctl -u mdmagent -f"
+echo "   Stop:    systemctl stop mdmagent"
 
 %preun
-%systemd_preun mdm-agent.service
+%systemd_preun mdmagent.service
 
 %postun
-%systemd_postun_with_restart mdm-agent.service
+%systemd_postun_with_restart mdmagent.service
 
 %changelog
 * $(date '+%a %b %d %Y') Your Name <admin@company.com> - $VERSION-1
@@ -633,5 +633,5 @@ echo "🎉 Linux packages ready!"
 echo "📁 Location: $BUILD_DIR/"
 echo ""
 echo "📋 Installation commands:"
-echo "   DEB: sudo dpkg -i $DEB_DIR/mdm-agent_${VERSION}_amd64.deb"
-echo "   RPM: sudo rpm -ivh $RPM_DIR/mdm-agent-${VERSION}-1.x86_64.rpm"
+echo "   DEB: sudo dpkg -i $DEB_DIR/mdmagent_${VERSION}_amd64.deb"
+echo "   RPM: sudo rpm -ivh $RPM_DIR/mdmagent-${VERSION}-1.x86_64.rpm"

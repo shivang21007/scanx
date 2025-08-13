@@ -5,7 +5,7 @@
     <id>MDMAgent</id>
     <name>MDM Agent</name>
     <description>MDM Agent - System Monitoring and Device Management Service</description>
-    <executable>C:\Program Files\MDMAgent\mdm-agent.exe</executable>
+    <executable>C:\Program Files\MDMAgent\mdmagent.exe</executable>
     <arguments>-daemon</arguments>
     <workingdirectory>C:\Program Files\MDMAgent</workingdirectory>
     <logpath>C:\Program Files\MDMAgent\logs</logpath>

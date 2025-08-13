@@ -4,10 +4,10 @@ import (
 	"context"
 	"time"
 
-	"mdm-agent/internal/collector"
-	"mdm-agent/internal/config"
-	"mdm-agent/internal/sender"
-	"mdm-agent/internal/utils"
+	"mdmagent/internal/collector"
+	"mdmagent/internal/config"
+	"mdmagent/internal/sender"
+	"mdmagent/internal/utils"
 )
 
 // Scheduler handles periodic data collection and transmission

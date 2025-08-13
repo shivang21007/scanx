@@ -29,15 +29,15 @@ mkdir -p "$PAYLOAD_DIR/var/lib/mdmagent"
 mkdir -p "$PAYLOAD_DIR/Library/LaunchDaemons"
 
 # Copy files to payload (using standard paths)
-cp "dist/builds/mdm-agent-darwin-amd64" "$PAYLOAD_DIR/usr/local/bin/mdm-agent"
+cp "dist/builds/mdmagent-darwin-amd64" "$PAYLOAD_DIR/usr/local/bin/mdmagent"
 mkdir -p "$PAYLOAD_DIR/etc/mdmagent/config"
-cp "config/"* "$PAYLOAD_DIR/etc/mdmagent/config/"
-cp "scripts/services/com.company.mdm-agent.plist" "$PAYLOAD_DIR/Library/LaunchDaemons/"
+cp config/* "$PAYLOAD_DIR/etc/mdmagent/config/"
+cp "scripts/services/com.company.mdmagent.plist" "$PAYLOAD_DIR/Library/LaunchDaemons/"
 
 # Set permissions
-chmod +x "$PAYLOAD_DIR/usr/local/bin/mdm-agent"
+chmod +x "$PAYLOAD_DIR/usr/local/bin/mdmagent"
 chmod 644 "$PAYLOAD_DIR/etc/mdmagent/config/"*
-chmod 644 "$PAYLOAD_DIR/Library/LaunchDaemons/com.company.mdm-agent.plist"
+chmod 644 "$PAYLOAD_DIR/Library/LaunchDaemons/com.company.mdmagent.plist"
 chmod 755 "$PAYLOAD_DIR/var/log/mdmagent"
 chmod 755 "$PAYLOAD_DIR/var/lib/mdmagent"
 
@@ -50,16 +50,16 @@ cat > "$SCRIPTS_DIR/preinstall" << 'EOF'
 echo "🧹 Cleaning up existing MDM Agent installation..."
 
 # Remove existing service process
-launchctl remove com.company.mdm-agent 2>/dev/null || true
+launchctl remove com.company.mdmagent 2>/dev/null || true
 
 # Stop existing service if running
-launchctl unload /Library/LaunchDaemons/com.company.mdm-agent.plist 2>/dev/null || true
+launchctl unload /Library/LaunchDaemons/com.company.mdmagent.plist 2>/dev/null || true
 
 # Remove old plist file
-rm -f /Library/LaunchDaemons/com.company.mdm-agent.plist 2>/dev/null || true
+rm -f /Library/LaunchDaemons/com.company.mdmagent.plist 2>/dev/null || true
 
 # Remove old binary
-rm -f /usr/local/bin/mdm-agent 2>/dev/null || true
+rm -f /usr/local/bin/mdmagent 2>/dev/null || true
 
 # Remove old configuration and data directories
 rm -rf /etc/mdmagent 2>/dev/null || true
@@ -67,12 +67,12 @@ rm -rf /var/log/mdmagent 2>/dev/null || true
 rm -rf /var/lib/mdmagent 2>/dev/null || true
 
 # Remove old log files
-rm -f /var/log/mdm-agent.log 2>/dev/null || true
-rm -f /var/log/mdm-agent.error.log 2>/dev/null || true
+rm -f /var/log/mdmagent.log 2>/dev/null || true
+rm -f /var/log/mdmagent.error.log 2>/dev/null || true
 
 # Remove quarantine from any existing binary (if it exists)
-if [ -f "/usr/local/bin/mdm-agent" ]; then
-    xattr -rd com.apple.quarantine /usr/local/bin/mdm-agent 2>/dev/null || true
+if [ -f "/usr/local/bin/mdmagent" ]; then
+    xattr -rd com.apple.quarantine /usr/local/bin/mdmagent 2>/dev/null || true
 fi
 
 echo "✅ Cleanup completed"
@@ -85,10 +85,10 @@ cat > "$SCRIPTS_DIR/postinstall" << 'EOF'
 #!/bin/bash
 
 # Remove quarantine attributes
-xattr -rd com.apple.quarantine /usr/local/bin/mdm-agent 2>/dev/null || true
+xattr -rd com.apple.quarantine /usr/local/bin/mdmagent 2>/dev/null || true
 
 # Ad-hoc sign the binary
-codesign --force --deep --sign - /usr/local/bin/mdm-agent 2>/dev/null || true
+codesign --force --deep --sign - /usr/local/bin/mdmagent 2>/dev/null || true
 
 # Check if osquery is installed first (check multiple common locations)
 osquery_found=false
@@ -156,13 +156,13 @@ osascript -e "display dialog \"✅ Configuration saved:\n\n📧 Email: $email\n�
 # Create directory structure and set permissions
 mkdir -p /var/log/mdmagent
 mkdir -p /var/lib/mdmagent
-touch /var/log/mdmagent/mdm-agent-std.log
+touch /var/log/mdmagent/mdmagent-std.log
 chmod 755 /var/log/mdmagent
 chmod 755 /var/lib/mdmagent
-chmod 644 /var/log/mdmagent/mdm-agent-std.log
+chmod 644 /var/log/mdmagent/mdmagent-std.log
 
 # Load and start the service
-launchctl load /Library/LaunchDaemons/com.company.mdm-agent.plist
+launchctl load /Library/LaunchDaemons/com.company.mdmagent.plist
 
 echo "MDM Agent installed successfully with user configuration!"
 echo "Email: $email"
@@ -176,7 +176,18 @@ cat > "$SCRIPTS_DIR/preremove" << 'EOF'
 #!/bin/bash
 
 # Stop and unload service
-launchctl unload /Library/LaunchDaemons/com.company.mdm-agent.plist 2>/dev/null || true
+launchctl unload /Library/LaunchDaemons/com.company.mdmagent.plist 2>/dev/null || true
+launchctl remove com.company.mdmagent 2>/dev/null || true
+
+# Remove the configuration files
+rm -rf /etc/mdmagent 2>/dev/null || true
+
+# Remove the log files
+rm -rf /var/log/mdmagent 2>/dev/null || true
+
+# Remove the binary
+rm -f /usr/local/bin/mdmagent 2>/dev/null || true
+
 
 exit 0
 EOF
@@ -188,7 +199,7 @@ chmod +x "$SCRIPTS_DIR/"*
 echo "🔨 Building package..."
 pkgbuild --root "$PAYLOAD_DIR" \
          --scripts "$SCRIPTS_DIR" \
-         --identifier "com.company.mdm-agent" \
+         --identifier "com.company.mdmagent" \
          --version "$VERSION" \
          --install-location "/" \
          "${PKG_NAME}-unsigned.pkg"

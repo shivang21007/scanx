@@ -5,8 +5,8 @@ import (
 	"runtime"
 	"strings"
 
-	"mdm-agent/internal/config"
-	"mdm-agent/internal/utils"
+	"mdmagent/internal/config"
+	"mdmagent/internal/utils"
 )
 
 // SystemInfo represents system metadata

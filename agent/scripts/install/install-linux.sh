@@ -34,12 +34,12 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-AGENT_NAME="mdm-agent"
+AGENT_NAME="mdmagent"
 INSTALL_DIR="/usr/local/bin"
 CONFIG_DIR="/etc/mdmagent"
 DATA_DIR="/var/lib/mdmagent"
 LOG_DIR="/var/log/mdmagent"
-SERVICE_FILE="/etc/systemd/system/mdm-agent.service"
+SERVICE_FILE="/etc/systemd/system/mdmagent.service"
 
 echo "🐧 Installing MDM Agent on Linux..."
 
@@ -79,13 +79,13 @@ install_osquery
 echo "✅ OSQuery found: $(which osqueryi)"
 
 # Stop existing service if running
-if systemctl is-active --quiet mdm-agent 2>/dev/null; then
+if systemctl is-active --quiet mdmagent 2>/dev/null; then
     echo "🔄 Stopping existing MDM Agent service..."
-    systemctl stop mdm-agent
+    systemctl stop mdmagent
 fi
 
-if systemctl is-enabled --quiet mdm-agent 2>/dev/null; then
-    systemctl disable mdm-agent
+if systemctl is-enabled --quiet mdmagent 2>/dev/null; then
+    systemctl disable mdmagent
 fi
 
 # Create directories with standardized paths
@@ -154,12 +154,12 @@ echo "   ⏱️  Interval: $user_interval"
 
 # Install systemd service
 echo "🔧 Installing service configuration..."
-cp "./services/mdm-agent.service" "$SERVICE_FILE"
+cp "./services/mdmagent.service" "$SERVICE_FILE"
 chmod 644 "$SERVICE_FILE"
 
 # Create log file and set proper permissions
-touch "$LOG_DIR/mdm-agent-std.log"
-chmod 644 "$LOG_DIR/mdm-agent-std.log"
+touch "$LOG_DIR/mdmagent-std.log"
+chmod 644 "$LOG_DIR/mdmagent-std.log"
 
 # Set proper permissions
 chown -R root:root "$CONFIG_DIR"
@@ -173,33 +173,33 @@ echo "🔄 Reloading systemd..."
 systemctl daemon-reload
 
 echo "🚀 Enabling and starting MDM Agent service..."
-systemctl enable mdm-agent
-systemctl start mdm-agent
+systemctl enable mdmagent
+systemctl start mdmagent
 
 # Wait a moment and check status
 sleep 2
-if systemctl is-active --quiet mdm-agent; then
+if systemctl is-active --quiet mdmagent; then
     echo "✅ MDM Agent service started successfully!"
 else
     echo "⚠️  Service may not have started. Check status:"
-    echo "   sudo systemctl status mdm-agent"
+    echo "   sudo systemctl status mdmagent"
 fi
 
 echo ""
 echo "🎉 Installation completed!"
 echo ""
 echo "📋 Service Management Commands:"
-echo "   Start:   sudo systemctl start mdm-agent"
-echo "   Stop:    sudo systemctl stop mdm-agent"
-echo "   Status:  sudo systemctl status mdm-agent"
-echo "   Logs:    sudo journalctl -u mdm-agent -f"
-echo "   Enable:  sudo systemctl enable mdm-agent"
-echo "   Disable: sudo systemctl disable mdm-agent"
+echo "   Start:   sudo systemctl start mdmagent"
+echo "   Stop:    sudo systemctl stop mdmagent"
+echo "   Status:  sudo systemctl status mdmagent"
+echo "   Logs:    sudo journalctl -u mdmagent -f"
+echo "   Enable:  sudo systemctl enable mdmagent"
+echo "   Disable: sudo systemctl disable mdmagent"
 echo ""
 echo "📁 File locations:"
 echo "   Binary:  $INSTALL_DIR/$AGENT_NAME"
 echo "   Config:  $CONFIG_DIR/"
-echo "   Logs:    $LOG_DIR/mdm-agent-std.log"
+echo "   Logs:    $LOG_DIR/mdmagent-std.log"
 echo "   Data:    $DATA_DIR/"
 echo ""
 echo "ℹ️  The agent will now run automatically on system startup"

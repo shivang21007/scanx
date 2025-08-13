@@ -1,4 +1,4 @@
-module mdm-agent
+module mdmagent
 
 go 1.21
 
