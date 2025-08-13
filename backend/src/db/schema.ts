@@ -3,6 +3,7 @@ import { getConnection } from './connection';
 // Database schema definitions
 export const TABLES = {
     ADMINS: 'admins',
+    USERS: 'users',
     DEVICES: 'devices',
     SYSTEM_INFO: 'system_info',
     DISK_ENCRYPTION_INFO: 'disk_encryption_info',
@@ -33,6 +34,26 @@ export const createAdminsTable = async () => {
     `);
     
     console.log(`✅ Table ${TABLES.ADMINS} created/verified`);
+};
+
+// Create users table for Google Workspace employees
+export const createUsersTable = async () => {
+    const connection = getConnection();
+    
+    await connection.execute(`
+        CREATE TABLE IF NOT EXISTS ${TABLES.USERS} (
+            gid INT AUTO_INCREMENT PRIMARY KEY,
+            email VARCHAR(255) UNIQUE NOT NULL,
+            name VARCHAR(255) NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            account_type ENUM('user', 'service') DEFAULT 'user',
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_email (email),
+            INDEX idx_account_type (account_type)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+    
+    console.log(`✅ Table ${TABLES.USERS} created/verified`);
 };
 
 // Create devices table (starting ID from 101)
@@ -214,6 +235,7 @@ export const initializeSchema = async () => {
     try {
         console.log("🔧 Initializing database schema...");
         await createAdminsTable();
+        await createUsersTable();
         await createDevicesTable();
         await createSystemInfoTable();
         await createDiskEncryptionInfoTable();
@@ -247,6 +269,7 @@ export const dropAllTables = async () => {
         await connection.execute(`DROP TABLE IF EXISTS ${TABLES.DISK_ENCRYPTION_INFO}`);
         await connection.execute(`DROP TABLE IF EXISTS ${TABLES.SYSTEM_INFO}`);
         await connection.execute(`DROP TABLE IF EXISTS ${TABLES.DEVICES}`);
+        await connection.execute(`DROP TABLE IF EXISTS ${TABLES.USERS}`);
         await connection.execute(`DROP TABLE IF EXISTS ${TABLES.ADMINS}`);
         
         console.log("🗑️  All tables dropped successfully");

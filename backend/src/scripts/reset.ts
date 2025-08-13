@@ -17,8 +17,8 @@ async function resetDatabase() {
         connection = await mysql.createConnection({
             host: env.MYSQL_HOST || 'localhost',
             port: parseInt(env.MYSQL_PORT || '3306'),
-            user: env.MYSQL_USER || 'admin',
-            password: env.MYSQL_PASSWORD || 'Shivang@123'
+            user: env.MYSQL_USER ,
+            password: env.MYSQL_PASSWORD
             // No database specified - we'll recreate it
         });
         

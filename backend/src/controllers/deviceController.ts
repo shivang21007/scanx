@@ -1,4 +1,5 @@
 import { DeviceModel, DeviceSummaryModel, IndividualDataModel, AgentPayload } from '../models/Device';
+import { UsersModel } from '../models/Users';
 import { Request, Response } from 'express';
 import { parseToIST, getCurrentISTString } from '../utils/timezone';
 
@@ -19,6 +20,29 @@ export const receiveAgentData = async (req: Request, res: Response) => {
     // Parse agent timestamp to IST
     const istTimestamp = parseToIST(agentData.timestamp);
     
+    // Validate user ownership:
+    // 1) If a device with this serial exists, proceed (update path below)
+    // 2) If not, ensure no other device uses this email (unique owner per email)
+    // 3) Verify user exists in users table and is a 'user', not 'service'
+
+    const existingDevice = await DeviceModel.findBySerial(agentData.serial_no);
+    if (!existingDevice) {
+      // Check if email is already bound to another device
+      const existingByEmail = await DeviceModel.findByUser(agentData.user);
+      if (existingByEmail.length > 0) {
+        return res.status(409).json({ message: 'email already associated with another device' });
+      }
+
+      // Verify user in users table
+      const userRec = await UsersModel.findByEmail(agentData.user);
+      if (!userRec) {
+        return res.status(404).json({ message: 'user_email not found' });
+      }
+      if (userRec.account_type !== 'user') {
+        return res.status(401).json({ message: 'service account cannot send data' });
+      }
+    }
+
     // Create or update device record
     const deviceId = await DeviceModel.createOrUpdate({
       user_email: agentData.user,

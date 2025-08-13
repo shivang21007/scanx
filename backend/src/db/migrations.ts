@@ -57,9 +57,9 @@ export const migration_001_add_backend_config = async () => {
     await markMigrationExecuted(migrationName);
 };
 
-// Migration: Add indexes for performance
-export const migration_002_add_performance_indexes = async () => {
-    const migrationName = '002_add_performance_indexes';
+// Migration: Add users table for Google Workspace integration
+export const migration_002_add_users_table = async () => {
+    const migrationName = '002_add_users_table';
     
     if (await isMigrationExecuted(migrationName)) {
         console.log(`⏭️  Migration '${migrationName}' already executed`);
@@ -71,97 +71,30 @@ export const migration_002_add_performance_indexes = async () => {
     const connection = getConnection();
     
     try {
-        // Add compound indexes for better query performance
+        // Create users table if it doesn't exist
         await connection.execute(`
-            ALTER TABLE device_data 
-            ADD INDEX IF NOT EXISTS idx_device_type_timestamp (device_id, data_type, timestamp)
+            CREATE TABLE IF NOT EXISTS users (
+                gid INT AUTO_INCREMENT PRIMARY KEY,
+                email VARCHAR(255) UNIQUE NOT NULL,
+                name VARCHAR(255) NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                account_type ENUM('user', 'service') DEFAULT 'user',
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_email (email),
+                INDEX idx_account_type (account_type)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         `);
         
-        await connection.execute(`
-            ALTER TABLE devices 
-            ADD INDEX IF NOT EXISTS idx_user_status (user_email, status)
-        `);
-        
-        console.log("✅ Performance indexes added");
+        console.log('✅ Added users table for Google Workspace integration');
         
     } catch (err: any) {
-        // Ignore errors for indexes that might already exist
-        console.log("ℹ️  Some indexes might already exist, continuing...");
+        console.log("ℹ️  Users table might already exist, continuing...");
     }
     
     await markMigrationExecuted(migrationName);
 };
 
-// Migration: Add device categories
-export const migration_003_add_device_categories = async () => {
-    const migrationName = '003_add_device_categories';
-    
-    if (await isMigrationExecuted(migrationName)) {
-        console.log(`⏭️  Migration '${migrationName}' already executed`);
-        return;
-    }
-    
-    console.log(`🔧 Executing migration: ${migrationName}`);
-    
-    const connection = getConnection();
-    
-    try {
-        // Add category column to devices table
-        await connection.execute(`
-            ALTER TABLE devices 
-            ADD COLUMN IF NOT EXISTS category ENUM('laptop', 'desktop', 'mobile', 'tablet', 'server') DEFAULT 'laptop'
-        `);
-        
-        await connection.execute(`
-            ALTER TABLE devices 
-            ADD INDEX IF NOT EXISTS idx_category (category)
-        `);
-        
-        console.log("✅ Device categories added");
-        
-    } catch (err: any) {
-        console.log("ℹ️  Device category column might already exist, continuing...");
-    }
-    
-    await markMigrationExecuted(migrationName);
-};
 
-// // Migration: Add computer_name column to devices table
-// export const migration_004_add_computer_name = async () => {
-//     const migrationName = '004_add_computer_name';
-    
-//     if (await isMigrationExecuted(migrationName)) {
-//         console.log(`⏭️  Migration '${migrationName}' already executed`);
-//         return;
-//     }
-    
-//     console.log(`🔧 Executing migration: ${migrationName}`);
-    
-//     const connection = getConnection();
-    
-//     try {
-//         // Check if column already exists
-//         const [columns] = await connection.execute(
-//             `SHOW COLUMNS FROM devices LIKE 'computer_name'`
-//         );
-        
-//         if ((columns as any[]).length === 0) {
-//             await connection.execute(`
-//                 ALTER TABLE devices 
-//                 ADD COLUMN computer_name VARCHAR(255) AFTER serial_no,
-//                 ADD INDEX idx_computer_name (computer_name)
-//             `);
-//             console.log('✅ Added computer_name column to devices table');
-//         } else {
-//             console.log('ℹ️  computer_name column already exists in devices table');
-//         }
-        
-//     } catch (err: any) {
-//         console.log("ℹ️  Computer name column might already exist, continuing...");
-//     }
-    
-//     await markMigrationExecuted(migrationName);
-// };
 
 // Run all migrations
 export const runMigrations = async () => {
@@ -172,9 +105,7 @@ export const runMigrations = async () => {
         
         // Execute migrations in order
         await migration_001_add_backend_config();
-        await migration_002_add_performance_indexes();
-        await migration_003_add_device_categories();
-        
+        await migration_002_add_users_table();
         console.log("🎯 All migrations completed successfully!");
         
     } catch (err: any) {
