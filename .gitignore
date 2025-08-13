@@ -52,6 +52,8 @@ go.work
 agent/macagent.log
 agent/config/agent.conf
 agent/builds/
+agent/pkg-build/
+agent/mdm-agent
 
 # React/Vite specific
 # Vite
@@ -144,3 +146,5 @@ Thumbs.db
 # Docker
 docker-compose.yml
 nginx.conf
+
+test_dir/
