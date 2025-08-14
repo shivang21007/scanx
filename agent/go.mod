@@ -1,4 +1,4 @@
-module mdmagent
+module scanx
 
 go 1.21
 

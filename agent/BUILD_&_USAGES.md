@@ -1,4 +1,4 @@
-# 🚀 MDM Agent - Build & Usage Guide
+# 🚀 ScanX - Build & Usage Guide
 
 ## 📋 Table of Contents
 - [Overview](#overview)
@@ -12,7 +12,7 @@
 
 ## 🎯 Overview
 
-The MDM Agent is a cross-platform system monitoring and device management agent that collects system information and sends it to a central management server. It runs as a persistent daemon/service and automatically restarts with the system.
+The ScanX is a cross-platform system monitoring and device management agent that collects system information and sends it to a central management server. It runs as a persistent daemon/service and automatically restarts with the system.
 
 ### 🌟 Key Features
 - **Cross-platform**: macOS, Windows, Linux (x86_64, ARM64)
@@ -39,8 +39,8 @@ cd agent
 ### Install on Target System
 ```bash
 # Extract and install
-tar -xzf dist/packages/mdmagent-<platform>-<arch>-v1.0.0.tar.gz
-cd mdmagent-<platform>-<arch>-v1.0.0
+tar -xzf dist/packages/scanx-<platform>-<arch>-v1.0.0.tar.gz
+cd scanx-<platform>-<arch>-v1.0.0
 sudo ./install/install-<platform>.sh
 ```
 
@@ -95,10 +95,10 @@ dist/
 **RPM Installation Options:**
 ```bash
 # Install with default values
-sudo rpm -i mdmagent-1.0.0-1.el9.x86_64.rpm
+sudo rpm -i scanx-1.0.0-1.el9.x86_64.rpm
 
 # Install with custom email and interval
-MDM_EMAIL="user@company.com" MDM_INTERVAL="1h" sudo -E rpm -i mdmagent-1.0.0-1.el9.x86_64.rpm
+SCANX_EMAIL="user@company.com" SCANX_INTERVAL="1h" sudo -E rpm -i scanx-1.0.0-1.el9.x86_64.rpm
 ```
 
 **Building RPM on CentOS9:**
@@ -107,7 +107,7 @@ MDM_EMAIL="user@company.com" MDM_INTERVAL="1h" sudo -E rpm -i mdmagent-1.0.0-1.e
 /tmp/
 ├── dist/
 │   ├── builds/
-│   │   └── mdmagent-linux-amd64          # Linux binary
+│   │   └── scanx-linux-amd64          # Linux binary
 │   └── linux-packages/
 │       ├── deb/
 │       └── rpm/
@@ -116,7 +116,7 @@ MDM_EMAIL="user@company.com" MDM_INTERVAL="1h" sudo -E rpm -i mdmagent-1.0.0-1.e
 │   └── queries.yml                         # OSQuery queries
 ├── scripts/
 │   └── services/
-│       └── mdmagent.service               # Systemd service file
+│       └── scanx.service               # Systemd service file
 └── create-linux-packages.sh                # Build script
 
 # Transfer files to CentOS9:
@@ -164,8 +164,8 @@ cd /tmp && chmod +x create-linux-packages.sh
 ### Method 1: Distribution Packages
 ```bash
 # Extract package
-tar -xzf mdmagent-<platform>-<arch>-v1.0.0.tar.gz
-cd mdmagent-<platform>-<arch>-v1.0.0
+tar -xzf scanx-<platform>-<arch>-v1.0.0.tar.gz
+cd scanx-<platform>-<arch>-v1.0.0
 
 # Install
 sudo ./install/install-<platform>.sh
@@ -174,27 +174,27 @@ sudo ./install/install-<platform>.sh
 ### Method 2: Native Packages
 ```bash
 # macOS
-sudo installer -pkg MDMAgent-1.0.0.pkg -target /
+sudo installer -pkg scanx-1.0.0.pkg -target /
 
 # Ubuntu/Debian
-sudo dpkg -i mdmagent_1.0.0_amd64.deb
+sudo dpkg -i scanx_1.0.0_amd64.deb
 
 # CentOS/RHEL
-sudo rpm -i mdmagent-1.0.0-1.el9.x86_64.rpm
+sudo rpm -i scanx-1.0.0-1.el9.x86_64.rpm
 ```
 
 ### Method 3: Manual Installation
 ```bash
 # Copy files
-sudo cp mdmagent /usr/local/bin/
-sudo mkdir -p /etc/mdmagent/config
-sudo cp config/* /etc/mdmagent/config/
+sudo cp scanx /usr/local/bin/
+sudo mkdir -p /etc/scanx/config
+sudo cp config/* /etc/scanx/config/
 
 # Install service
-sudo cp services/mdmagent.service /etc/systemd/system/
+sudo cp services/scanx.service /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable mdmagent
-sudo systemctl start mdmagent
+sudo systemctl enable scanx
+sudo systemctl start scanx
 ```
 
 ## 🛠️ Service Management
@@ -202,54 +202,54 @@ sudo systemctl start mdmagent
 ### macOS (launchd)
 ```bash
 # Start service
-sudo launchctl load /Library/LaunchDaemons/com.company.mdmagent.plist
+sudo launchctl load /Library/LaunchDaemons/com.company.scanx.plist
 
 # Stop service
-sudo launchctl unload /Library/LaunchDaemons/com.company.mdmagent.plist
+sudo launchctl unload /Library/LaunchDaemons/com.company.scanx.plist
 
 # Check status
-sudo launchctl list | grep mdmagent
+sudo launchctl list | grep scanx
 
 # View logs
-tail -f /var/log/mdmagent.log
+tail -f /var/log/scanx.log
 ```
 
 ### Linux (systemd)
 ```bash
 # Start service
-sudo systemctl start mdmagent
+sudo systemctl start scanx
 
 # Stop service
-sudo systemctl stop mdmagent
+sudo systemctl stop scanx
 
 # Check status
-sudo systemctl status mdmagent
+sudo systemctl status scanx
 
 # View logs
-sudo journalctl -u mdmagent -f
+sudo journalctl -u scanx -f
 
 # Enable auto-start
-sudo systemctl enable mdmagent
+sudo systemctl enable scanx
 ```
 
 ### Windows (Windows Service)
 ```powershell
 # Start service
-sc start MDMAgent
+sc start scanx
 
 # Stop service
-sc stop MDMAgent
+sc stop scanx
 
 # Check status
-sc query MDMAgent
+sc query scanx
 
 # View logs
-Get-EventLog -LogName Application -Source MDMAgent
+Get-EventLog -LogName Application -Source scanx
 ```
 
 ## ⚙️ Configuration
 
-### Agent Configuration (`/etc/mdmagent/config/agent.conf`)
+### Agent Configuration (`/etc/scanx/config/agent.conf`)
 ```json
 {
     "user_email": "user@company.com",
@@ -259,7 +259,7 @@ Get-EventLog -LogName Application -Source MDMAgent
 }
 ```
 
-### Queries Configuration (`/etc/mdmagent/config/queries.yml`)
+### Queries Configuration (`/etc/scanx/config/queries.yml`)
 ```yaml
 platform:
   darwin:
@@ -283,7 +283,7 @@ platform:
 /tmp/
 ├── dist/
 │   ├── builds/
-│   │   └── mdmagent-linux-amd64          # Linux binary (required)
+│   │   └── scanx-linux-amd64          # Linux binary (required)
 │   └── linux-packages/
 │       ├── deb/                           # Created during build
 │       └── rpm/                           # Created during build
@@ -292,25 +292,25 @@ platform:
 │   └── queries.yml                         # OSQuery queries (required)
 ├── scripts/
 │   └── services/
-│       └── mdmagent.service               # Systemd service file (required)
+│       └── scanx.service               # Systemd service file (required)
 └── create-linux-packages.sh                # Build script (required)
 ```
 
 **Required Files for RPM Build:**
-- `dist/builds/mdmagent-linux-amd64` - Linux binary
+- `dist/builds/scanx-linux-amd64` - Linux binary
 - `config/agent.conf` - Agent configuration
 - `config/queries.yml` - OSQuery queries
-- `scripts/services/mdmagent.service` - Systemd service
+- `scripts/services/scanx.service` - Systemd service
 - `create-linux-packages.sh` - Build script
 
 ### File Locations
 | Component | macOS | Linux | Windows |
 |-----------|-------|-------|---------|
-| **Binary** | `/usr/local/bin/mdmagent` | `/usr/local/bin/mdmagent` | `C:\Program Files\MDMAgent\mdmagent.exe` |
-| **Config** | `/etc/mdmagent/config/` | `/etc/mdmagent/config/` | `C:\Program Files\MDMAgent\config\` |
-| **Logs** | `/var/log/mdmagent.log` | `/var/log/mdmagent/mdmagent-std.log` | `C:\Program Files\MDMAgent\logs\` |
-| **Data** | `/var/lib/mdmagent/` | `/var/lib/mdmagent/` | `C:\Program Files\MDMAgent\data\` |
-| **Service** | `/Library/LaunchDaemons/com.company.mdmagent.plist` | `/etc/systemd/system/mdmagent.service` | Windows Service |
+| **Binary** | `/usr/local/bin/scanx` | `/usr/local/bin/scanx` | `C:\Program Files\scanx\scanx.exe` |
+| **Config** | `/etc/scanx/config/` | `/etc/scanx/config/` | `C:\Program Files\scanx\config\` |
+| **Logs** | `/var/log/scanx.log` | `/var/log/scanx/scanx-std.log` | `C:\Program Files\scanx\logs\` |
+| **Data** | `/var/lib/scanx/` | `/var/lib/scanx/` | `C:\Program Files\scanx\data\` |
+| **Service** | `/Library/LaunchDaemons/com.company.scanx.plist` | `/etc/systemd/system/scanx.service` | Windows Service |
 
 ## 🔍 Troubleshooting
 
@@ -324,8 +324,8 @@ platform:
 ./scripts/macos-sign.sh
 
 # Option 2: Remove quarantine and sign
-xattr -rd com.apple.quarantine mdmagent
-codesign --force --deep --sign - mdmagent
+xattr -rd com.apple.quarantine scanx
+codesign --force --deep --sign - scanx
 ```
 
 #### 2. Service Won't Start
@@ -333,14 +333,14 @@ codesign --force --deep --sign - mdmagent
 **Solution**:
 ```bash
 # Check logs
-sudo journalctl -u mdmagent --no-pager -n 20
+sudo journalctl -u scanx --no-pager -n 20
 
 # Verify config
-sudo cat /etc/mdmagent/config/agent.conf
+sudo cat /etc/scanx/config/agent.conf
 
 # Check permissions
-ls -la /usr/local/bin/mdmagent
-ls -la /etc/mdmagent/config/
+ls -la /usr/local/bin/scanx
+ls -la /etc/scanx/config/
 ```
 
 #### 3. OSQuery Not Found
@@ -378,14 +378,14 @@ tree /tmp/
 # /tmp/
 # ├── dist/
 # │   ├── builds/
-# │   │   └── mdmagent-linux-amd64
+# │   │   └── scanx-linux-amd64
 # │   └── linux-packages/
 # ├── config/
 # │   ├── agent.conf
 # │   └── queries.yml
 # ├── scripts/
 # │   └── services/
-# │       └── mdmagent.service
+# │       └── scanx.service
 # └── create-linux-packages.sh
 
 # Build RPM:
@@ -397,29 +397,29 @@ cd /tmp && ./create-linux-packages.sh 2
 **Solution**:
 ```bash
 # Verify config directory structure
-ls -la /etc/mdmagent/config/
+ls -la /etc/scanx/config/
 
 # Should contain:
 # - agent.conf
 # - queries.yml
 
 # Check working directory in service file
-cat /etc/systemd/system/mdmagent.service | grep WorkingDirectory
+cat /etc/systemd/system/scanx.service | grep WorkingDirectory
 ```
 
 ### Debug Mode
 Run agent in debug mode for troubleshooting:
 ```bash
 # Stop service first
-sudo systemctl stop mdmagent
+sudo systemctl stop scanx
 
 # Run manually with debug
-sudo /usr/local/bin/mdmagent -daemon -debug
+sudo /usr/local/bin/scanx -daemon -debug
 ```
 
 ### Log Locations
-- **macOS**: `/var/log/mdmagent.log`
-- **Linux**: `/var/log/mdmagent/mdmagent-std.log` + `journalctl -u mdmagent`
+- **macOS**: `/var/log/scanx.log`
+- **Linux**: `/var/log/scanx/scanx-std.log` + `journalctl -u scanx`
 - **Windows**: Event Viewer → Windows Logs → Application
 
 ## 📚 Additional Resources

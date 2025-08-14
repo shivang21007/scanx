@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# Create Linux DEB and RPM packages for MDM Agent with actual package building
+# Create Linux DEB and RPM packages for scanx with actual package building
 
 set -e
 
 VERSION=$(cat config/agent.conf | grep -o '"version": "[^"]*"' | cut -d'"' -f4)
-PACKAGE_NAME="mdmagent"
+PACKAGE_NAME="scanx"
 BUILD_DIR="dist/linux-packages"
 DEB_DIR="$BUILD_DIR/deb"
 RPM_DIR="$BUILD_DIR/rpm"
@@ -56,22 +56,22 @@ create_package_structure() {
     local temp_dir="$BUILD_DIR/temp-$pkg_type"
     
     mkdir -p "$temp_dir/usr/local/bin"
-    mkdir -p "$temp_dir/etc/mdmagent/config"
-    mkdir -p "$temp_dir/var/log/mdmagent"
-    mkdir -p "$temp_dir/var/lib/mdmagent"
+    mkdir -p "$temp_dir/etc/scanx/config"
+    mkdir -p "$temp_dir/var/log/scanx"
+    mkdir -p "$temp_dir/var/lib/scanx"
     mkdir -p "$temp_dir/etc/systemd/system"
     
     # Copy files
-    cp "dist/builds/mdmagent-linux-amd64" "$temp_dir/usr/local/bin/mdmagent"
-    cp "config/"* "$temp_dir/etc/mdmagent/config/"
-    cp "scripts/services/mdmagent.service" "$temp_dir/etc/systemd/system/"
+    cp "dist/builds/scanx-linux-amd64" "$temp_dir/usr/local/bin/scanx"
+    cp "config/"* "$temp_dir/etc/scanx/config/"
+    cp "scripts/services/scanx.service" "$temp_dir/etc/systemd/system/"
     
     # Set permissions
-    chmod +x "$temp_dir/usr/local/bin/mdmagent"
-    chmod 644 "$temp_dir/etc/mdmagent/config/"*
-    chmod 644 "$temp_dir/etc/systemd/system/mdmagent.service"
-    chmod 755 "$temp_dir/var/log/mdmagent"
-    chmod 755 "$temp_dir/var/lib/mdmagent"
+    chmod +x "$temp_dir/usr/local/bin/scanx"
+    chmod 644 "$temp_dir/etc/scanx/config/"*
+    chmod 644 "$temp_dir/etc/systemd/system/scanx.service"
+    chmod 755 "$temp_dir/var/log/scanx"
+    chmod 755 "$temp_dir/var/lib/scanx"
     
     echo "$temp_dir"
 }
@@ -102,14 +102,14 @@ if ! command -v osqueryi &> /dev/null; then
         echo "  Visit: https://osquery.io/downloads/linux"
     fi
     echo ""
-    echo "Then reconfigure the package: sudo dpkg-reconfigure mdmagent"
+    echo "Then reconfigure the package: sudo dpkg-reconfigure scanx"
     exit 1
 fi
 
 # Configuration setup
-config_file="/etc/mdmagent/config/agent.conf"
+config_file="/etc/scanx/config/agent.conf"
 
-echo "📋 MDM Agent Configuration"
+echo "📋 scanx Configuration"
 echo "========================="
 
 # Get email from user
@@ -144,27 +144,27 @@ echo "   📧 Email: $user_email"
 echo "   ⏱️  Interval: $user_interval"
 
 # Create log file
-touch /var/log/mdmagent/mdmagent-std.log
-chmod 644 /var/log/mdmagent/mdmagent-std.log
+touch /var/log/scanx/scanx-std.log
+chmod 644 /var/log/scanx/scanx-std.log
 
 # Enable and start service
 systemctl daemon-reload
-systemctl enable mdmagent
-systemctl start mdmagent
+systemctl enable scanx
+systemctl start scanx
 
 echo ""
-echo "🎉 MDM Agent installed and started successfully!"
+echo "🎉 scanx installed and started successfully!"
 echo ""
 echo "📋 File locations:"
-echo "   Binary:  /usr/local/bin/mdmagent"
-echo "   Config:  /etc/mdmagent/config/"
-echo "   Logs:    /var/log/mdmagent/mdmagent-std.log"
-echo "   Data:    /var/lib/mdmagent/"
+echo "   Binary:  /usr/local/bin/scanx"
+echo "   Config:  /etc/scanx/config/"
+echo "   Logs:    /var/log/scanx/scanx-std.log"
+echo "   Data:    /var/lib/scanx/"
 echo ""
 echo "📋 Service commands:"
-echo "   Status:  systemctl status mdmagent"
-echo "   Logs:    journalctl -u mdmagent -f"
-echo "   Stop:    systemctl stop mdmagent"
+echo "   Status:  systemctl status scanx"
+echo "   Logs:    journalctl -u scanx -f"
+echo "   Stop:    systemctl stop scanx"
 
 exit 0
 EOF
@@ -178,8 +178,8 @@ create_preremove_script() {
 set -e
 
 # Stop and disable service
-systemctl stop mdmagent || true
-systemctl disable mdmagent || true
+systemctl stop scanx || true
+systemctl disable scanx || true
 
 exit 0
 EOF
@@ -202,7 +202,7 @@ Priority: optional
 Architecture: amd64
 Depends: systemd
 Maintainer: Your Company <admin@company.com>
-Description: MDM Agent - System Monitoring and Device Management
+Description: scanx - System Monitoring and Device Management
  A cross-platform agent for system monitoring and device management.
  Collects system information and sends it to a central management server.
 EOF
@@ -234,11 +234,11 @@ create_rpm_package() {
 Name:           $PACKAGE_NAME
 Version:        $VERSION
 Release:        1%{?dist}
-Summary:        MDM Agent - System Monitoring and Device Management
+Summary:        scanx - System Monitoring and Device Management
 
 %global debug_package %{nil}
 License:        Proprietary
-URL:            https://github.com/your-company/mdmagent
+URL:            https://github.com/your-company/scanx
 Source0:        %{name}-%{version}.tar.gz
 
 Requires:       systemd
@@ -257,21 +257,21 @@ Collects system information and sends it to a central management server.
 %install
 rm -rf \$RPM_BUILD_ROOT
 mkdir -p \$RPM_BUILD_ROOT/usr/local/bin
-mkdir -p \$RPM_BUILD_ROOT/etc/mdmagent/config
-mkdir -p \$RPM_BUILD_ROOT/var/log/mdmagent
-mkdir -p \$RPM_BUILD_ROOT/var/lib/mdmagent
+mkdir -p \$RPM_BUILD_ROOT/etc/scanx/config
+mkdir -p \$RPM_BUILD_ROOT/var/log/scanx
+mkdir -p \$RPM_BUILD_ROOT/var/lib/scanx
 mkdir -p \$RPM_BUILD_ROOT/etc/systemd/system
 
-install -m 755 mdmagent \$RPM_BUILD_ROOT/usr/local/bin/
-install -m 644 config/* \$RPM_BUILD_ROOT/etc/mdmagent/config/
-install -m 644 mdmagent.service \$RPM_BUILD_ROOT/etc/systemd/system/
+install -m 755 scanx \$RPM_BUILD_ROOT/usr/local/bin/
+install -m 644 config/* \$RPM_BUILD_ROOT/etc/scanx/config/
+install -m 644 scanx.service \$RPM_BUILD_ROOT/etc/systemd/system/
 
 %files
-/usr/local/bin/mdmagent
-/etc/mdmagent/config/*
-/etc/systemd/system/mdmagent.service
-%dir /var/log/mdmagent
-%dir /var/lib/mdmagent
+/usr/local/bin/scanx
+/etc/scanx/config/*
+/etc/systemd/system/scanx.service
+%dir /var/log/scanx
+%dir /var/lib/scanx
 
 %post
 # Check if osquery is installed first
@@ -289,23 +289,23 @@ if ! command -v osqueryi &> /dev/null; then
 fi
 
 # Configuration setup
-config_file="/etc/mdmagent/config/agent.conf"
+config_file="/etc/scanx/config/agent.conf"
 
-echo "📋 MDM Agent Configuration"
+echo "📋 scanx Configuration"
 echo "========================="
 
 # 2-Level Fallback for Email: Environment Variable -> Default
 echo "📧 Email Configuration (2-level fallback):"
-echo "   1. Environment variable MDM_EMAIL (if set)"
+echo "   1. Environment variable SCANX_EMAIL (if set)"
 echo "   2. Default: {ip}@{os_name}.com"
 
 # Generate default email based on system info
 ip=\$(hostname -I | awk '{print \$1}' | head -1 || echo "unknown")
 os_name=\$(grep -o '^[A-Za-z]*' /etc/os-release 2>/dev/null | head -1 || echo "linux")
 
-if [[ -n "\$MDM_EMAIL" ]]; then
+if [[ -n "\$SCANX_EMAIL" ]]; then
     # Level 1: Environment variable
-    user_email="\$MDM_EMAIL"
+    user_email="\$SCANX_EMAIL"
     echo "✅ Using environment variable: \$user_email"
 else
     # Level 2: Default value
@@ -323,34 +323,34 @@ echo "   📧 Email: \$user_email"
 echo "   ⏱️  Interval: \$user_interval"
 
 # Create log file
-touch /var/log/mdmagent/mdmagent-std.log
-chmod 644 /var/log/mdmagent/mdmagent-std.log
+touch /var/log/scanx/scanx-std.log
+chmod 644 /var/log/scanx/scanx-std.log
 
 # Enable and start service
-%systemd_post mdmagent.service
+%systemd_post scanx.service
 systemctl daemon-reload
-systemctl enable mdmagent
-systemctl start mdmagent
+systemctl enable scanx
+systemctl start scanx
 
 echo ""
-echo "🎉 MDM Agent installed and started successfully!"
+echo "🎉 scanx installed and started successfully!"
 echo ""
 echo "📋 File locations:"
-echo "   Binary:  /usr/local/bin/mdmagent"
-echo "   Config:  /etc/mdmagent/config/"
-echo "   Logs:    /var/log/mdmagent/mdmagent-std.log"
-echo "   Data:    /var/lib/mdmagent/"
+echo "   Binary:  /usr/local/bin/scanx"
+echo "   Config:  /etc/scanx/config/"
+echo "   Logs:    /var/log/scanx/scanx-std.log"
+echo "   Data:    /var/lib/scanx/"
 echo ""
 echo "📋 Service commands:"
-echo "   Status:  systemctl status mdmagent"
-echo "   Logs:    journalctl -u mdmagent -f"
-echo "   Stop:    systemctl stop mdmagent"
+echo "   Status:  systemctl status scanx"
+echo "   Logs:    journalctl -u scanx -f"
+echo "   Stop:    systemctl stop scanx"
 
 %preun
-%systemd_preun mdmagent.service
+%systemd_preun scanx.service
 
 %postun
-%systemd_postun_with_restart mdmagent.service
+%systemd_postun_with_restart scanx.service
 
 %changelog
 * $(date '+%a %b %d %Y') Your Name <admin@company.com> - $VERSION-1
@@ -368,16 +368,16 @@ echo "🔴 Building RPM Package on CentOS/RHEL"
 echo "======================================"
 
 # Check if files exist
-if [[ ! -f "mdmagent" ]] || [[ ! -d "config" ]] || [[ ! -f "mdmagent.service" ]]; then
+if [[ ! -f "scanx" ]] || [[ ! -d "config" ]] || [[ ! -f "scanx.service" ]]; then
     echo "❌ Required files not found. Please ensure you have:"
-    echo "   - mdmagent (binary)"
+    echo "   - scanx (binary)"
     echo "   - config/ (directory with agent.conf and queries.yml)"
-    echo "   - mdmagent.service (systemd service file)"
+    echo "   - scanx.service (systemd service file)"
     exit 1
 fi
 
 VERSION=$(cat config/agent.conf | grep -o '"version": "[^"]*"' | cut -d'"' -f4)
-PACKAGE_NAME="mdmagent"
+PACKAGE_NAME="scanx"
 
 # Setup RPM build environment
 if command -v rpmdev-setuptree &> /dev/null; then
@@ -388,9 +388,9 @@ fi
 
 # Create source directory and tarball
 mkdir -p ${PACKAGE_NAME}-${VERSION}
-cp mdmagent ${PACKAGE_NAME}-${VERSION}/
+cp scanx ${PACKAGE_NAME}-${VERSION}/
 cp -r config ${PACKAGE_NAME}-${VERSION}/
-cp mdmagent.service ${PACKAGE_NAME}-${VERSION}/
+cp scanx.service ${PACKAGE_NAME}-${VERSION}/
 
 tar -czf ~/rpmbuild/SOURCES/${PACKAGE_NAME}-${VERSION}.tar.gz ${PACKAGE_NAME}-${VERSION}
 rm -rf ${PACKAGE_NAME}-${VERSION}
@@ -416,9 +416,9 @@ EOF
         echo "📋 To build RPM on CentOS/RHEL:"
         echo "   1. Copy files to CentOS/RHEL system:"
         echo "      scp -r $RPM_DIR/* user@centos-server:/tmp/"
-        echo "      scp dist/builds/mdmagent-linux-amd64 user@centos-server:/tmp/mdmagent"
+        echo "      scp dist/builds/scanx-linux-amd64 user@centos-server:/tmp/scanx"
         echo "      scp -r config user@centos-server:/tmp/"
-        echo "      scp scripts/services/mdmagent.service user@centos-server:/tmp/"
+        echo "      scp scripts/services/scanx.service user@centos-server:/tmp/"
         echo "   2. On CentOS/RHEL system:"
         echo "      cd /tmp && ./build-rpm.sh"
         
@@ -434,9 +434,9 @@ EOF
         rm -rf "$SOURCE_DIR"
         mkdir -p "$SOURCE_DIR"
         
-        cp "dist/builds/mdmagent-linux-amd64" "$SOURCE_DIR/mdmagent"
+        cp "dist/builds/scanx-linux-amd64" "$SOURCE_DIR/scanx"
         cp -r config "$SOURCE_DIR/"
-        cp "scripts/services/mdmagent.service" "$SOURCE_DIR/"
+        cp "scripts/services/scanx.service" "$SOURCE_DIR/"
         
         cd /tmp
         tar -czf "$BUILD_ROOT/SOURCES/${PACKAGE_NAME}-${VERSION}.tar.gz" "${PACKAGE_NAME}-${VERSION}"
@@ -448,11 +448,11 @@ EOF
 Name:           $PACKAGE_NAME
 Version:        $VERSION
 Release:        1%{?dist}
-Summary:        MDM Agent - System Monitoring and Device Management
+Summary:        scanx - System Monitoring and Device Management
 
 %global debug_package %{nil}
 License:        Proprietary
-URL:            https://github.com/your-company/mdmagent
+URL:            https://github.com/your-company/scanx
 Source0:        %{name}-%{version}.tar.gz
 
 Requires:       systemd
@@ -471,41 +471,41 @@ Collects system information and sends it to a central management server.
 %install
 rm -rf \$RPM_BUILD_ROOT
 mkdir -p \$RPM_BUILD_ROOT/usr/local/bin
-mkdir -p \$RPM_BUILD_ROOT/etc/mdmagent/config
-mkdir -p \$RPM_BUILD_ROOT/var/log/mdmagent
-mkdir -p \$RPM_BUILD_ROOT/var/lib/mdmagent
+mkdir -p \$RPM_BUILD_ROOT/etc/scanx/config
+mkdir -p \$RPM_BUILD_ROOT/var/log/scanx
+mkdir -p \$RPM_BUILD_ROOT/var/lib/scanx
 mkdir -p \$RPM_BUILD_ROOT/etc/systemd/system
 
-install -m 755 mdmagent \$RPM_BUILD_ROOT/usr/local/bin/
-install -m 644 config/* \$RPM_BUILD_ROOT/etc/mdmagent/config/
-install -m 644 mdmagent.service \$RPM_BUILD_ROOT/etc/systemd/system/
+install -m 755 scanx \$RPM_BUILD_ROOT/usr/local/bin/
+install -m 644 config/* \$RPM_BUILD_ROOT/etc/scanx/config/
+install -m 644 scanx.service \$RPM_BUILD_ROOT/etc/systemd/system/
 
 %files
-/usr/local/bin/mdmagent
-/etc/mdmagent/config/*
-/etc/systemd/system/mdmagent.service
-%dir /var/log/mdmagent
-%dir /var/lib/mdmagent
+/usr/local/bin/scanx
+/etc/scanx/config/*
+/etc/systemd/system/scanx.service
+%dir /var/log/scanx
+%dir /var/lib/scanx
 
 %post
 # Configuration setup
-config_file="/etc/mdmagent/config/agent.conf"
+config_file="/etc/scanx/config/agent.conf"
 
-echo "📋 MDM Agent Configuration"
+echo "📋 scanx Configuration"
 echo "========================="
 
 # 2-Level Fallback for Email: Environment Variable -> Default
 echo "📧 Email Configuration (2-level fallback):"
-echo "   1. Environment variable MDM_EMAIL (if set)"
+echo "   1. Environment variable SCANX_EMAIL (if set)"
 echo "   2. Default: {ip}@{os_name}.com"
 
 # Generate default email based on system info
 ip=\$(hostname -I | awk '{print \$1}' | head -1 || echo "unknown")
 os_name=\$(grep -o '^[A-Za-z]*' /etc/os-release 2>/dev/null | head -1 || echo "linux")
 
-if [[ -n "\$MDM_EMAIL" ]]; then
+if [[ -n "\$SCANX_EMAIL" ]]; then
     # Level 1: Environment variable
-    user_email="\$MDM_EMAIL"
+    user_email="\$SCANX_EMAIL"
     echo "✅ Using environment variable: \$user_email"
 else
     # Level 2: Default value
@@ -516,12 +516,12 @@ fi
 # 2-Level Fallback for Interval: Environment Variable -> Default
 echo ""
 echo "⏱️  Interval Configuration (2-level fallback):"
-echo "   1. Environment variable MDM_INTERVAL (if set)"
+echo "   1. Environment variable SCANX_INTERVAL (if set)"
 echo "   2. Default: 2h"
 
-if [[ -n "\$MDM_INTERVAL" ]]; then
+if [[ -n "\$SCANX_INTERVAL" ]]; then
     # Level 1: Environment variable
-    user_interval="\$MDM_INTERVAL"
+    user_interval="\$SCANX_INTERVAL"
     echo "✅ Using environment variable: \$user_interval"
 else
     # Level 2: Default value
@@ -539,34 +539,34 @@ echo "   📧 Email: \$user_email"
 echo "   ⏱️  Interval: \$user_interval"
 
 # Create log file
-touch /var/log/mdmagent/mdmagent-std.log
-chmod 644 /var/log/mdmagent/mdmagent-std.log
+touch /var/log/scanx/scanx-std.log
+chmod 644 /var/log/scanx/scanx-std.log
 
 # Enable and start service
-%systemd_post mdmagent.service
+%systemd_post scanx.service
 systemctl daemon-reload
-systemctl enable mdmagent
-systemctl start mdmagent
+systemctl enable scanx
+systemctl start scanx
 
 echo ""
-echo "🎉 MDM Agent installed and started successfully!"
+echo "🎉 scanx installed and started successfully!"
 echo ""
 echo "📋 File locations:"
-echo "   Binary:  /usr/local/bin/mdmagent"
-echo "   Config:  /etc/mdmagent/config/"
-echo "   Logs:    /var/log/mdmagent/mdmagent-std.log"
-echo "   Data:    /var/lib/mdmagent/"
+echo "   Binary:  /usr/local/bin/scanx"
+echo "   Config:  /etc/scanx/config/"
+echo "   Logs:    /var/log/scanx/scanx-std.log"
+echo "   Data:    /var/lib/scanx/"
 echo ""
 echo "📋 Service commands:"
-echo "   Status:  systemctl status mdmagent"
-echo "   Logs:    journalctl -u mdmagent -f"
-echo "   Stop:    systemctl stop mdmagent"
+echo "   Status:  systemctl status scanx"
+echo "   Logs:    journalctl -u scanx -f"
+echo "   Stop:    systemctl stop scanx"
 
 %preun
-%systemd_preun mdmagent.service
+%systemd_preun scanx.service
 
 %postun
-%systemd_postun_with_restart mdmagent.service
+%systemd_postun_with_restart scanx.service
 
 %changelog
 * $(date '+%a %b %d %Y') Your Name <admin@company.com> - $VERSION-1
@@ -633,5 +633,5 @@ echo "🎉 Linux packages ready!"
 echo "📁 Location: $BUILD_DIR/"
 echo ""
 echo "📋 Installation commands:"
-echo "   DEB: sudo dpkg -i $DEB_DIR/mdmagent_${VERSION}_amd64.deb"
-echo "   RPM: sudo rpm -ivh $RPM_DIR/mdmagent-${VERSION}-1.x86_64.rpm"
+echo "   DEB: sudo dpkg -i $DEB_DIR/scanx_${VERSION}_amd64.deb"
+echo "   RPM: sudo rpm -ivh $RPM_DIR/scanx-${VERSION}-1.x86_64.rpm"

@@ -9,11 +9,11 @@ import (
 	"runtime"
 	"syscall"
 
-	"mdmagent/internal/collector"
-	"mdmagent/internal/config"
-	"mdmagent/internal/scheduler"
-	"mdmagent/internal/sender"
-	"mdmagent/internal/utils"
+	"scanx/internal/collector"
+	"scanx/internal/config"
+	"scanx/internal/scheduler"
+	"scanx/internal/sender"
+	"scanx/internal/utils"
 )
 
 func main() {
@@ -61,7 +61,7 @@ func main() {
 	if *configPath != "" {
 		cfg, err = config.LoadConfigFromPath(*configPath)
 	} else {
-		cfg, err = config.LoadConfig()
+		cfg, err = config.LoadConfigwithFallback()
 	}
 
 	if err != nil {
@@ -197,7 +197,7 @@ func runDaemon(cfg *config.Config, collector *collector.Collector) {
 
 // installAgent handles the installation process
 func installAgent(email string) error {
-	fmt.Println("Installing MDM Agent...")
+	fmt.Println("Installing ScanX...")
 
 	// Check if osquery is installed
 	runner := &collector.OSQueryRunner{}
@@ -235,7 +235,7 @@ func installAgent(email string) error {
 	// TODO: Set appropriate permissions
 
 	fmt.Println("Configuration files generated at current location")
-	fmt.Println("Note: In production, these should be at system paths like /etc/mdmagent/")
+	fmt.Println("Note: In production, these should be at system paths like /etc/scanx/")
 
 	return nil
 }

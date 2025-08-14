@@ -5,8 +5,8 @@ import (
 	"runtime"
 	"strings"
 
-	"mdmagent/internal/config"
-	"mdmagent/internal/utils"
+	"scanx/internal/config"
+	"scanx/internal/utils"
 )
 
 // SystemInfo represents system metadata
@@ -75,7 +75,7 @@ func (c *Collector) extractSystemInfo() error {
 	}
 
 	// Execute system_info query
-	results, err := c.runner.ExecuteQuery(systemInfoQuery.Query)
+	results, err := c.runner.ExecuteQuery("system_info", systemInfoQuery.Query)
 	if err != nil {
 		return fmt.Errorf("failed to execute system_info query: %w", err)
 	}
@@ -142,14 +142,31 @@ func (c *Collector) CollectData() (*CollectedData, error) {
 	// Initialize data map
 	data := make(map[string][]map[string]interface{})
 
-	// Execute each query
 	for queryName, queryConfig := range queries {
-		results, err := c.runner.ExecuteQuery(queryConfig.Query)
+		results, err := c.runner.ExecuteQuery(queryName, queryConfig.Query)
 		if err != nil {
 			// Log error but continue with other queries
 			fmt.Printf("Warning: Failed to execute query '%s': %v\n", queryName, err)
 			// Set empty result for failed queries
-			data[queryName] = []map[string]interface{}{}
+			data[queryName] = []map[string]interface{}{
+				{
+					"status": "failed to execute query",
+				},
+			}
+			continue
+		}
+
+		if queryName == "screen_lock_info" {
+			utils.Info("🔍 Results of query '%s': %v", queryName, results)
+			fmt.Printf("🔍 Results of query '%s': %v\n", queryName, results)
+		}
+
+		if len(results) == 0 {
+			data[queryName] = []map[string]interface{}{
+				{
+					"status": fmt.Sprintf("no_data_found for %s", queryName),
+				},
+			}
 			continue
 		}
 

@@ -1,4 +1,4 @@
-# Windows Installation Script for MDM Agent
+# Windows Installation Script for scanx
 # Interactive: powershell -ExecutionPolicy Bypass -File install-windows.ps1
 # Silent:      powershell -ExecutionPolicy Bypass -File install-windows.ps1 -Email "user@company.com" -Interval "10m"
 
@@ -20,13 +20,13 @@ if ($Help) {
 
 $ErrorActionPreference = "Stop"
 
-$AGENT_NAME = "mdmagent.exe"
-$INSTALL_DIR = "C:\Program Files\MDMAgent"
+$AGENT_NAME = "scanx.exe"
+$INSTALL_DIR = "C:\Program Files\scanx"
 $CONFIG_DIR = "$INSTALL_DIR\config"
 $LOG_DIR = "$INSTALL_DIR\logs"
-$SERVICE_NAME = "MDMAgent"
+$SERVICE_NAME = "scanx"
 
-Write-Host "🪟 Installing MDM Agent on Windows..." -ForegroundColor Green
+Write-Host "🪟 Installing scanx on Windows..." -ForegroundColor Green
 
 # Check if running as Administrator
 if (-NOT ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
@@ -55,7 +55,7 @@ if (-not (Test-OSQuery)) {
 try {
     $service = Get-Service -Name $SERVICE_NAME -ErrorAction SilentlyContinue
     if ($service) {
-        Write-Host "🔄 Stopping existing MDM Agent service..." -ForegroundColor Yellow
+        Write-Host "🔄 Stopping existing scanx service..." -ForegroundColor Yellow
         Stop-Service -Name $SERVICE_NAME -Force -ErrorAction SilentlyContinue
         
         # Uninstall existing service
@@ -132,7 +132,7 @@ Write-Host "   ⏱️  Interval: $user_interval" -ForegroundColor White
 # Create the service using sc.exe
 Write-Host "🔧 Installing Windows service..." -ForegroundColor Blue
 $binaryPath = "`"$INSTALL_DIR\$AGENT_NAME`" -daemon"
-$scResult = & sc.exe create $SERVICE_NAME binPath= $binaryPath start= auto DisplayName= "MDM Agent"
+$scResult = & sc.exe create $SERVICE_NAME binPath= $binaryPath start= auto DisplayName= "scanx"
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "❌ Failed to create service. Error: $scResult" -ForegroundColor Red
@@ -140,7 +140,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 # Configure service description
-& sc.exe description $SERVICE_NAME "MDM Agent - System Monitoring and Device Management Service"
+& sc.exe description $SERVICE_NAME "scanx - System Monitoring and Device Management Service"
 
 # Configure service recovery options (restart on failure)
 & sc.exe failure $SERVICE_NAME reset= 86400 actions= restart/10000/restart/20000/restart/30000
@@ -149,11 +149,11 @@ if ($LASTEXITCODE -ne 0) {
 & sc.exe config $SERVICE_NAME start= auto
 
 # Start the service
-Write-Host "🚀 Starting MDM Agent service..." -ForegroundColor Green
+Write-Host "🚀 Starting scanx service..." -ForegroundColor Green
 $startResult = & sc.exe start $SERVICE_NAME
 
 if ($LASTEXITCODE -eq 0) {
-    Write-Host "✅ MDM Agent service started successfully!" -ForegroundColor Green
+    Write-Host "✅ scanx service started successfully!" -ForegroundColor Green
 } else {
     Write-Host "⚠️  Service may not have started. Check status with: sc query $SERVICE_NAME" -ForegroundColor Yellow
 }
@@ -165,7 +165,7 @@ Write-Host "📋 Service Management Commands:" -ForegroundColor Cyan
 Write-Host "   Start:   sc start $SERVICE_NAME" -ForegroundColor White
 Write-Host "   Stop:    sc stop $SERVICE_NAME" -ForegroundColor White
 Write-Host "   Status:  sc query $SERVICE_NAME" -ForegroundColor White
-Write-Host "   Logs:    Get-Content `"$LOG_DIR\mdmagent.log`" -Tail 50 -Wait" -ForegroundColor White
+Write-Host "   Logs:    Get-Content `"$LOG_DIR\scanx.log`" -Tail 50 -Wait" -ForegroundColor White
 Write-Host ""
 Write-Host "📁 Configuration: $CONFIG_DIR" -ForegroundColor Cyan
 Write-Host "📁 Binary: $INSTALL_DIR\$AGENT_NAME" -ForegroundColor Cyan
@@ -175,8 +175,8 @@ Write-Host "ℹ️  The agent will now run automatically on system startup" -For
 
 # Create uninstall script
 $uninstallScript = @"
-# Uninstall MDM Agent
-Write-Host "🗑️  Uninstalling MDM Agent..." -ForegroundColor Yellow
+# Uninstall scanx
+Write-Host "🗑️  Uninstalling scanx..." -ForegroundColor Yellow
 
 # Stop and remove service
 try {
@@ -193,7 +193,7 @@ if (Test-Path "$INSTALL_DIR") {
     Write-Host "✅ Files removed" -ForegroundColor Green
 }
 
-Write-Host "🎉 MDM Agent uninstalled successfully!" -ForegroundColor Green
+Write-Host "🎉 scanx uninstalled successfully!" -ForegroundColor Green
 "@
 
 $uninstallScript | Out-File -FilePath "$INSTALL_DIR\uninstall.ps1" -Encoding UTF8

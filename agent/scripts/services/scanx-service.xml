@@ -2,13 +2,13 @@
 <!-- Windows Service Configuration Template -->
 <!-- This file is used by the installation script to create the Windows service -->
 <service>
-    <id>MDMAgent</id>
-    <name>MDM Agent</name>
-    <description>MDM Agent - System Monitoring and Device Management Service</description>
-    <executable>C:\Program Files\MDMAgent\mdmagent.exe</executable>
+    <id>scanx</id>
+    <name>scanx</name>
+    <description>scanx - System Monitoring and Device Management Service</description>
+    <executable>C:\Program Files\scanx\scanx.exe</executable>
     <arguments>-daemon</arguments>
-    <workingdirectory>C:\Program Files\MDMAgent</workingdirectory>
-    <logpath>C:\Program Files\MDMAgent\logs</logpath>
+    <workingdirectory>C:\Program Files\scanx</workingdirectory>
+    <logpath>C:\Program Files\scanx\logs</logpath>
     <log mode="roll-by-size">
         <sizeThreshold>10240</sizeThreshold>
         <keepFiles>8</keepFiles>

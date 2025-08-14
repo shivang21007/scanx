@@ -3,22 +3,24 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.company.mdmagent</string>
+    <string>com.company.scanx</string>
     
     <key>ProgramArguments</key>
     <array>
-        <string>/usr/local/bin/mdmagent</string>
+        <string>/usr/local/bin/scanx</string>
         <string>-daemon</string>
+        <string>-config</string>
+        <string>/etc/scanx/config/</string>
     </array>
     
     <key>WorkingDirectory</key>
-    <string>/etc/mdmagent</string>
+    <string>/etc/scanx/</string>
     
     <key>StandardOutPath</key>
-    <string>/var/log/mdmagent/mdmagent-std.log</string>
+    <string>/var/log/scanx/scanx-std.log</string>
     
     <key>StandardErrorPath</key>
-    <string>/var/log/mdmagent/mdmagent-error.log</string>
+    <string>/var/log/scanx/scanx-error.log</string>
     
     <key>RunAtLoad</key>
     <true/>

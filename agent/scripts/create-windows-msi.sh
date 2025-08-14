@@ -1,14 +1,14 @@
 #!/bin/bash
 
-# Create Windows MSI Installer for MDM Agent
+# Create Windows MSI Installer for scanx
 # Requires: WiX Toolset or wine + WiX on macOS/Linux
 
 set -e
 
 VERSION=$(cat config/agent.conf | grep -o '"version": "[^"]*"' | cut -d'"' -f4)
-MSI_NAME="MDMAgent-${VERSION}"
+MSI_NAME="scanx-${VERSION}"
 BUILD_DIR="dist/msi-build"
-WXS_FILE="$BUILD_DIR/mdmagent.wxs"
+WXS_FILE="$BUILD_DIR/scanx.wxs"
 
 echo "🪟 Creating Windows MSI Installer"
 echo "================================"
@@ -33,7 +33,7 @@ cat > "$WXS_FILE" << EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
   <Product Id="*" 
-           Name="MDM Agent" 
+           Name="scanx" 
            Language="1033" 
            Version="$VERSION" 
            Manufacturer="Your Company" 
@@ -42,13 +42,13 @@ cat > "$WXS_FILE" << EOF
     <Package InstallerVersion="200" 
              Compressed="yes" 
              InstallScope="perMachine"
-             Description="MDM Agent - System Monitoring and Device Management" />
+             Description="scanx - System Monitoring and Device Management" />
 
     <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
     <MediaTemplate EmbedCab="yes" />
 
     <!-- Features -->
-    <Feature Id="ProductFeature" Title="MDM Agent" Level="1">
+    <Feature Id="ProductFeature" Title="scanx" Level="1">
       <ComponentGroupRef Id="ProductComponents" />
       <ComponentRef Id="ServiceComponent" />
     </Feature>
@@ -56,20 +56,20 @@ cat > "$WXS_FILE" << EOF
     <!-- Directory Structure -->
     <Directory Id="TARGETDIR" Name="SourceDir">
       <Directory Id="ProgramFilesFolder">
-        <Directory Id="INSTALLFOLDER" Name="MDMAgent">
+        <Directory Id="INSTALLFOLDER" Name="scanx">
           <Directory Id="ConfigFolder" Name="config" />
           <Directory Id="LogsFolder" Name="logs" />
         </Directory>
       </Directory>
       <Directory Id="CommonAppDataFolder">
-        <Directory Id="CompanyDataFolder" Name="MDMAgent" />
+        <Directory Id="CompanyDataFolder" Name="scanx" />
       </Directory>
     </Directory>
 
     <!-- Components -->
     <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
       <Component Id="MainExecutable" Guid="11111111-1111-1111-1111-111111111111">
-        <File Id="mdm_agent.exe" Source="dist/builds/mdmagent-windows-amd64.exe" KeyPath="yes" />
+        <File Id="scanx.exe" Source="dist/builds/scanx-windows-amd64.exe" KeyPath="yes" />
       </Component>
       
       <Component Id="ConfigFiles" Guid="22222222-2222-2222-2222-222222222222" Directory="ConfigFolder">
@@ -80,11 +80,11 @@ cat > "$WXS_FILE" << EOF
 
     <!-- Service Component -->
     <Component Id="ServiceComponent" Directory="INSTALLFOLDER" Guid="33333333-3333-3333-3333-333333333333">
-      <ServiceInstall Id="MDMAgentService"
+      <ServiceInstall Id="scanxService"
                       Type="ownProcess"
-                      Name="MDMAgent"
-                      DisplayName="MDM Agent"
-                      Description="MDM Agent - System Monitoring and Device Management"
+                      Name="scanx"
+                      DisplayName="scanx"
+                      Description="scanx - System Monitoring and Device Management"
                       Start="auto"
                       Account="LocalSystem"
                       ErrorControl="ignore"
@@ -97,7 +97,7 @@ cat > "$WXS_FILE" << EOF
                       Start="install" 
                       Stop="both" 
                       Remove="uninstall" 
-                      Name="MDMAgent" 
+                      Name="scanx" 
                       Wait="yes" />
     </Component>
 
@@ -129,7 +129,7 @@ cat > "$BUILD_DIR/config-dialog.wxs" << 'EOF'
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
   <Fragment>
     <UI>
-      <Dialog Id="ConfigDialog" Width="370" Height="270" Title="MDM Agent Configuration">
+      <Dialog Id="ConfigDialog" Width="370" Height="270" Title="scanx Configuration">
         <Control Id="EmailLabel" Type="Text" X="20" Y="60" Width="100" Height="17" Text="Email Address:" />
         <Control Id="EmailEdit" Type="Edit" X="20" Y="80" Width="200" Height="17" Property="USER_EMAIL" />
         
@@ -165,7 +165,7 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
 $form = New-Object System.Windows.Forms.Form
-$form.Text = "MDM Agent Configuration"
+$form.Text = "scanx Configuration"
 $form.Size = New-Object System.Drawing.Size(400, 250)
 $form.StartPosition = "CenterScreen"
 
@@ -199,13 +199,13 @@ $okButton.Location = New-Object System.Drawing.Point(200, 160)
 $okButton.Size = New-Object System.Drawing.Size(75, 25)
 $okButton.Add_Click({
     if ($emailTextBox.Text -match "@") {
-        $configFile = "C:\Program Files\MDMAgent\config\agent.conf"
+        $configFile = "C:\Program Files\scanx\config\agent.conf"
         $config = Get-Content $configFile -Raw
         $config = $config -replace '"user_email": "[^"]*"', "`"user_email`": `"$($emailTextBox.Text)`""
         $config = $config -replace '"interval": "[^"]*"', "`"interval`": `"$($intervalComboBox.SelectedItem)`""
         $config | Set-Content $configFile
         
-        [System.Windows.Forms.MessageBox]::Show("Configuration saved successfully!", "MDM Agent", "OK", "Information")
+        [System.Windows.Forms.MessageBox]::Show("Configuration saved successfully!", "scanx", "OK", "Information")
         $form.Close()
     } else {
         [System.Windows.Forms.MessageBox]::Show("Please enter a valid email address.", "Error", "OK", "Error")
@@ -226,17 +226,17 @@ EOF
 # Create build script
 cat > "$BUILD_DIR/build-msi.bat" << 'EOF'
 @echo off
-echo Building MDM Agent MSI...
+echo Building scanx MSI...
 
 REM Compile WiX sources
-candle mdmagent.wxs config-dialog.wxs
+candle scanx.wxs config-dialog.wxs
 if %ERRORLEVEL% neq 0 goto error
 
 REM Link to create MSI
-light -ext WixUIExtension mdmagent.wixobj config-dialog.wixobj -o MDMAgent.msi
+light -ext WixUIExtension scanx.wixobj config-dialog.wixobj -o scanx.msi
 if %ERRORLEVEL% neq 0 goto error
 
-echo MSI created successfully: MDMAgent.msi
+echo MSI created successfully: scanx.msi
 goto end
 
 :error
@@ -254,7 +254,7 @@ echo "2. Copy $BUILD_DIR/ to Windows machine"
 echo "3. Run: cd $BUILD_DIR && build-msi.bat"
 echo ""
 echo "📋 Files created:"
-echo "   - mdmagent.wxs (main installer definition)"
+echo "   - scanx.wxs (main installer definition)"
 echo "   - config-dialog.wxs (configuration UI)"
 echo "   - configure-agent.ps1 (PowerShell config script)"
 echo "   - build-msi.bat (build script)"

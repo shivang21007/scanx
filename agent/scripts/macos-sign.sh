@@ -1,19 +1,19 @@
 #!/bin/bash
 
-# macOS Code Signing Script for MDM Agent
+# macOS Code Signing Script for scanx
 # This script signs the macOS binary for seamless installation
 
 set -e
 
 # Configuration
-BINARY_PATH="dist/builds/mdmagent-darwin-amd64"
+BINARY_PATH="dist/builds/scanx-darwin-amd64"
 DEVELOPER_ID="${1:-}"
 ENTITLEMENTS_FILE="scripts/entitlements.plist"
 VERSION=$(cat config/agent.conf | grep -o '"version": "[^"]*"' | cut -d'"' -f4)
-PKG_NAME="MDMAgent-${VERSION}"
+PKG_NAME="scanx-${VERSION}"
 BUILD_DIR="dist/macos-build"
 
-echo "🍎 macOS Code Signing for MDM Agent"
+echo "🍎 macOS Code Signing for scanx"
 echo "=================================="
 
 # Check if binary exists

@@ -1,6 +1,6 @@
 [Unit]
-Description=MDM Agent - System Monitoring and Device Management
-Documentation=https://github.com/company/mdmagent
+Description=scanx - System Monitoring and Device Management
+Documentation=https://github.com/company/scanx
 After=network.target
 Wants=network.target
 
@@ -8,8 +8,8 @@ Wants=network.target
 Type=simple
 User=root
 Group=root
-ExecStart=/usr/local/bin/mdmagent -daemon
-WorkingDirectory=/etc/mdmagent
+ExecStart=/usr/local/bin/scanx -daemon -config /etc/scanx/config
+WorkingDirectory=/etc/scanx
 Restart=always
 RestartSec=10
 KillMode=process
@@ -18,13 +18,13 @@ TimeoutStopSec=30
 # Logging
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=mdmagent
+SyslogIdentifier=scanx
 
 # Security settings
 NoNewPrivileges=yes
 ProtectSystem=strict
 ProtectHome=yes
-ReadWritePaths=/etc/mdmagent /var/log
+ReadWritePaths=/etc/scanx /var/log
 ProtectKernelTunables=yes
 ProtectKernelModules=yes
 ProtectControlGroups=yes

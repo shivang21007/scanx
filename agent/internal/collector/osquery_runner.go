@@ -6,6 +6,8 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strings"
+	"scanx/internal/utils"
 )
 
 // OSQueryRunner handles osquery detection and execution
@@ -55,7 +57,13 @@ func (r *OSQueryRunner) getSystemOSQueryPath() string {
 		return "/usr/local/bin/osqueryi"
 	default:
 		// Fallback for other Unix-like systems
-		return "/usr/local/bin/osqueryi"
+		// get osquery from PATH by command -v osqueryi
+		cmd := exec.Command("command", "-v", "osqueryi")
+		output, err := cmd.Output()
+		if err != nil {
+			return ""
+		}
+		return strings.TrimSpace(string(output))
 	}
 }
 
@@ -82,12 +90,15 @@ func (r *OSQueryRunner) IsExecutable(path string) bool {
 }
 
 // ExecuteQuery executes an osquery SQL query and returns JSON results
-func (r *OSQueryRunner) ExecuteQuery(query string) ([]map[string]interface{}, error) {
+func (r *OSQueryRunner) ExecuteQuery(queryName string, query string) ([]map[string]interface{}, error) {
 	// Execute osquery with JSON output
+	utils.Info("Executing queryName: %s with osquery path: %s", queryName, r.osqueryPath)
+	fmt.Printf("Executing queryName: %s with osquery path: %s\n", queryName, r.osqueryPath)
+
 	cmd := exec.Command(r.osqueryPath, "--json", query)
 
 	// Suppress stderr output (equivalent to 2>/dev/null or 2>NUL)
-	cmd.Stderr = nil
+	// cmd.Stderr = nil
 
 	// Capture output
 	output, err := cmd.Output()
@@ -98,7 +109,12 @@ func (r *OSQueryRunner) ExecuteQuery(query string) ([]map[string]interface{}, er
 	// Parse JSON output
 	var results []map[string]interface{}
 	if err := json.Unmarshal(output, &results); err != nil {
-		return nil, fmt.Errorf("failed to parse osquery JSON output: %w", err)
+		// Include the raw output in error for debugging
+		outputStr := string(output)
+		if len(outputStr) > 200 {
+			outputStr = outputStr[:200] + "..."
+		}
+		return nil, fmt.Errorf("failed to parse osquery JSON output: %w\nRaw output: %s", err, outputStr)
 	}
 
 	return results, nil

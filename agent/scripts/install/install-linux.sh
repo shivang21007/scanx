@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Linux Installation Script for MDM Agent
+# Linux Installation Script for scanx
 # Interactive: sudo ./install-linux.sh
 # Silent:      sudo ./install-linux.sh --email "user@company.com" --interval "10m"
 
@@ -34,14 +34,14 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-AGENT_NAME="mdmagent"
+AGENT_NAME="scanx"
 INSTALL_DIR="/usr/local/bin"
-CONFIG_DIR="/etc/mdmagent"
-DATA_DIR="/var/lib/mdmagent"
-LOG_DIR="/var/log/mdmagent"
-SERVICE_FILE="/etc/systemd/system/mdmagent.service"
+CONFIG_DIR="/etc/scanx"
+DATA_DIR="/var/lib/scanx"
+LOG_DIR="/var/log/scanx"
+SERVICE_FILE="/etc/systemd/system/scanx.service"
 
-echo "🐧 Installing MDM Agent on Linux..."
+echo "🐧 Installing scanx on Linux..."
 
 # Check if running as root
 if [[ $EUID -ne 0 ]]; then
@@ -79,13 +79,13 @@ install_osquery
 echo "✅ OSQuery found: $(which osqueryi)"
 
 # Stop existing service if running
-if systemctl is-active --quiet mdmagent 2>/dev/null; then
-    echo "🔄 Stopping existing MDM Agent service..."
-    systemctl stop mdmagent
+if systemctl is-active --quiet scanx 2>/dev/null; then
+    echo "🔄 Stopping existing scanx service..."
+    systemctl stop scanx
 fi
 
-if systemctl is-enabled --quiet mdmagent 2>/dev/null; then
-    systemctl disable mdmagent
+if systemctl is-enabled --quiet scanx 2>/dev/null; then
+    systemctl disable scanx
 fi
 
 # Create directories with standardized paths
@@ -154,12 +154,12 @@ echo "   ⏱️  Interval: $user_interval"
 
 # Install systemd service
 echo "🔧 Installing service configuration..."
-cp "./services/mdmagent.service" "$SERVICE_FILE"
+cp "./services/scanx.service" "$SERVICE_FILE"
 chmod 644 "$SERVICE_FILE"
 
 # Create log file and set proper permissions
-touch "$LOG_DIR/mdmagent-std.log"
-chmod 644 "$LOG_DIR/mdmagent-std.log"
+touch "$LOG_DIR/scanx-std.log"
+chmod 644 "$LOG_DIR/scanx-std.log"
 
 # Set proper permissions
 chown -R root:root "$CONFIG_DIR"
@@ -172,34 +172,34 @@ chown root:root "$SERVICE_FILE"
 echo "🔄 Reloading systemd..."
 systemctl daemon-reload
 
-echo "🚀 Enabling and starting MDM Agent service..."
-systemctl enable mdmagent
-systemctl start mdmagent
+echo "🚀 Enabling and starting scanx service..."
+systemctl enable scanx
+systemctl start scanx
 
 # Wait a moment and check status
 sleep 2
-if systemctl is-active --quiet mdmagent; then
-    echo "✅ MDM Agent service started successfully!"
+if systemctl is-active --quiet scanx; then
+    echo "✅ scanx service started successfully!"
 else
     echo "⚠️  Service may not have started. Check status:"
-    echo "   sudo systemctl status mdmagent"
+    echo "   sudo systemctl status scanx"
 fi
 
 echo ""
 echo "🎉 Installation completed!"
 echo ""
 echo "📋 Service Management Commands:"
-echo "   Start:   sudo systemctl start mdmagent"
-echo "   Stop:    sudo systemctl stop mdmagent"
-echo "   Status:  sudo systemctl status mdmagent"
-echo "   Logs:    sudo journalctl -u mdmagent -f"
-echo "   Enable:  sudo systemctl enable mdmagent"
-echo "   Disable: sudo systemctl disable mdmagent"
+echo "   Start:   sudo systemctl start scanx"
+echo "   Stop:    sudo systemctl stop scanx"
+echo "   Status:  sudo systemctl status scanx"
+echo "   Logs:    sudo journalctl -u scanx -f"
+echo "   Enable:  sudo systemctl enable scanx"
+echo "   Disable: sudo systemctl disable scanx"
 echo ""
 echo "📁 File locations:"
 echo "   Binary:  $INSTALL_DIR/$AGENT_NAME"
 echo "   Config:  $CONFIG_DIR/"
-echo "   Logs:    $LOG_DIR/mdmagent-std.log"
+echo "   Logs:    $LOG_DIR/scanx-std.log"
 echo "   Data:    $DATA_DIR/"
 echo ""
 echo "ℹ️  The agent will now run automatically on system startup"

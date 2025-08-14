@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# Cross-platform build script for MDM Agent
+# Cross-platform build script for scanx
 # This script builds the agent for multiple operating systems
 
 set -e
 
 # Configuration
-BINARY_NAME="mdmagent"
+BINARY_NAME="scanx"
 VERSION=$(cat config/agent.conf | grep -o '"version": "[^"]*"' | cut -d'"' -f4)
 DIST_DIR="dist"
 BUILD_DIR="$DIST_DIR/builds"
@@ -24,7 +24,7 @@ mkdir -p "$PACKAGES_DIR"
 mkdir -p "$DIST_DIR/linux-packages"
 mkdir -p "$DIST_DIR/msi-build"  
 
-echo "🚀 Building MDM Agent v$VERSION for multiple platforms..."
+echo "🚀 Building scanx v$VERSION for multiple platforms..."
 
 # Build for different platforms
 build_platform() {
@@ -120,21 +120,21 @@ create_package() {
     case $platform in
         "darwin")
             cp "scripts/install/install-macos.sh" "$pkg_dir/install/"
-            cp "scripts/services/com.company.mdmagent.plist" "$pkg_dir/services/"
+            cp "scripts/services/com.company.scanx.plist" "$pkg_dir/services/"
             ;;
         "linux")
             cp "scripts/install/install-linux.sh" "$pkg_dir/install/"
-            cp "scripts/services/mdmagent.service" "$pkg_dir/services/"
+            cp "scripts/services/scanx.service" "$pkg_dir/services/"
             ;;
         "windows")
             cp "scripts/install/install-windows.ps1" "$pkg_dir/install/"
-            cp "scripts/services/mdmagent-service.xml" "$pkg_dir/services/"
+            cp "scripts/services/scanx-service.xml" "$pkg_dir/services/"
             ;;
     esac
     
     # Create README
     cat > "$pkg_dir/README.md" << EOF
-# MDM Agent v$VERSION
+# scanx v$VERSION
 
 ## Installation
 
@@ -162,14 +162,14 @@ Edit \`config/agent.conf\` to set your email and preferences.
 ## Service Management
 
 ### Start the service:
-- macOS: \`sudo launchctl load /Library/LaunchDaemons/com.company.mdmagent.plist\`
-- Linux: \`sudo systemctl start mdmagent\`
-- Windows: \`sc start MDMAgent\`
+- macOS: \`sudo launchctl load /Library/LaunchDaemons/com.company.scanx.plist\`
+- Linux: \`sudo systemctl start scanx\`
+- Windows: \`sc start scanx\`
 
 ### Check status:
-- macOS: \`sudo launchctl list | grep mdmagent\`
-- Linux: \`sudo systemctl status mdmagent\`
-- Windows: \`sc query MDMAgent\`
+- macOS: \`sudo launchctl list | grep scanx\`
+- Linux: \`sudo systemctl status scanx\`
+- Windows: \`sc query scanx\`
 EOF
     
     # Create tar.gz for Unix platforms
@@ -201,7 +201,7 @@ echo "🎉 Build complete! Distribution structure:"
 echo "📁 $DIST_DIR/"
 echo "├── builds/                    # Raw binaries"
 echo "├── packages/                  # Platform-specific packages"
-echo "├── MDMAgent-${VERSION}.pkg           # macOS installer (if built)"
+echo "├── scanx-${VERSION}.pkg           # macOS installer (if built)"
 echo "├── linux-packages/           # DEB/RPM structures (if built)"
 echo "├── msi-build/                 # Windows MSI sources (if built)"
 echo "└── tmp/                       # Temporary build files"

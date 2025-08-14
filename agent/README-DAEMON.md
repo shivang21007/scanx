@@ -1,13 +1,13 @@
-# 🔧 MDM Agent - Daemon Deployment Guide
+# 🔧 ScanX - Daemon Deployment Guide
 
 ## 📋 Overview
 
-The MDM Agent is a cross-platform system monitoring and device management daemon that operates as a persistent background service. It automatically collects system information using OSQuery and transmits data to a central management server at configurable intervals.
+The ScanX is a cross-platform system monitoring and device management daemon that operates as a persistent background service. It automatically collects system information using OSQuery and transmits data to a central management server at configurable intervals.
 
 ## 🎯 Architecture
 
 ### Core Components
-- **Agent Binary**: Cross-platform Go application (`mdmagent`)
+- **Agent Binary**: Cross-platform Go application (`ScanX`)
 - **OSQuery Integration**: System information collection engine
 - **Service Layer**: Platform-specific daemon management
 - **Configuration**: JSON/YAML-based settings management
@@ -41,8 +41,8 @@ The MDM Agent is a cross-platform system monitoring and device management daemon
 #### 2. Deploy to Target Systems
 ```bash
 # Extract distribution package
-tar -xzf mdmagent-<platform>-<arch>-v1.0.0.tar.gz
-cd mdmagent-<platform>-<arch>-v1.0.0
+tar -xzf scanx-<platform>-<arch>-v1.0.0.tar.gz
+cd scanx-<platform>-<arch>-v1.0.0
 
 # Install with interactive configuration
 sudo ./install/install-<platform>.sh
@@ -52,13 +52,13 @@ sudo ./install/install-<platform>.sh
 ```bash
 # Check service status
 # macOS
-sudo launchctl list | grep mdmagent
+sudo launchctl list | grep scanx
 
 # Linux
-sudo systemctl status mdmagent
+sudo systemctl status scanx
 
 # Windows
-sc query MDMAgent
+sc query scanx
 ```
 
 ## 🔧 Service Configuration
@@ -71,7 +71,7 @@ sc query MDMAgent
 - **User**: root (required for OSQuery access)
 
 ### Customization
-Edit `/etc/mdmagent/config/agent.conf`:
+Edit `/etc/scanx/config/agent.conf`:
 ```json
 {
     "user_email": "admin@company.com",
@@ -100,15 +100,15 @@ Edit `/etc/mdmagent/config/agent.conf`:
 ### File Permissions
 ```bash
 # Binary permissions
-chmod 755 /usr/local/bin/mdmagent
+chmod 755 /usr/local/bin/scanx
 
 # Configuration permissions
-chmod 644 /etc/mdmagent/config/*
-chown root:root /etc/mdmagent/config/*
+chmod 644 /etc/scanx/config/*
+chown root:root /etc/scanx/config/*
 
 # Log permissions
-chmod 644 /var/log/mdmagent/*
-chown root:root /var/log/mdmagent/*
+chmod 644 /var/log/scanx/*
+chown root:root /var/log/scanx/*
 ```
 
 ### Network Security
@@ -126,16 +126,16 @@ chown root:root /var/log/mdmagent/*
 ### Health Checks
 ```bash
 # Service status
-sudo systemctl status mdmagent
+sudo systemctl status scanx
 
 # Process monitoring
-ps aux | grep mdmagent
+ps aux | grep scanx
 
 # Log analysis
-sudo journalctl -u mdmagent --since "1 hour ago"
+sudo journalctl -u scanx --since "1 hour ago"
 
 # Data transmission
-tail -f /var/log/mdmagent/mdmagent-std.log
+tail -f /var/log/scanx/scanx-std.log
 ```
 
 ### Performance Metrics
@@ -170,7 +170,7 @@ See [BUILD_&_USAGES.md](./BUILD_&_USAGES.md#troubleshooting) for detailed troubl
 
 ### Installation
 - [ ] Binary deployed to `/usr/local/bin/`
-- [ ] Configuration files in `/etc/mdmagent/config/`
+- [ ] Configuration files in `/etc/scanx/config/`
 - [ ] Service file installed and enabled
 - [ ] Log directories created with proper permissions
 

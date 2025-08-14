@@ -4,10 +4,10 @@ import (
 	"context"
 	"time"
 
-	"mdmagent/internal/collector"
-	"mdmagent/internal/config"
-	"mdmagent/internal/sender"
-	"mdmagent/internal/utils"
+	"scanx/internal/collector"
+	"scanx/internal/config"
+	"scanx/internal/sender"
+	"scanx/internal/utils"
 )
 
 // Scheduler handles periodic data collection and transmission

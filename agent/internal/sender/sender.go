@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"time"
 
-	"mdmagent/internal/collector"
-	"mdmagent/internal/config"
-	"mdmagent/internal/utils"
+	"scanx/internal/collector"
+	"scanx/internal/config"
+	"scanx/internal/utils"
 )
 
 // BackendSender handles sending data to the MDM backend
@@ -33,7 +33,7 @@ func NewBackendSender(baseURL string) *BackendSender {
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
 		},
-		userAgent: "mdmagent/1.0",
+		userAgent: "scanx/1.0",
 	}
 }
 

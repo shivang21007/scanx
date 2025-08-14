@@ -19,7 +19,7 @@ const (
 	LogLevelDebug
 )
 
-// Logger handles system logging for the MDM agent
+// Logger handles system logging for the scanx
 type Logger struct {
 	debugLogger   *log.Logger
 	infoLogger    *log.Logger
@@ -77,7 +77,7 @@ func NewLogger(levelStr string) (*Logger, error) {
 	// Ensure log directory exists
 	if err := ensureLogDir(logPath); err != nil {
 		// Fallback to current directory if system path fails
-		logPath = "./mdmagent.log"
+		logPath = "./scanx.log"
 		fmt.Printf("Warning: Could not create system log directory, using fallback: %s\n", logPath)
 	}
 
@@ -85,7 +85,7 @@ func NewLogger(levelStr string) (*Logger, error) {
 	logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
 		// Final fallback: log to current directory
-		logPath = "./mdmagent.log"
+		logPath = "./scanx.log"
 		logFile, err = os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 		if err != nil {
 			return nil, fmt.Errorf("failed to open log file: %w", err)
@@ -113,11 +113,11 @@ func NewLogger(levelStr string) (*Logger, error) {
 func getSystemLogPath() string {
 	switch runtime.GOOS {
 	case "windows":
-		return `C:\ProgramData\MDMAgent\logs\mdmagent.log`
+		return `C:\ProgramData\scanx\logs\scanx.log`
 	case "darwin", "linux":
-		return "/var/log/mdmagent/mdmagent.log"
+		return "/var/log/scanx/scanx.log"
 	default:
-		return "/var/log/mdmagent/mdmagent.log"
+		return "/var/log/scanx/scanx.log"
 	}
 }
 

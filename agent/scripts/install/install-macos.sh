@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# macOS Installation Script for MDM Agent
+# macOS Installation Script for scanx
 # Interactive: sudo ./install-macos.sh
 # Silent:      sudo ./install-macos.sh --email "user@company.com" --interval "10m"
 
@@ -34,14 +34,14 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-AGENT_NAME="mdmagent"
+AGENT_NAME="scanx"
 INSTALL_DIR="/usr/local/bin"
-CONFIG_DIR="/etc/mdmagent"
-DATA_DIR="/var/lib/mdmagent"
-LOG_DIR="/var/log/mdmagent"
-PLIST_PATH="/Library/LaunchDaemons/com.company.mdmagent.plist"
+CONFIG_DIR="/etc/scanx"
+DATA_DIR="/var/lib/scanx"
+LOG_DIR="/var/log/scanx"
+PLIST_PATH="/Library/LaunchDaemons/com.company.scanx.plist"
 
-echo "🍎 Installing MDM Agent on macOS..."
+echo "🍎 Installing scanx on macOS..."
 
 # Check if running as root
 if [[ $EUID -ne 0 ]]; then
@@ -59,8 +59,8 @@ fi
 echo "✅ OSQuery found: $(which osqueryi)"
 
 # Stop existing service if running
-if launchctl list | grep -q "com.company.mdmagent"; then
-    echo "🔄 Stopping existing MDM Agent service..."
+if launchctl list | grep -q "com.company.scanx"; then
+    echo "🔄 Stopping existing scanx service..."
     launchctl unload "$PLIST_PATH" 2>/dev/null || true
 fi
 
@@ -135,13 +135,13 @@ echo "   ⏱️  Interval: $user_interval"
 
 # Install launchd plist
 echo "🔧 Installing service configuration..."
-cp "./services/com.company.mdmagent.plist" "$PLIST_PATH"
+cp "./services/com.company.scanx.plist" "$PLIST_PATH"
 chmod 644 "$PLIST_PATH"
 chown root:wheel "$PLIST_PATH"
 
 # Create log file and set proper permissions
-touch "$LOG_DIR/mdmagent-std.log"
-chmod 644 "$LOG_DIR/mdmagent-std.log"
+touch "$LOG_DIR/scanx-std.log"
+chmod 644 "$LOG_DIR/scanx-std.log"
 
 # Set proper permissions
 chown -R root:wheel "$CONFIG_DIR"
@@ -150,16 +150,16 @@ chown -R root:wheel "$LOG_DIR"
 chown root:wheel "$INSTALL_DIR/$AGENT_NAME"
 
 # Load and start the service
-echo "🚀 Starting MDM Agent service..."
+echo "🚀 Starting scanx service..."
 launchctl load "$PLIST_PATH"
 
 # Wait a moment and check status
 sleep 2
-if launchctl list | grep -q "com.company.mdmagent"; then
-    echo "✅ MDM Agent service started successfully!"
+if launchctl list | grep -q "com.company.scanx"; then
+    echo "✅ scanx service started successfully!"
 else
     echo "⚠️  Service may not have started. Check logs:"
-    echo "   tail -f /var/log/mdmagent.log"
+    echo "   tail -f /var/log/scanx.log"
 fi
 
 echo ""
@@ -168,13 +168,13 @@ echo ""
 echo "📋 Service Management Commands:"
 echo "   Start:   sudo launchctl load $PLIST_PATH"
 echo "   Stop:    sudo launchctl unload $PLIST_PATH"
-echo "   Status:  sudo launchctl list | grep mdmagent"
-echo "   Logs:    tail -f $LOG_DIR/mdmagent-std.log"
+echo "   Status:  sudo launchctl list | grep scanx"
+echo "   Logs:    tail -f $LOG_DIR/scanx-std.log"
 echo ""
 echo "📁 File locations:"
 echo "   Binary:  $INSTALL_DIR/$AGENT_NAME"
 echo "   Config:  $CONFIG_DIR/"
-echo "   Logs:    $LOG_DIR/mdmagent-std.log"
+echo "   Logs:    $LOG_DIR/scanx-std.log"
 echo "   Data:    $DATA_DIR/"
 echo ""
 echo "ℹ️  The agent will now run automatically on system startup"
