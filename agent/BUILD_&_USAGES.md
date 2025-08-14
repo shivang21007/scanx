@@ -94,8 +94,6 @@ dist/
 
 **RPM Installation Options:**
 ```bash
-# Install with default values
-sudo rpm -i scanx-1.0.0-1.el9.x86_64.rpm
 
 # Install with custom email and interval
 SCANX_EMAIL="user@company.com" SCANX_INTERVAL="1h" sudo -E rpm -i scanx-1.0.0-1.el9.x86_64.rpm

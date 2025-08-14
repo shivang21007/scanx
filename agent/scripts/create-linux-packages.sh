@@ -50,10 +50,10 @@ check_and_install_fpm() {
     fi
 }
 
-# Create temporary directory structure for packaging
-create_package_structure() {
+# Create temporary directory structure for DEB packaging
+create_deb_package_structure() {
     local pkg_type=$1
-    local temp_dir="$BUILD_DIR/temp-$pkg_type"
+    local temp_dir="$DEB_DIR/temp-debug-$pkg_type"
     
     mkdir -p "$temp_dir/usr/local/bin"
     mkdir -p "$temp_dir/etc/scanx/config"
@@ -181,6 +181,21 @@ set -e
 systemctl stop scanx || true
 systemctl disable scanx || true
 
+# Remove configuration files
+rm -rf /etc/scanx/config/*
+
+# Remove binary
+rm -f /usr/local/bin/scanx
+
+# Remove service file
+rm -f /etc/systemd/system/scanx.service
+
+# Remove log files
+rm -rf /var/log/scanx/*
+
+# Remove data files
+rm -rf /var/lib/scanx/*
+
 exit 0
 EOF
 }
@@ -188,7 +203,7 @@ EOF
 # Create DEB package using native tools
 echo "📦 Building DEB package..."
 create_deb_package() {
-    local temp_dir=$(create_package_structure "deb")
+    local temp_dir=$(create_deb_package_structure "deb")
     local control_dir="$temp_dir/DEBIAN"
     
     mkdir -p "$control_dir"
@@ -219,7 +234,7 @@ EOF
     dpkg-deb --build "$temp_dir" "$DEB_DIR/${PACKAGE_NAME}_${VERSION}_amd64.deb"
     
     # Clean up
-    rm -rf "$temp_dir"
+    #rm -rf "$temp_dir"
 }
 
 # Create RPM package using rpmbuild
@@ -249,6 +264,19 @@ A cross-platform agent for system monitoring and device management.
 Collects system information and sends it to a central management server.
 
 %prep
+# remove existing installation
+echo "🔴 Removing existing installation"
+systemctl stop scanx || true
+systemctl disable scanx || true
+rm -rf /etc/scanx/config/*
+rm -f /usr/local/bin/scanx
+rm -f /etc/systemd/system/scanx.service
+rm -rf /var/log/scanx/*
+rm -rf /var/lib/scanx/*
+systemctl daemon-reload
+
+echo "✅ old installation removed successfully ..."
+
 %setup -q
 
 %build

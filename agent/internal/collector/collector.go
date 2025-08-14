@@ -156,7 +156,7 @@ func (c *Collector) CollectData() (*CollectedData, error) {
 			continue
 		}
 
-		if queryName == "screen_lock_info" {
+		if queryName == "screen_lock_info" || queryName == "antivirus_info" || queryName == "disk_encryption_info" || queryName == "password_manager_info" {
 			utils.Info("🔍 Results of query '%s': %v", queryName, results)
 			fmt.Printf("🔍 Results of query '%s': %v\n", queryName, results)
 		}

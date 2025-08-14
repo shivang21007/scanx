@@ -51,7 +51,7 @@ EOF
 # Check available signing identities
 echo ""
 echo "🔍 Available signing identities:"
-security find-identity -v -p codesigning | grep "Developer ID Application" || echo "❌ No Developer ID Application certificates found"
+security find-identity -v -p codesigning | grep "Developer ID Application" || echo " No Developer ID Application certificates found , continue with ad-hoc signing ...."
 
 if [ -z "$DEVELOPER_ID" ]; then
     echo ""
