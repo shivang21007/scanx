@@ -3,6 +3,43 @@ import { UsersModel } from '../models/Users';
 import { Request, Response } from 'express';
 import { parseToIST, getCurrentISTString } from '../utils/timezone';
 
+// Function to check if data indicates compliance based on data type
+function checkDataCompliance(dataType: string, data: any[]): boolean {
+  if (!data || data.length === 0) return false;
+  
+  const item = data[0]; // Check first item
+  
+  switch (dataType) {
+    case 'disk_encryption_info':
+      // Check if disk_encryption is "true" (enabled)
+      return item.disk_encryption === 'true' || item.disk_encryption === true;
+      
+    case 'password_manager_info':
+      // Check if password_manager is "true" (enabled)
+      return item.password_manager === 'true' || item.password_manager === true;
+      
+    case 'antivirus_info':
+      // Check if antivirus is "true" (enabled)
+      return item.antivirus_info === 'true' || item.antivirus_info === true;
+      
+    case 'screen_lock_info':
+      // Check if screen_lock is "true" (enabled)
+      return item.screen_lock === 'true' || item.screen_lock === true;
+      
+    case 'apps_info':
+      // For apps_info, we consider it compliant if data exists (no specific true/false check)
+      return true;
+      
+    case 'system_info':
+      // For system_info, we consider it compliant if data exists (no specific true/false check)
+      return true;
+      
+    default:
+      // For unknown data types, consider compliant if data exists
+      return true;
+  }
+}
+
 // Agent data ingestion endpoint
 export const receiveAgentData = async (req: Request, res: Response) => {
   try {
@@ -91,6 +128,9 @@ export const receiveAgentData = async (req: Request, res: Response) => {
           )
         );
         
+        // Check if data indicates non-compliance (feature disabled/false)
+        const isCompliant = checkDataCompliance(dataType, data);
+        
         try {
           // Insert new historical record (no update - keep all historical data)
           await connection.execute(
@@ -99,12 +139,14 @@ export const receiveAgentData = async (req: Request, res: Response) => {
             [deviceId, timestamp, JSON.stringify(data)]
           );
           
-          // Only mark as true if no error status found
-          if (!hasErrorStatus) {
+          // Mark as true only if no error status AND data is compliant
+          if (!hasErrorStatus && isCompliant) {
             receivedDataTypes[dataType as keyof typeof receivedDataTypes] = true;
-            console.log(`✅ Stored ${dataType} data for device ${deviceId}`);
-          } else {
+            console.log(`✅ Stored ${dataType} data for device ${deviceId} - COMPLIANT`);
+          } else if (hasErrorStatus) {
             console.log(`⚠️  ${dataType} has error status - marking as false in summary`);
+          } else {
+            console.log(`⚠️  ${dataType} is non-compliant - marking as false in summary`);
           }
           
         } catch (error: any) {
