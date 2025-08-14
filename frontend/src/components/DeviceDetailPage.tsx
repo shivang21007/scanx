@@ -36,7 +36,7 @@ export function DeviceDetailPage() {
         console.log('Device basic info:', response.device);
         console.log('Device summary:', response.summary);
         console.log('Available data types:', Object.keys(response.data || {}));
-        
+
         setDeviceInfo(response);
       } catch (err: any) {
         console.error('Failed to fetch device details:', err);
@@ -66,12 +66,37 @@ export function DeviceDetailPage() {
 
   const formatDataForDisplay = (dataObject: any, type: string) => {
     console.log(`Formatting data for ${type}:`, dataObject);
-    
+
     // Extract actual data from the response object
     const dataArray = dataObject?.data;
     if (!dataArray || !Array.isArray(dataArray) || dataArray.length === 0) {
       console.log(`No data available for ${type}`);
       return <p className="text-gray-500">No {type.replace('_', ' ')} information available</p>;
+    }
+
+    // Check for error status in the data
+    const firstItem = dataArray[0];
+    if (firstItem && (firstItem.status || firstItem.error || firstItem.hasErrorStatus)) {
+      const errorMessage = firstItem.errorMessage || firstItem.status || firstItem.error || 'Unknown error';
+      return (
+        <div className="space-y-3">
+          <div className="border border-red-200 rounded-lg p-4 bg-red-50">
+            <div className="flex items-center">
+              <AlertTriangle className="h-5 w-5 text-red-500 mr-2" />
+              <h4 className="font-medium text-red-800">Error in {type.replace('_', ' ')}</h4>
+            </div>
+            <p className="text-red-700 mt-2 mb-3">{errorMessage}</p>
+            <details className="mt-3">
+              <summary className="text-sm text-red-600 cursor-pointer hover:text-red-800">
+                View Raw Error Data
+              </summary>
+              <pre className="mt-2 bg-red-100 p-3 rounded text-xs text-red-800 overflow-x-auto">
+                {JSON.stringify(dataArray, null, 2)}
+              </pre>
+            </details>
+          </div>
+        </div>
+      );
     }
 
     switch (type) {
@@ -101,7 +126,7 @@ export function DeviceDetailPage() {
             <div className="border rounded-lg p-4">
               <h4 className="font-medium mb-2">Disk Encryption Status</h4>
               <div className="grid grid-cols-2 gap-4">
-                <div><span className="font-medium">Encrypted:</span> 
+                <div><span className="font-medium">Encrypted:</span>
                   <span className={`ml-2 px-2 py-1 rounded text-xs ${diskData.disk_encryption === 'true' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                     {diskData.disk_encryption === 'true' ? 'Yes' : 'No'}
                   </span>
@@ -148,7 +173,7 @@ export function DeviceDetailPage() {
             <div className="border rounded-lg p-4">
               <h4 className="font-medium mb-2">Password Manager Status</h4>
               <div className="grid grid-cols-2 gap-4">
-                <div><span className="font-medium">Enabled:</span> 
+                <div><span className="font-medium">Enabled:</span>
                   <span className={`ml-2 px-2 py-1 rounded text-xs ${passwordData.password_manager === 'true' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                     {passwordData.password_manager === 'true' ? 'Yes' : 'No'}
                   </span>
@@ -164,7 +189,7 @@ export function DeviceDetailPage() {
             <div className="border rounded-lg p-4">
               <h4 className="font-medium mb-2">Antivirus Status</h4>
               <div className="grid grid-cols-2 gap-4">
-                <div><span className="font-medium">Enabled:</span> 
+                <div><span className="font-medium">Enabled:</span>
                   <span className={`ml-2 px-2 py-1 rounded text-xs ${antivirusData.antivirus_info === 'true' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                     {antivirusData.antivirus_info === 'true' ? 'Yes' : 'No'}
                   </span>
@@ -180,7 +205,7 @@ export function DeviceDetailPage() {
             <div className="border rounded-lg p-4">
               <h4 className="font-medium mb-2">Screen Lock Status</h4>
               <div className="grid grid-cols-2 gap-4">
-                <div><span className="font-medium">Enabled:</span> 
+                <div><span className="font-medium">Enabled:</span>
                   <span className={`ml-2 px-2 py-1 rounded text-xs ${screenData.screen_lock === 'true' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                     {screenData.screen_lock === 'true' ? 'Yes' : 'No'}
                   </span>
@@ -355,11 +380,10 @@ export function DeviceDetailPage() {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center py-4 px-1 border-b-2 font-medium text-sm ${
-                      activeTab === tab.id
+                    className={`flex items-center py-4 px-1 border-b-2 font-medium text-sm ${activeTab === tab.id
                         ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 cursor-pointer'
+                      }`}
                   >
                     <Icon className="h-4 w-4 mr-2" />
                     {tab.label}
@@ -375,50 +399,131 @@ export function DeviceDetailPage() {
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div className="bg-gray-50 rounded-lg p-4">
-                    <div className="flex items-center">
-                      <Settings className="h-8 w-8 text-blue-600" />
-                      <div className="ml-3">
-                        <p className="text-sm font-medium text-gray-900">System Info</p>
-                        <p className="text-xs text-gray-500">
-                          {deviceInfo.data?.system_info ? 'Available' : 'No data'}
-                        </p>
+                    <button 
+                      onClick={() => setActiveTab('system_info')} 
+                      className="w-full text-left hover:bg-gray-100 rounded-lg p-2 transition-colors cursor-pointer"
+                    >
+                      <div className="flex items-center">
+                        <Settings className="h-8 w-8 text-blue-600" />
+                        <div className="ml-3">
+                          <p className="text-sm font-medium text-gray-900">System Info</p>
+                          <p className={`text-xs ${deviceInfo.data?.system_info?.hasErrorStatus ? 'text-red-500' : deviceInfo.data?.system_info ? 'text-green-600' : 'text-gray-500'}`}>
+                            {deviceInfo.data?.system_info?.hasErrorStatus ? 'Error' : deviceInfo.data?.system_info ? 'Available' : 'No data'}
+                          </p>
+                        </div>
                       </div>
-                    </div>
+                    </button>
                   </div>
                   <div className="bg-gray-50 rounded-lg p-4">
-                    <div className="flex items-center">
-                      <HardDrive className="h-8 w-8 text-green-600" />
-                      <div className="ml-3">
-                        <p className="text-sm font-medium text-gray-900">Disk Encryption</p>
-                        <p className="text-xs text-gray-500">
-                          {deviceInfo.data?.disk_encryption_info ? 'Available' : 'No data'}
-                        </p>
+                    <button 
+                      onClick={() => setActiveTab('disk_encryption_info')} 
+                      className="w-full text-left hover:bg-gray-100 rounded-lg p-2 transition-colors cursor-pointer"
+                    >
+                      <div className="flex items-center">
+                        <HardDrive className="h-8 w-8 text-green-600" />
+                        <div className="ml-3">
+                          <p className="text-sm font-medium text-gray-900">Disk Encryption</p>
+                          <p className={`text-xs ${deviceInfo.data?.disk_encryption_info?.hasErrorStatus ? 'text-red-500' : deviceInfo.data?.disk_encryption_info ? 'text-green-600' : 'text-gray-500'}`}>
+                            {deviceInfo.data?.disk_encryption_info?.hasErrorStatus ? 'Error' : deviceInfo.data?.disk_encryption_info ? 'Available' : 'No data'}
+                          </p>
+                        </div>
                       </div>
-                    </div>
+                    </button>
                   </div>
                   <div className="bg-gray-50 rounded-lg p-4">
-                    <div className="flex items-center">
-                      <Shield className="h-8 w-8 text-red-600" />
-                      <div className="ml-3">
-                        <p className="text-sm font-medium text-gray-900">Security</p>
-                        <p className="text-xs text-gray-500">
-                          {(deviceInfo.data?.antivirus_info || deviceInfo.data?.screen_lock_info) ? 'Available' : 'No data'}
-                        </p>
+                    <button 
+                      onClick={() => setActiveTab('password_manager_info')} 
+                      className="w-full text-left hover:bg-gray-100 rounded-lg p-2 transition-colors cursor-pointer"
+                    >
+                      <div className="flex items-center">
+                        <Lock className="h-8 w-8 text-yellow-600" />
+                        <div className="ml-3">
+                          <p className="text-sm font-medium text-gray-900">Password Manager</p>
+                          <p className={`text-xs ${deviceInfo.data?.password_manager_info?.hasErrorStatus ? 'text-red-500' : deviceInfo.data?.password_manager_info ? 'text-green-600' : 'text-gray-500'}`}>
+                            {deviceInfo.data?.password_manager_info?.hasErrorStatus ? 'Error' : deviceInfo.data?.password_manager_info ? 'Available' : 'No data'}
+                          </p>
+                        </div>
                       </div>
-                    </div>
+                    </button>
                   </div>
                   <div className="bg-gray-50 rounded-lg p-4">
-                    <div className="flex items-center">
-                      <Grid3X3 className="h-8 w-8 text-purple-600" />
-                      <div className="ml-3">
-                        <p className="text-sm font-medium text-gray-900">Applications</p>
-                        <p className="text-xs text-gray-500">
-                          {deviceInfo.data?.apps_info?.data ? `${deviceInfo.data.apps_info.data.length || 0} apps` : 'No data'}
-                        </p>
+                    <button 
+                      onClick={() => setActiveTab('antivirus_info')} 
+                      className="w-full text-left hover:bg-gray-100 rounded-lg p-2 transition-colors cursor-pointer"
+                    >
+                      <div className="flex items-center">
+                        <Shield className="h-8 w-8 text-red-600" />
+                        <div className="ml-3">
+                          <p className="text-sm font-medium text-gray-900">Antivirus</p>
+                          <p className={`text-xs ${deviceInfo.data?.antivirus_info?.hasErrorStatus ? 'text-red-500' : deviceInfo.data?.antivirus_info ? 'text-green-600' : 'text-gray-500'}`}>
+                            {deviceInfo.data?.antivirus_info?.hasErrorStatus ? 'Error' : deviceInfo.data?.antivirus_info ? 'Available' : 'No data'}
+                          </p>
+                        </div>
                       </div>
-                    </div>
+                    </button>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <button 
+                      onClick={() => setActiveTab('screen_lock_info')} 
+                      className="w-full text-left hover:bg-gray-100 rounded-lg p-2 transition-colors cursor-pointer"
+                    >
+                      <div className="flex items-center">
+                        <Eye className="h-8 w-8 text-indigo-600" />
+                        <div className="ml-3">
+                          <p className="text-sm font-medium text-gray-900">Screen Lock</p>
+                          <p className={`text-xs ${deviceInfo.data?.screen_lock_info?.hasErrorStatus ? 'text-red-500' : deviceInfo.data?.screen_lock_info ? 'text-green-600' : 'text-gray-500'}`}>
+                            {deviceInfo.data?.screen_lock_info?.hasErrorStatus ? 'Error' : deviceInfo.data?.screen_lock_info ? 'Available' : 'No data'}
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <button 
+                      onClick={() => setActiveTab('apps_info')} 
+                      className="w-full text-left hover:bg-gray-100 rounded-lg p-2 transition-colors cursor-pointer"
+                    >
+                      <div className="flex items-center">
+                        <Grid3X3 className="h-8 w-8 text-purple-600" />
+                        <div className="ml-3">
+                          <p className="text-sm font-medium text-gray-900">Applications</p>
+                          <p className={`text-xs ${deviceInfo.data?.apps_info?.hasErrorStatus ? 'text-red-500' : deviceInfo.data?.apps_info?.data ? 'text-green-600' : 'text-gray-500'}`}>
+                            {deviceInfo.data?.apps_info?.hasErrorStatus ? 'Error' : deviceInfo.data?.apps_info?.data ? `${deviceInfo.data.apps_info.data.length || 0} apps` : 'No data'}
+                          </p>
+                        </div>
+                      </div>
+                    </button>
                   </div>
                 </div>
+                
+                {/* Error Summary */}
+                {(() => {
+                  const errorTypes = Object.entries(deviceInfo.data || {}).filter(([, value]: [string, any]) => value?.hasErrorStatus);
+                  if (errorTypes.length > 0) {
+                    return (
+                      <div className="border border-red-200 rounded-lg p-4 bg-red-50">
+                        <div className="flex items-center">
+                          <AlertTriangle className="h-5 w-5 text-red-500 mr-2" />
+                          <h4 className="font-medium text-red-800">Data Collection Errors</h4>
+                        </div>
+                        <p className="text-red-700 mt-2 mb-3">
+                          The following data types have collection errors:
+                        </p>
+                        <ul className="list-disc list-inside text-sm text-red-700 space-y-1">
+                          {errorTypes.map(([key, value]: [string, any]) => (
+                            <li key={key}>
+                              <span className="font-medium">{key.replace('_', ' ')}:</span> {value.errorMessage || 'Unknown error'}
+                            </li>
+                          ))}
+                        </ul>
+                        <p className="text-xs text-red-600 mt-3">
+                          Click on individual tabs to view detailed error information and raw data.
+                        </p>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
             ) : (
               <div>
