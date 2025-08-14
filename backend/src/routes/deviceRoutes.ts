@@ -6,7 +6,8 @@ import {
   getDevicesTable,
   getDeviceById,
   getDeviceDataHistory,
-  getDashboardStats
+  getDashboardStats,
+  getDeviceData
 } from '../controllers/deviceController';
 
 const router: express.Router = express.Router();
@@ -16,9 +17,12 @@ router.post('/agent/report', receiveAgentData);
 
 // Protected admin routes for device management
 router.get('/dashboard/stats', auth, getDashboardStats);
-router.get('/table', auth, getDevicesTable);  // New enriched endpoint for devices table
+// New enriched endpoint for devices table
+router.get('/table', auth, getDevicesTable);  
+
 router.get('/', auth, getDevices);
 router.get('/:id', auth, getDeviceById);
+router.get('/:id/data/:type', auth, getDeviceData);
 router.get('/:id/data/:type/history', auth, getDeviceDataHistory);
 
 export default router;

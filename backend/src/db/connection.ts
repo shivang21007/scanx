@@ -10,7 +10,7 @@ export const connectDB = async () => {
             port: parseInt(env.MYSQL_PORT || '3306'),
             user: env.MYSQL_USER,
             password: env.MYSQL_PASSWORD ,
-            database: env.MYSQL_DATABASE || 'mdm_agent'
+            database: env.MYSQL_DATABASE || 'scanx'
         });
         
         console.log("MySQL connected successfully ....");

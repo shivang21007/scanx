@@ -7,6 +7,7 @@ import { parseToIST, getCurrentISTString } from '../utils/timezone';
 export const receiveAgentData = async (req: Request, res: Response) => {
   try {
     const agentData: AgentPayload = req.body;
+    console.log( "screen_lock_info of", agentData.serial_no, "is", agentData.data.screen_lock_info);
     
     // Validate required fields
     if (!agentData.user || !agentData.serial_no || !agentData.os_type) {
@@ -15,7 +16,7 @@ export const receiveAgentData = async (req: Request, res: Response) => {
       });
     }
 
-    console.log(`Received agent data from device: ${agentData.serial_no} (${agentData.user})`);
+    console.log(`Received agent data from device: ${agentData.serial_no} (${agentData.user} ${agentData.timestamp})`);
 
     // Parse agent timestamp to IST
     const istTimestamp = parseToIST(agentData.timestamp);
@@ -56,7 +57,15 @@ export const receiveAgentData = async (req: Request, res: Response) => {
     });
 
     // Store data in individual tables
-    const timestamp = istTimestamp;
+    // Convert agent timestamp to MySQL format if provided, otherwise use server timestamp
+    let timestamp: string;
+    if (agentData.timestamp) {
+      const date = new Date(agentData.timestamp);
+      timestamp = date.toISOString().slice(0, 19).replace('T', ' '); // Convert to MySQL format: YYYY-MM-DD HH:mm:ss
+    } else {
+      timestamp = istTimestamp.toISOString().slice(0, 19).replace('T', ' ');
+    }
+    const lastReportTimestamp = agentData.timestamp ? new Date(agentData.timestamp) : istTimestamp;
     const { getConnection } = require('../db');
     const connection = getConnection();
     
@@ -74,6 +83,14 @@ export const receiveAgentData = async (req: Request, res: Response) => {
       if (data && data.length > 0) {
         const tableName = dataType; // matches our table names
         
+        // Check if data contains error status
+        const hasErrorStatus = data.some((item: any) => 
+          item.status && (
+            item.status === 'failed to execute query' || 
+            item.status.startsWith('no_data_found for')
+          )
+        );
+        
         try {
           // Insert new historical record (no update - keep all historical data)
           await connection.execute(
@@ -82,8 +99,13 @@ export const receiveAgentData = async (req: Request, res: Response) => {
             [deviceId, timestamp, JSON.stringify(data)]
           );
           
-          receivedDataTypes[dataType as keyof typeof receivedDataTypes] = true;
-          console.log(`✅ Stored ${dataType} data for device ${deviceId}`);
+          // Only mark as true if no error status found
+          if (!hasErrorStatus) {
+            receivedDataTypes[dataType as keyof typeof receivedDataTypes] = true;
+            console.log(`✅ Stored ${dataType} data for device ${deviceId}`);
+          } else {
+            console.log(`⚠️  ${dataType} has error status - marking as false in summary`);
+          }
           
         } catch (error: any) {
           console.error(`❌ Failed to store ${dataType}:`, error.message);
@@ -111,7 +133,7 @@ export const receiveAgentData = async (req: Request, res: Response) => {
     // Update device summary with received data types
     await DeviceSummaryModel.createOrUpdate({
       device_id: deviceId,
-      last_report: timestamp,
+      last_report: lastReportTimestamp,
       ...receivedDataTypes
     });
 

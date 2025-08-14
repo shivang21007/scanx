@@ -269,9 +269,29 @@ export class IndividualDataModel {
                     }
                 }
                 
+                // Check for error status in the data
+                let hasErrorStatus = false;
+                let errorMessage = null;
+                
+                if (parsedData && Array.isArray(parsedData)) {
+                    const errorItem = parsedData.find((item: any) => 
+                        item.status && (
+                            item.status === 'failed to execute query' || 
+                            item.status.startsWith('no_data_found for')
+                        )
+                    );
+                    
+                    if (errorItem) {
+                        hasErrorStatus = true;
+                        errorMessage = errorItem.status;
+                    }
+                }
+                
                 return {
                     ...row,
-                    data: parsedData
+                    data: parsedData,
+                    hasErrorStatus,
+                    errorMessage
                 };
             }
             return null;

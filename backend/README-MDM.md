@@ -1,6 +1,6 @@
-# MDM Backend API
+# ScanX Backend API
 
-A TypeScript-based backend API for the Mobile Device Management (MDM) system using Express.js, MySQL, and JWT authentication.
+A TypeScript-based backend API for the Mobile Device Management (scanx) system using Express.js, MySQL, and JWT authentication.
 
 ## 🚀 Features
 
@@ -59,9 +59,9 @@ A TypeScript-based backend API for the Mobile Device Management (MDM) system usi
    ```bash
    # Option 1: Local MySQL
    mysql -u root -p
-   CREATE DATABASE mdm_agent;
-   CREATE USER 'mdm_user'@'localhost' IDENTIFIED BY 'mdm_password';
-   GRANT ALL PRIVILEGES ON mdm_agent.* TO 'mdm_user'@'localhost';
+   CREATE DATABASE scanx;
+   CREATE USER 'scanx_user'@'localhost' IDENTIFIED BY 'scanx_password';
+   GRANT ALL PRIVILEGES ON scanx.* TO 'scanx_user'@'localhost';
    
    # Option 2: Docker MySQL only
    docker-compose up mysql -d
@@ -143,9 +143,9 @@ The agent should send data to: `POST /api/devices/agent/report`
 | `PORT` | Server port | `3000` |
 | `MYSQL_HOST` | MySQL host | `localhost` |
 | `MYSQL_PORT` | MySQL port | `3306` |
-| `MYSQL_USER` | MySQL username | `mdm_user` |
-| `MYSQL_PASSWORD` | MySQL password | `mdm_password` |
-| `MYSQL_DATABASE` | Database name | `mdm_agent` |
+| `MYSQL_USER` | MySQL username | `scanx_user` |
+| `MYSQL_PASSWORD` | MySQL password | `scanx_password` |
+| `MYSQL_DATABASE` | Database name | `scanx` |
 | `JWT_SECRET` | JWT signing secret | (required) |
 
 ## 🐛 Troubleshooting

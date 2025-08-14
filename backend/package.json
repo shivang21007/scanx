@@ -1,5 +1,5 @@
 {
-  "name": "mdm-backend-api",
+  "name": "scanx-backend-api",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
@@ -12,14 +12,14 @@
     "db:reset": "ts-node scripts/reset.ts"
   },
   "keywords": [
-    "mdm",
+    "scanx",
     "device-management",
     "typescript",
     "mysql"
   ],
-  "author": "MDM Team",
+  "author": "ScanX Team",
   "license": "ISC",
-  "description": "MDM Backend API for device management with TypeScript, Express, MySQL and JWT.",
+  "description": "ScanX Backend API for device management with TypeScript, Express, MySQL and JWT.",
   "dependencies": {
     "bcryptjs": "^3.0.2",
     "cookie-parser": "^1.4.7",

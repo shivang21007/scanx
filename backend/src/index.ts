@@ -32,7 +32,7 @@ initializeDatabase().catch(err => {
 // Health check endpoint
 app.get('/', (req, res) => {
   res.json({ 
-    message: 'MDM Backend API is running 🚀',
+    message: 'ScanX Backend API is running 🚀',
     version: '1.0.0',
     endpoints: {
       auth: '/api/auth',
@@ -71,7 +71,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 const PORT = env.PORT || 3000;
 
 app.listen(PORT, () => {
-  console.log(`🚀 MDM Backend Server running on port ${PORT}`);
+  console.log(`🚀 ScanX Backend Server running on port ${PORT}`);
   console.log(`Agent endpoint: http://localhost:${PORT}/api/devices/agent/report`);
   console.log(`Admin dashboard API: http://localhost:${PORT}/api/devices`);
   console.log(`Auth endpoint: http://localhost:${PORT}/api/auth`);

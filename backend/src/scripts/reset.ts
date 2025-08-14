@@ -25,7 +25,7 @@ async function resetDatabase() {
         console.log("✅ Connected to MySQL server");
         
         // Drop the entire database
-        const dbName = env.MYSQL_DATABASE || 'mdm_agent';
+        const dbName = env.MYSQL_DATABASE || 'scanx';
         console.log(`🗑️  Dropping database: ${dbName}`);
         await connection.execute(`DROP DATABASE IF EXISTS ${dbName}`);
         
