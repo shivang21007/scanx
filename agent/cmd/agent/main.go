@@ -61,7 +61,7 @@ func main() {
 	if *configPath != "" {
 		cfg, err = config.LoadConfigFromPath(*configPath)
 	} else {
-		cfg, err = config.LoadConfigwithFallback()
+		cfg, err = config.LoadConfig()
 	}
 
 	if err != nil {

@@ -42,28 +42,28 @@ type Config struct {
 }
 
 // LoadConfig loads both agent.conf and queries.yml
-func LoadConfigwithFallback() (*Config, error) {
+func LoadConfig() (*Config, error) {
 	// Try a series of candidate config directories so the binary works without -config
 	// this is a fallback for the case where the binary is not run with -config
-    candidateDirs := []string{
-        "config",                    // running from source tree / unpacked package
-        "/etc/scanx/config",        // standardized Unix install path
-        "C:\\Program Files\\scanx\\config", // Windows install path
-    }
+	candidateDirs := []string{
+		"config",                           // running from source tree / unpacked package
+		"/etc/scanx/config",                // standardized Unix install path
+		"C:\\Program Files\\scanx\\config", // Windows install path
+	}
 
-    var lastErr error
-    for _, dir := range candidateDirs {
-        cfg, err := LoadConfigFromPath(dir)
-        if err == nil {
-            return cfg, nil
-        }
-        lastErr = err
-    }
+	var lastErr error
+	for _, dir := range candidateDirs {
+		cfg, err := LoadConfigFromPath(dir)
+		if err == nil {
+			return cfg, nil
+		}
+		lastErr = err
+	}
 
-    if lastErr == nil {
-        lastErr = fmt.Errorf("no configuration directories found")
-    }
-    return nil, lastErr
+	if lastErr == nil {
+		lastErr = fmt.Errorf("no configuration directories found")
+	}
+	return nil, lastErr
 }
 
 // LoadConfigFromPath loads configuration from a custom path

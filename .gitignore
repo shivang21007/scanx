@@ -53,7 +53,7 @@ agent/macagent.log
 agent/config/agent.conf
 agent/builds/
 agent/pkg-build/
-agent/mdm-agent
+agent/scanx
 
 # React/Vite specific
 # Vite

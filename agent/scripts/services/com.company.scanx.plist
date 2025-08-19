@@ -10,11 +10,23 @@
         <string>/usr/local/bin/scanx</string>
         <string>-daemon</string>
         <string>-config</string>
-        <string>/etc/scanx/config/</string>
+        <string>/etc/scanx/config</string>
     </array>
     
     <key>WorkingDirectory</key>
     <string>/etc/scanx/</string>
+    
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>HOME</key>
+        <string>/var/root</string>
+        <key>USER</key>
+        <string>root</string>
+        <key>LOGNAME</key>
+        <string>root</string>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    </dict>
     
     <key>StandardOutPath</key>
     <string>/var/log/scanx/scanx-std.log</string>
