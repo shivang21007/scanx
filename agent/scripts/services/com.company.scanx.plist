@@ -8,9 +8,9 @@
     <key>ProgramArguments</key>
     <array>
         <string>/usr/local/bin/scanx</string>
-        <string>-daemon</string>
         <string>-config</string>
         <string>/etc/scanx/config</string>
+        <string>-daemon</string>
     </array>
     
     <key>WorkingDirectory</key>
@@ -18,14 +18,10 @@
     
     <key>EnvironmentVariables</key>
     <dict>
-        <key>HOME</key>
-        <string>/var/root</string>
-        <key>USER</key>
-        <string>root</string>
-        <key>LOGNAME</key>
-        <string>root</string>
         <key>PATH</key>
         <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <key>OSQUERY_FLAGS</key>
+        <string>--disable_events=false --disable_audit=false --audit_allow_user_events=true</string>
     </dict>
     
     <key>StandardOutPath</key>

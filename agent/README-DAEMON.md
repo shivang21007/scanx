@@ -2,21 +2,66 @@
 
 ## 📋 Overview
 
-The ScanX is a cross-platform system monitoring and device management daemon that operates as a persistent background service. It automatically collects system information using OSQuery and transmits data to a central management server at configurable intervals.
+The **ScanX** is an advanced cross-platform system monitoring and device management daemon that provides comprehensive endpoint visibility and security compliance monitoring. It operates as a persistent background service that automatically collects detailed system information using OSQuery and transmits this data to a central management server at configurable intervals.
+
+### 🎯 Core Capabilities
+
+#### Comprehensive System Monitoring
+- **Hardware Inventory**: CPU, memory, disk usage, serial numbers, BIOS/UEFI info
+- **Operating System Details**: Version, patches, security settings, kernel information
+- **Network Configuration**: Interfaces, routing, DNS, connectivity status
+- **Security Compliance**: Disk encryption, antivirus status, firewall rules, screen lock settings
+- **Software Inventory**: Installed applications, system services, browser extensions
+- **User Context Data**: User preferences, login sessions, application usage patterns
+
+#### Intelligent Query Execution
+- **Context-Aware Processing**: 
+  - System-level queries execute as root for full system access
+  - User-specific queries (screen lock, user preferences) execute in user context
+  - Automatic user detection and context switching
+- **OSQuery Integration**: Leverages OSQuery's powerful SQL-like interface for system queries
+- **Temporary File Management**: Uses `/var/lib/scanx/query.sql` for secure query execution
+- **Error Handling**: Comprehensive error capture, logging, and fallback mechanisms
+
+#### Persistent Operation
+- **Auto-Start**: Automatically starts with system boot
+- **Self-Healing**: Automatic restart on failures with exponential backoff
+- **Resource Management**: Efficient memory and CPU usage with configurable limits
+- **Log Management**: Structured logging with rotation and retention policies
 
 ## 🎯 Architecture
 
 ### Core Components
-- **Agent Binary**: Cross-platform Go application (`ScanX`)
-- **OSQuery Integration**: System information collection engine
-- **Service Layer**: Platform-specific daemon management
-- **Configuration**: JSON/YAML-based settings management
-- **Backend Communication**: HTTP-based data transmission
+- **Agent Binary**: Cross-platform Go application (`ScanX`) with embedded queries
+- **OSQuery Integration**: System information collection engine with context-aware execution
+- **Service Layer**: Platform-specific daemon management (launchd/systemd/Windows Service)
+- **Configuration Management**: JSON-based settings with embedded query definitions
+- **Backend Communication**: HTTP/HTTPS-based data transmission with retry logic
 
 ### Service Management
-- **macOS**: `launchd` with `.plist` configuration
-- **Linux**: `systemd` service with auto-restart
-- **Windows**: Windows Service with recovery options
+- **macOS**: `launchd` with `.plist` configuration (runs as root, queries execute in user context)
+- **Linux**: `systemd` service with auto-restart and resource limits
+- **Windows**: Windows Service with recovery options and performance counters
+
+### Query Execution Architecture
+
+#### System-Level Queries
+- **Execution Context**: Root user for full system access
+- **Data Collected**: Hardware info, system services, network configuration, security status
+- **Examples**: `system_info`, `disk_encryption_info`, `antivirus_info`, `apps_info`
+
+#### User-Specific Queries
+- **Execution Context**: Current logged-in user using `sudo -u username`
+- **Data Collected**: User preferences, screen lock settings, personal security configurations
+- **Examples**: `screen_lock_info`, user-specific application settings
+- **User Detection**: Automatic detection using multiple methods:
+  - macOS: `stat -f "%Su" /dev/console`
+  - Fallback: `who` command and `user.Current()`
+
+#### Temporary File Management
+- **Location**: `/var/lib/scanx/query.sql` (777 permissions for universal access)
+- **Security**: Temporary files created and cleaned up after each query
+- **Error Handling**: Comprehensive error capture and logging
 
 ## 🚀 Quick Deployment
 
@@ -24,11 +69,32 @@ The ScanX is a cross-platform system monitoring and device management daemon tha
 1. **OSQuery Installation**: Required on all target systems
 2. **Network Access**: Connectivity to backend server (`http://172.0.10.183:3000`)
 3. **Administrative Privileges**: Required for service installation
+4. **Sudo Access**: Required for user context query execution
 
-### Deployment Steps
+### Setup Steps
 
-#### 1. Build Agent
+#### Step 1: Install OSQuery
 ```bash
+# macOS
+brew install osquery
+
+# Ubuntu/Debian
+curl -L https://pkg.osquery.io/deb/GPG | sudo apt-key add -
+echo 'deb [arch=amd64] https://pkg.osquery.io/deb deb main' | sudo tee /etc/apt/sources.list.d/osquery.list
+sudo apt update && sudo apt install osquery
+
+# CentOS/RHEL
+curl -L https://pkg.osquery.io/rpm/GPG | sudo rpm --import -
+sudo yum-config-manager --add-repo https://pkg.osquery.io/rpm/osquery-s3-rpm.repo
+sudo yum install osquery
+```
+
+#### Step 2: Build Agent
+```bash
+# Clone repository and build
+git clone <repository>
+cd agent
+
 # Build for all platforms
 ./scripts/build.sh
 
@@ -38,17 +104,27 @@ The ScanX is a cross-platform system monitoring and device management daemon tha
 ./scripts/create-windows-msi.sh    # Windows .msi
 ```
 
-#### 2. Deploy to Target Systems
+#### Step 3: Deploy to Target Systems
 ```bash
-# Extract distribution package
+# Method 1: Distribution Package
 tar -xzf scanx-<platform>-<arch>-v1.0.0.tar.gz
 cd scanx-<platform>-<arch>-v1.0.0
-
-# Install with interactive configuration
 sudo ./install/install-<platform>.sh
+
+# Method 2: Native Installer (macOS)
+sudo installer -pkg dist/macos-build/scanx-1.0.0.pkg -target /
+
+# Method 3: Package Manager (Linux)
+sudo dpkg -i scanx_1.0.0_amd64.deb  # Ubuntu/Debian
+sudo rpm -i scanx-1.0.0-1.el9.x86_64.rpm  # CentOS/RHEL
 ```
 
-#### 3. Verify Installation
+#### Step 4: Configure Agent
+During installation, you'll be prompted for:
+- **Email Address**: Used for device identification in backend
+- **Collection Interval**: How often to collect data (5m, 10m, 1h, 2h, etc.)
+
+#### Step 5: Verify Installation
 ```bash
 # Check service status
 # macOS
@@ -59,6 +135,25 @@ sudo systemctl status scanx
 
 # Windows
 sc query scanx
+
+# Check logs
+# macOS
+tail -f /var/log/scanx/scanx-std.log
+
+# Linux
+sudo journalctl -u scanx -f
+
+# Windows
+Get-EventLog -LogName Application -Source scanx
+```
+
+#### Step 6: Test Data Collection
+```bash
+# Run agent manually to test
+sudo /usr/local/bin/scanx -test
+
+# Check backend for received data
+# Backend URL: http://172.0.10.183:3000
 ```
 
 ## 🔧 Service Configuration

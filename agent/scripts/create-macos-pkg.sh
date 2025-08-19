@@ -31,7 +31,7 @@ mkdir -p "$PAYLOAD_DIR/Library/LaunchDaemons"
 # Copy files to payload (using standard paths)
 cp "dist/builds/scanx-darwin-amd64" "$PAYLOAD_DIR/usr/local/bin/scanx"
 mkdir -p "$PAYLOAD_DIR/etc/scanx/config"
-cp "config/"* "$PAYLOAD_DIR/etc/scanx/config/"
+cp "config/agent.conf" "$PAYLOAD_DIR/etc/scanx/config/"
 cp "scripts/services/com.company.scanx.plist" "$PAYLOAD_DIR/Library/LaunchDaemons/"
 
 # Set permissions
@@ -75,6 +75,14 @@ rm -f /var/log/scanx-error.log 2>/dev/null || true
 if [ -f "/usr/local/bin/scanx" ]; then
     xattr -rd com.apple.quarantine /usr/local/bin/scanx 2>/dev/null || true
 fi
+
+# Clean up any permission issues
+chmod 755 /usr/local/bin/scanx 2>/dev/null || true
+chmod 755 /etc/scanx 2>/dev/null || true
+chmod 755 /etc/scanx/config 2>/dev/null || true
+chmod 644 /etc/scanx/config/* 2>/dev/null || true
+chmod 755 /var/log/scanx 2>/dev/null || true
+chmod 755 /var/lib/scanx 2>/dev/null || true
 
 echo "✅ Cleanup completed"
 
@@ -152,18 +160,44 @@ sed -i '' "s/\"user_email\": \"[^\"]*\"/\"user_email\": \"$email\"/" "$config_fi
 sed -i '' "s/\"interval\": \"[^\"]*\"/\"interval\": \"$interval\"/" "$config_file"
 
 # Show configuration confirmation
-osascript -e "display dialog \"✅ Configuration saved:\n\n📧 Email: $email\n⏱️ Interval: $interval\n\nThe scanx will start automatically.\" with title \"scanx Setup Complete\" with icon note buttons {\"OK\"} default button \"OK\""
+osascript -e "display dialog \"✅ Configuration saved:\n\n📧 Email: $email\n⏱️ Interval: $interval\n👤 Service will run as: root (queries execute as current user)\n\nThe scanx will start automatically.\" with title \"scanx Setup Complete\" with icon note buttons {\"OK\"} default button \"OK\""
 
 # Create directory structure and set permissions
 mkdir -p /var/log/scanx
 mkdir -p /var/lib/scanx
 touch /var/log/scanx/scanx-std.log
-chmod 755 /var/log/scanx
-chmod 755 /var/lib/scanx
-chmod 644 /var/log/scanx/scanx-std.log
+
+# Set proper permissions for user access
+chmod -R 777 /var/log/scanx
+chmod -R 777 /var/lib/scanx
+chmod 666 /var/log/scanx/scanx-std.log
+
+# Ensure config directory is readable by the service user
+chmod -R 777 /etc/scanx
+chmod -R 777 /etc/scanx/config
+chmod 644 /etc/scanx/config/agent.conf
+
+# Ensure binary is executable by the service user
+chmod -R 777 /usr/local/bin/scanx
+
+# Verify permissions are correct
+echo "🔍 Verifying permissions..."
+ls -la /usr/local/bin/scanx
+ls -la /etc/scanx/config/
+ls -la /var/log/scanx/
 
 # Load and start the service
+echo "🚀 Starting scanx service..."
 launchctl load /Library/LaunchDaemons/com.company.scanx.plist
+
+# Wait a moment and verify service started
+sleep 3
+if launchctl list | grep -q "com.company.scanx"; then
+    echo "✅ scanx service started successfully!"
+else
+    echo "⚠️  Service may not have started. Check logs:"
+    echo "   tail -f /var/log/scanx/scanx-std.log"
+fi
 
 echo "scanx installed successfully with user configuration!"
 echo "Email: $email"

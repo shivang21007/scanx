@@ -86,7 +86,7 @@ fi
 # Sign the binary
 echo ""
 echo "🔐 Signing binary..."
-codesign --force --options runtime --entitlements "$ENTITLEMENTS_FILE" --sign "$SIGNING_IDENTITY" "$BINARY_PATH"
+codesign --force --options runtime --entitlements "$ENTITLEMENTS_FILE" --sign "$SIGNING_IDENTITY" --timestamp "$BINARY_PATH"
 
 # Verify signature
 echo "✅ Verifying signature..."

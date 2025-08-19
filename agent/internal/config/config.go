@@ -8,8 +8,6 @@ import (
 	"runtime"
 	"scanx/internal/utils"
 	"time"
-
-	"gopkg.in/yaml.v3"
 )
 
 // AgentConfig represents the agent configuration from agent.conf
@@ -41,7 +39,7 @@ type Config struct {
 	Queries QueriesConfig
 }
 
-// LoadConfig loads both agent.conf and queries.yml
+// LoadConfig loads agent.conf from file and uses embedded queries.go
 func LoadConfig() (*Config, error) {
 	// Try a series of candidate config directories so the binary works without -config
 	// this is a fallback for the case where the binary is not run with -config
@@ -66,11 +64,11 @@ func LoadConfig() (*Config, error) {
 	return nil, lastErr
 }
 
-// LoadConfigFromPath loads configuration from a custom path
+// LoadConfigFromPath loads agent configuration from file and uses embedded queries
 func LoadConfigFromPath(configDir string) (*Config, error) {
 	config := &Config{}
 
-	// Load agent configuration
+	// Load agent configuration from file
 	agentConfig, err := loadAgentConfigFromPath(configDir)
 	if err != nil {
 		utils.Error("failed to load agent config: %w", err)
@@ -79,14 +77,10 @@ func LoadConfigFromPath(configDir string) (*Config, error) {
 	config.Agent = *agentConfig
 	utils.Info("Agent config loaded successfully")
 
-	// Load queries configuration
-	queriesConfig, err := loadQueriesConfigFromPath(configDir)
-	if err != nil {
-		utils.Error("failed to load queries config: %w", err)
-		return nil, fmt.Errorf("failed to load queries config: %w", err)
-	}
+	// Use embedded queries instead of loading from file
+	queriesConfig := GetQueriesConfig()
 	config.Queries = *queriesConfig
-	utils.Info("Queries config loaded successfully")
+	utils.Info("Embedded queries loaded successfully")
 
 	return config, nil
 }
@@ -95,31 +89,19 @@ func LoadConfigFromPath(configDir string) (*Config, error) {
 func loadAgentConfigFromPath(configDir string) (*AgentConfig, error) {
 	configPath := filepath.Join(configDir, "agent.conf")
 
+	// Check if file exists and is readable
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		return nil, fmt.Errorf("agent config file does not exist: %s", configPath)
+	}
+
 	data, err := os.ReadFile(configPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read agent config file: %w", err)
+		return nil, fmt.Errorf("failed to read agent config file %s: %w", configPath, err)
 	}
 
 	var config AgentConfig
 	if err := json.Unmarshal(data, &config); err != nil {
 		return nil, fmt.Errorf("failed to parse agent config: %w", err)
-	}
-
-	return &config, nil
-}
-
-// loadQueriesConfigFromPath loads the queries.yml file from a custom path
-func loadQueriesConfigFromPath(configDir string) (*QueriesConfig, error) {
-	configPath := filepath.Join(configDir, "queries.yml")
-
-	data, err := os.ReadFile(configPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read queries config file: %w", err)
-	}
-
-	var config QueriesConfig
-	if err := yaml.Unmarshal(data, &config); err != nil {
-		return nil, fmt.Errorf("failed to parse queries config: %w", err)
 	}
 
 	return &config, nil

@@ -49,9 +49,8 @@ logs/
 go.work
 
 # Agent specific
-agent/macagent.log
-agent/config/agent.conf
-agent/builds/
+agent/scanx.log
+agent/dist/
 agent/pkg-build/
 agent/scanx
 

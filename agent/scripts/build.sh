@@ -38,6 +38,7 @@ build_platform() {
     GOOS=$GOOS GOARCH=$GOARCH go build \
         -ldflags "-s -w -X main.version=$VERSION" \
         -o "$BUILD_DIR/$output_name" \
+        -trimpath \
         ./cmd/agent
     
     echo "✅ Built: $BUILD_DIR/$output_name"

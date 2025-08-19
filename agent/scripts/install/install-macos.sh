@@ -136,6 +136,9 @@ echo "   ⏱️  Interval: $user_interval"
 # Install launchd plist
 echo "🔧 Installing service configuration..."
 cp "./services/com.company.scanx.plist" "$PLIST_PATH"
+
+echo "👤 Service will run as root (queries execute as current user)"
+
 chmod 644 "$PLIST_PATH"
 chown root:wheel "$PLIST_PATH"
 
@@ -143,11 +146,25 @@ chown root:wheel "$PLIST_PATH"
 touch "$LOG_DIR/scanx-std.log"
 chmod 644 "$LOG_DIR/scanx-std.log"
 
-# Set proper permissions
+# Set proper permissions for user access
 chown -R root:wheel "$CONFIG_DIR"
 chown -R root:wheel "$DATA_DIR"
 chown -R root:wheel "$LOG_DIR"
 chown root:wheel "$INSTALL_DIR/$AGENT_NAME"
+
+# Ensure directories are accessible by the service user
+chmod -R 777 "$CONFIG_DIR"
+chmod -R 777 "$CONFIG_DIR/config"
+chmod 644 "$CONFIG_DIR/config/"*
+chmod -R 777 "$DATA_DIR"
+chmod -R 777 "$LOG_DIR"
+
+# Ensure log file is writable by the service user
+touch "$LOG_DIR/scanx-std.log"
+chmod 666 "$LOG_DIR/scanx-std.log"
+
+# Ensure binary is executable by the service user
+chmod 755 "$INSTALL_DIR/$AGENT_NAME"
 
 # Load and start the service
 echo "🚀 Starting scanx service..."

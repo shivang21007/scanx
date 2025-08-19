@@ -7,17 +7,17 @@ platform:
       query: "SELECT s.*, o.version as os_version FROM system_info s, os_version o;"
       description: "System information with OS version"
     
-    screen_lock_info:
-      query: "SELECT CASE WHEN enabled = '1' THEN 'true' ELSE 'false' END AS screen_lock, grace_period FROM screenlock;"
-      description: "Screen lock information"
-    
     disk_encryption_info:
       query: "SELECT CASE WHEN COUNT(*) > 0 THEN 'true' ELSE 'false' END AS disk_encryption FROM disk_encryption WHERE uid != '' AND encrypted = '1';"
-      description: "Disk encryption information"
+      description: "Disk encryption information for macOS"
+
+    screen_lock_info:
+      query: "SELECT CASE WHEN enabled = '1' THEN 'true' ELSE 'false' END AS screen_lock, grace_period FROM screenlock;"
+      description: "Screen lock information for macOS"
 
     password_manager_info:
       query: "SELECT CASE WHEN COUNT(*) > 0 THEN 'true' ELSE 'false' END AS password_manager FROM apps WHERE bundle_name IN ('MacPass','KeyPassXC','KeyPass');"
-      description: "Password manager information"
+      description: "Password manager information for macOS"
 
     antivirus_info:
       query:  "SELECT CASE WHEN (SELECT assessments_enabled FROM gatekeeper LIMIT 1) = 1 THEN 'true' WHEN (SELECT global_state FROM alf LIMIT 1) = 1 THEN 'true' ELSE 'false' END AS antivirus_info;"

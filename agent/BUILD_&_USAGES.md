@@ -12,14 +12,70 @@
 
 ## 🎯 Overview
 
-The ScanX is a cross-platform system monitoring and device management agent that collects system information and sends it to a central management server. It runs as a persistent daemon/service and automatically restarts with the system.
+The **ScanX** is a sophisticated cross-platform system monitoring and device management agent that provides comprehensive endpoint visibility and security compliance monitoring. It operates as a persistent daemon/service that automatically collects detailed system information using OSQuery and transmits this data to a central management server at configurable intervals.
 
 ### 🌟 Key Features
-- **Cross-platform**: macOS, Windows, Linux (x86_64, ARM64)
-- **Persistent**: Auto-starts with system boot
+- **Cross-platform Support**: macOS, Windows, Linux (x86_64, ARM64)
+- **Intelligent Query Execution**: 
+  - System queries run as root for full system access
+  - User-specific queries (like screen lock preferences) execute in user context
+  - Automatic user detection and context switching
+- **Persistent Operation**: Auto-starts with system boot and self-healing
+- **Comprehensive Data Collection**:
+  - System hardware and OS information
+  - Security status (disk encryption, antivirus, firewall)
+  - Installed applications and software inventory
+  - User-specific security settings (screen lock, password policies)
+  - Network configuration and connectivity
 - **Configurable**: Customizable collection intervals and user identification
 - **Secure**: Code-signed binaries and secure service configurations
-- **Flexible**: Multiple installation methods (packages, installers, manual)
+- **Flexible Deployment**: Multiple installation methods (packages, installers, manual)
+
+### 🔍 What ScanX Monitors
+
+#### System Information
+- **Hardware Details**: CPU, memory, disk usage, serial numbers
+- **Operating System**: Version, patches, security settings, kernel info
+- **Network Configuration**: Interfaces, routing, DNS, connectivity
+
+#### Security Compliance
+- **Disk Encryption**: FileVault (macOS), BitLocker (Windows), LUKS (Linux)
+- **Antivirus Status**: Real-time protection, definitions, scan history
+- **Firewall Configuration**: Rules, policies, active connections
+- **Screen Lock Settings**: User-specific lock preferences and grace periods
+- **Password Policies**: Complexity requirements, expiration settings
+
+#### Software Inventory
+- **Installed Applications**: Name, version, installation date, publisher
+- **System Services**: Running services, startup items, daemons
+- **Browser Extensions**: Security extensions, privacy tools
+- **Development Tools**: IDEs, compilers, package managers
+
+#### User Context Data
+- **User Preferences**: Security settings, privacy configurations
+- **Login Sessions**: Active users, session information
+- **Application Usage**: Recently used applications, file access patterns
+
+### 🏗️ Architecture
+
+#### Service Layer
+- **macOS**: `launchd` with `.plist` configuration (runs as root)
+- **Linux**: `systemd` service with auto-restart capabilities
+- **Windows**: Windows Service with recovery options
+
+#### Query Execution Engine
+- **OSQuery Integration**: Leverages OSQuery for system information collection
+- **Context-Aware Execution**: 
+  - System-level queries execute as root
+  - User-specific queries execute in user context using `sudo -u username`
+- **Temporary File Management**: Uses `/var/lib/scanx/query.sql` for query execution
+- **Error Handling**: Comprehensive error capture and logging
+
+#### Data Transmission
+- **HTTP/HTTPS Communication**: Secure data transmission to backend
+- **JSON Format**: Structured data format for easy processing
+- **Retry Logic**: Automatic retry on network failures
+- **Compression**: Efficient data transmission with compression
 
 ## 🚀 Quick Start
 
@@ -403,6 +459,25 @@ ls -la /etc/scanx/config/
 
 # Check working directory in service file
 cat /etc/systemd/system/scanx.service | grep WorkingDirectory
+```
+
+#### 6. User Context Query Issues
+**Problem**: User-specific queries fail with permission errors
+**Solution**:
+```bash
+# Check /var/lib/scanx permissions
+ls -la /var/lib/scanx/
+
+# Should be 777 (rwxrwxrwx) for universal access
+# Fix permissions if needed:
+sudo chmod 777 /var/lib/scanx
+
+# Verify sudo access for current user
+sudo -u $(whoami) whoami
+
+# Test user context query manually
+echo "SELECT 1;" > /var/lib/scanx/test.sql
+sudo -u $(whoami) osqueryi --json < /var/lib/scanx/test.sql
 ```
 
 ### Debug Mode
