@@ -35,17 +35,21 @@ func GetQueriesConfig() *QueriesConfig {
 					Query:       "SELECT s.*, o.version as os_version FROM system_info s, os_version o;",
 					Description: "System information with OS version",
 				},
-				"screen_lock_info": {
-					Query:       "select * from screen_lock;",
-					Description: "Screen lock information",
-				},
+				// "screen_lock_info": {
+				// 	Query:       "select * from screen_lock;",
+				// 	Description: "Screen lock information",
+				// },
 				"disk_encryption_info": {
 					Query:       "SELECT CASE WHEN COUNT(*) > 0 THEN 'true' ELSE 'false' END AS disk_encryption FROM bitlocker_info WHERE protection_status = 1 OR percentage_encrypted > 0;",
 					Description: "Disk encryption information",
 				},
 				"antivirus_info": {
-					Query:       "SELECT CASE WHEN antivirus = 'Good' THEN 'true' ELSE 'false' END AS antivirus_status FROM windows_security_center;",
-					Description: "Antivirus information",
+					Query:       "SELECT CASE WHEN antivirus = 'Good' THEN 'true' ELSE 'false' END AS antivirus_info FROM windows_security_center;",
+					Description: "Antivirus information for Windows",
+				},
+				"password_manager_info": {
+					Query:       "SELECT CASE WHEN COUNT(*) > 0 THEN 'true' ELSE 'false' END AS password_manager FROM programs WHERE name IN ('KeePassXC','KeePass','Keepass','1Password','LastPass','1Password X','Password Wolf','Dashlane','Nordpass','1Password7','Bitwarden','Bitwarden Legacy','TeamPassword');",
+					Description: "Password manager information for Windows",
 				},
 				"apps_info": {
 					Query:       "SELECT name, version, language, publisher, install_date, identifying_number, package_family_name, upgrade_code FROM programs;",

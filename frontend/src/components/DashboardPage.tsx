@@ -53,7 +53,7 @@ export function DashboardPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
+      <header className="bg-white shadow-lg border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
@@ -122,7 +122,7 @@ export function DashboardPage() {
         {!loading && !error && stats && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             <Link to="/devices" className="block">
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md hover:border-blue-300 transition-all cursor-pointer">
+              <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-6 hover:shadow-md hover:border-blue-300 transition-all cursor-pointer">
                 <div className="flex items-center">
                   <Monitor className="h-8 w-8 text-blue-600" />
                   <div className="ml-4">
@@ -134,7 +134,7 @@ export function DashboardPage() {
             </Link>
             
             <Link to="/users" className="block">
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md hover:border-purple-300 transition-all cursor-pointer">
+              <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-6 hover:shadow-md hover:border-purple-300 transition-all cursor-pointer">
                 <div className="flex items-center">
                   <Users className="h-8 w-8 text-purple-600" />
                   <div className="ml-4">
@@ -145,7 +145,7 @@ export function DashboardPage() {
               </div>
             </Link>
 
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-6">
               <div className="flex items-center">
                 <Activity className="h-8 w-8 text-green-600" />
                 <div className="ml-4">
@@ -155,7 +155,7 @@ export function DashboardPage() {
               </div>
             </div>
 
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-6">
               <div className="flex items-center">
                 <Shield className="h-8 w-8 text-orange-600" />
                 <div className="ml-4">
@@ -171,7 +171,7 @@ export function DashboardPage() {
         {!loading && !error && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Recent Devices */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div className="bg-white rounded-lg shadow-lg border border-gray-200">
               <div className="px-6 py-4 border-b border-gray-200">
                 <h3 className="text-lg font-medium text-gray-900">Recent Devices</h3>
               </div>
@@ -182,11 +182,13 @@ export function DashboardPage() {
                       <div key={device.id} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg">
                         <div className="flex items-center">
                           <Monitor className="h-5 w-5 text-gray-400 mr-3" />
+                          <Link to={`/devices/${device.id}`}>
                           <div>
                             <p className="text-sm font-medium text-gray-900">{device.computer_name || 'Unknown Device'}</p>
                             <p className="text-xs text-gray-500">{device.user_email}</p>
                             <p className="text-xs text-gray-400">{device.serial_no}</p>
                           </div>
+                          </Link>
                         </div>
                         <div className="flex items-center">
                           <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
@@ -211,7 +213,7 @@ export function DashboardPage() {
             </div>
 
             {/* OS Distribution */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div className="bg-white rounded-lg shadow-lg border border-gray-200">
               <div className="px-6 py-4 border-b border-gray-200">
                 <h3 className="text-lg font-medium text-gray-900">OS Distribution</h3>
               </div>
@@ -238,7 +240,32 @@ export function DashboardPage() {
             </div>
           </div>
         )}
+
+        {/* Logged in as admin details at the bottom of the page as card */}
+        {!loading && !error && (
+          <div className="grid grid-cols-1 lg:grid-cols-1 gap-6 mt-6">
+          <div className="bg-gray-50 rounded-lg shadow-lg border border-gray-200">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <p className="text-sm text-gray-500">Logged in as: </p>
+            <p className="text-sm text-gray-500">Name: {admin?.name}</p>
+            <p className="text-sm text-gray-500">Email: {admin?.email}</p>
+            <p className="text-sm text-gray-500">Created at: {admin?.created_at}</p>
+          </div>
+        </div>
+        </div>
+        )}
+
       </main>
+
+      {/* Footer */}
+      <footer className="bg-white shadow-lg border border-gray-200 text-center">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-center items-center h-16">
+            <Link to="https://octro.com" className="text-sm text-gray-500 text-center">© 2025 ScanX. All rights reserved Octro Inc.</Link>
+          </div>
+        </div>
+      </footer>
+
     </div>
   );
 }

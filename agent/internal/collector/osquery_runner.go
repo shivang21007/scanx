@@ -137,7 +137,7 @@ func (r *OSQueryRunner) ExecuteQueryAsUser(queryName string, query string, usern
 	utils.Info("Executing query '%s' as user '%s'", queryName, username)
 
 	// Create temporary query file
-	queryFile := "/var/lib/scanx/query.sql"
+	queryFile := "/tmp/scanx_query.sql"
 	err := os.WriteFile(queryFile, []byte(query), 0644)
 	if err != nil {
 		return nil, fmt.Errorf("failed to write query file: %w", err)
@@ -200,7 +200,7 @@ func (r *OSQueryRunner) ExecuteQuery(queryName string, query string) ([]map[stri
 	utils.Info("Executing queryName: %s with osquery path: %s", queryName, r.osqueryPath)
 
 	// For user-specific queries on macOS, execute as current user
-	if runtime.GOOS == "darwin" && (queryName == "screen_lock_info" || strings.Contains(strings.ToLower(query), "screenlock")) {
+	if (runtime.GOOS == "darwin" || runtime.GOOS == "linux") && (queryName == "screen_lock_info" || strings.Contains(strings.ToLower(query), "screenlock")) {
 		username, err := r.getCurrentUser()
 		if err != nil {
 			utils.Info("Failed to get current user, falling back to root execution: %v", err)
