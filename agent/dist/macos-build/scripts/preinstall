@@ -1,0 +1,43 @@
+#!/bin/bash
+
+# Clean up existing scanx installation
+echo "🧹 Cleaning up existing scanx installation..."
+
+# Remove existing service process
+launchctl remove com.company.scanx 2>/dev/null || true
+
+# Stop existing service if running
+launchctl unload /Library/LaunchDaemons/com.company.scanx.plist 2>/dev/null || true
+
+# Remove old plist file
+rm -f /Library/LaunchDaemons/com.company.scanx.plist 2>/dev/null || true
+
+# Remove old binary
+rm -f /usr/local/bin/scanx 2>/dev/null || true
+
+# Remove old configuration and data directories
+rm -rf /etc/scanx 2>/dev/null || true
+rm -rf /var/log/scanx 2>/dev/null || true
+rm -rf /var/lib/scanx 2>/dev/null || true
+
+# Remove old log files
+rm -f /var/log/scanx.log 2>/dev/null || true
+rm -f /var/log/scanx-std.log 2>/dev/null || true
+rm -f /var/log/scanx-error.log 2>/dev/null || true
+
+# Remove quarantine from any existing binary (if it exists)
+if [ -f "/usr/local/bin/scanx" ]; then
+    xattr -rd com.apple.quarantine /usr/local/bin/scanx 2>/dev/null || true
+fi
+
+# Clean up any permission issues
+chmod 755 /usr/local/bin/scanx 2>/dev/null || true
+chmod 755 /etc/scanx 2>/dev/null || true
+chmod 755 /etc/scanx/config 2>/dev/null || true
+chmod 644 /etc/scanx/config/* 2>/dev/null || true
+chmod 755 /var/log/scanx 2>/dev/null || true
+chmod 755 /var/lib/scanx 2>/dev/null || true
+
+echo "✅ Cleanup completed"
+
+exit 0

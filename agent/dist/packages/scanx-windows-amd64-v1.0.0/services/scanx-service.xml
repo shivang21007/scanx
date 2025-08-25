@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Windows Service Configuration Template -->
+<!-- This file is used by the installation script to create the Windows service -->
+<service>
+    <id>scanx</id>
+    <name>scanx</name>
+    <description>scanx - System Monitoring and Device Management Service</description>
+    <executable>C:\Program Files\scanx\scanx.exe</executable>
+    <arguments>-daemon</arguments>
+    <workingdirectory>C:\Program Files\scanx</workingdirectory>
+    <logpath>C:\Program Files\scanx\logs</logpath>
+    <log mode="roll-by-size">
+        <sizeThreshold>10240</sizeThreshold>
+        <keepFiles>8</keepFiles>
+    </log>
+    <onfailure action="restart" delay="10 sec"/>
+    <onfailure action="restart" delay="20 sec"/>
+    <onfailure action="none"/>
+    <resetfailure>1 hour</resetfailure>
+    <env name="PATH" value="C:\Program Files\osquery;%PATH%"/>
+</service>

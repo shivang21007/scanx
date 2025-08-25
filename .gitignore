@@ -22,7 +22,6 @@ lerna-debug.log*
 .env.docker.production.local
 
 # Build outputs
-dist/
 dist-ssr/
 build/
 *.local
@@ -49,8 +48,7 @@ logs/
 go.work
 
 # Agent specific
-agent/scanx.log
-agent/scanx
+agent/*.log
 
 # React/Vite specific
 # Vite
@@ -60,7 +58,8 @@ vite.config.ts.timestamp-*
 # React build
 /frontend/build/
 /frontend/dist/
-
+/backend/build/
+/backend/dist/
 # TypeScript
 *.tsbuildinfo
 
@@ -107,7 +106,6 @@ jspm_packages/
 
 # Nuxt.js build / generate output
 .nuxt
-dist
 
 # Storybook build outputs
 .out
