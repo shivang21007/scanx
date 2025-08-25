@@ -1,24 +1,66 @@
 # Windows Installation Script for scanx
-# Interactive: powershell -ExecutionPolicy Bypass -File install-windows.ps1
-# Silent:      powershell -ExecutionPolicy Bypass -File install-windows.ps1 -Email "user@company.com" -Interval "10m"
+# This script must be run with elevated privileges and proper execution policy
+# 
+# Installation Methods:
+# 1. Interactive: Right-click PowerShell -> Run as Administrator, then:
+#    Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+#    .\install-windows.ps1
+#
+# 2. Silent: Right-click PowerShell -> Run as Administrator, then:
+#    Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+#    .\install-windows.ps1 -Email "user@company.com" -Interval "10m"
+#
+# 3. Bypass (one-time): Right-click PowerShell -> Run as Administrator, then:
+#    powershell -ExecutionPolicy Bypass -File install-windows.ps1
 
 param(
     [switch]$Force,
     [string]$Email = "",
     [string]$Interval = "",
-    [switch]$Help
+    [switch]$Help,
+    [switch]$BypassExecutionPolicy
 )
 
 if ($Help) {
-    Write-Host "Usage: install-windows.ps1 [-Email EMAIL] [-Interval INTERVAL]"
-    Write-Host "  -Email EMAIL      Employee email (required for silent install)"
-    Write-Host "  -Interval INTERVAL Data collection interval (default: 10m)"
-    Write-Host "  -Force            Force installation even if osquery not found"
-    Write-Host "  -Help             Show this help message"
+    Write-Host "Usage: install-windows.ps1 [-Email EMAIL] [-Interval INTERVAL] [-BypassExecutionPolicy]"
+    Write-Host "  -Email EMAIL              Employee email (required for silent install)"
+    Write-Host "  -Interval INTERVAL        Data collection interval (default: 10m)"
+    Write-Host "  -Force                    Force installation even if osquery not found"
+    Write-Host "  -BypassExecutionPolicy    Bypass execution policy check"
+    Write-Host "  -Help                     Show this help message"
+    Write-Host ""
+    Write-Host "Installation Methods:"
+    Write-Host "  1. Interactive: Right-click PowerShell -> Run as Administrator"
+    Write-Host "     Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser"
+    Write-Host "     .\install-windows.ps1"
+    Write-Host ""
+    Write-Host "  2. Silent: Right-click PowerShell -> Run as Administrator"
+    Write-Host "     Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser"
+    Write-Host "     .\install-windows.ps1 -Email 'user@company.com' -Interval '10m'"
+    Write-Host ""
+    Write-Host "  3. Bypass (one-time): Right-click PowerShell -> Run as Administrator"
+    Write-Host "     powershell -ExecutionPolicy Bypass -File install-windows.ps1"
     exit 0
 }
 
 $ErrorActionPreference = "Stop"
+
+# Check execution policy unless bypassed
+if (-not $BypassExecutionPolicy) {
+    $currentPolicy = Get-ExecutionPolicy -Scope CurrentUser
+    if ($currentPolicy -eq "Restricted") {
+        Write-Host "❌ PowerShell execution policy is restricted" -ForegroundColor Red
+        Write-Host ""
+        Write-Host "To fix this, run PowerShell as Administrator and execute:" -ForegroundColor Yellow
+        Write-Host "Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser" -ForegroundColor Cyan
+        Write-Host ""
+        Write-Host "Or use the bypass method:" -ForegroundColor Yellow
+        Write-Host "powershell -ExecutionPolicy Bypass -File install-windows.ps1" -ForegroundColor Cyan
+        Write-Host ""
+        Write-Host "For more information, see: https://go.microsoft.com/fwlink/?LinkID=135170" -ForegroundColor Blue
+        exit 1
+    }
+}
 
 $AGENT_NAME = "scanx.exe"
 $INSTALL_DIR = "C:\Program Files\scanx"
@@ -27,11 +69,20 @@ $LOG_DIR = "$INSTALL_DIR\logs"
 $SERVICE_NAME = "scanx"
 
 Write-Host "🪟 Installing scanx on Windows..." -ForegroundColor Green
+Write-Host "Execution Policy: $(Get-ExecutionPolicy -Scope CurrentUser)" -ForegroundColor Cyan
 
 # Check if running as Administrator
 if (-NOT ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
     Write-Host "❌ This script must be run as Administrator" -ForegroundColor Red
-    Write-Host "Right-click PowerShell and select 'Run as Administrator'" -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "To fix this:" -ForegroundColor Yellow
+    Write-Host "1. Right-click on PowerShell" -ForegroundColor White
+    Write-Host "2. Select 'Run as Administrator'" -ForegroundColor White
+    Write-Host "3. Navigate to this directory" -ForegroundColor White
+    Write-Host "4. Run the script again" -ForegroundColor White
+    Write-Host ""
+    Write-Host "Or use the bypass method:" -ForegroundColor Yellow
+    Write-Host "powershell -ExecutionPolicy Bypass -File install-windows.ps1" -ForegroundColor Cyan
     exit 1
 }
 
@@ -44,9 +95,12 @@ function Test-OSQuery {
 # Install osquery if not present
 if (-not (Test-OSQuery)) {
     Write-Host "⚠️  OSQuery not found. Please install osquery manually:" -ForegroundColor Yellow
-    Write-Host "exiting script..."
+    Write-Host ""
+    Write-Host "Download from: https://osquery.io/downloads/" -ForegroundColor Cyan
+    Write-Host "Or install via Chocolatey: choco install osquery" -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host "After installing osquery, run this script again." -ForegroundColor Yellow
     exit 1
-    
 } else {
     Write-Host "✅ OSQuery found: C:\Program Files\osquery\osqueryi.exe" -ForegroundColor Green
 }
@@ -91,12 +145,13 @@ if (-not [string]::IsNullOrWhiteSpace($Email)) {
     Write-Host "=====================" -ForegroundColor Cyan
 
     # Get email (required)
-    do {
+    $user_email = ""
+    while ([string]::IsNullOrWhiteSpace($user_email) -or $user_email -notlike "*@*") {
         $user_email = Read-Host "📧 Enter employee email (required)"
-        if ([string]::IsNullOrWhiteSpace($user_email) -or $user_email -notmatch "@") {
+        if ([string]::IsNullOrWhiteSpace($user_email) -or $user_email -notlike "*@*") {
             Write-Host "❌ Please enter a valid email address" -ForegroundColor Red
         }
-    } while ([string]::IsNullOrWhiteSpace($user_email) -or $user_email -notmatch "@")
+    }
 
     # Get interval (optional)
     Write-Host ""
@@ -174,7 +229,7 @@ Write-Host ""
 Write-Host "ℹ️  The agent will now run automatically on system startup" -ForegroundColor Blue
 
 # Create uninstall script
-$uninstallScript = @"
+$uninstallContent = @"
 # Uninstall scanx
 Write-Host "🗑️  Uninstalling scanx..." -ForegroundColor Yellow
 
@@ -196,6 +251,6 @@ if (Test-Path "$INSTALL_DIR") {
 Write-Host "🎉 scanx uninstalled successfully!" -ForegroundColor Green
 "@
 
-$uninstallScript | Out-File -FilePath "$INSTALL_DIR\uninstall.ps1" -Encoding UTF8
+$uninstallContent | Out-File -FilePath "$INSTALL_DIR\uninstall.ps1" -Encoding UTF8
 Write-Host ""
 Write-Host "📝 Uninstall script created: $INSTALL_DIR\uninstall.ps1" -ForegroundColor Cyan

@@ -50,8 +50,6 @@ go.work
 
 # Agent specific
 agent/scanx.log
-agent/dist/
-agent/pkg-build/
 agent/scanx
 
 # React/Vite specific
