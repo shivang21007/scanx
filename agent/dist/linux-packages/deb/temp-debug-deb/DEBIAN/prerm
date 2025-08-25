@@ -1,0 +1,24 @@
+#!/bin/bash
+
+set -e
+
+# Stop and disable service
+systemctl stop scanx || true
+systemctl disable scanx || true
+
+# Remove configuration files
+rm -rf /etc/scanx/config/*
+
+# Remove binary
+rm -f /usr/local/bin/scanx
+
+# Remove service file
+rm -f /etc/systemd/system/scanx.service
+
+# Remove log files
+rm -rf /var/log/scanx/*
+
+# Remove data files
+rm -rf /var/lib/scanx/*
+
+exit 0

@@ -1,0 +1,10 @@
+Package: scanx
+Version: 1.0.0
+Section: admin
+Priority: optional
+Architecture: amd64
+Depends: systemd
+Maintainer: Your Company <admin@company.com>
+Description: scanx - System Monitoring and Device Management
+ A cross-platform agent for system monitoring and device management.
+ Collects system information and sends it to a central management server.

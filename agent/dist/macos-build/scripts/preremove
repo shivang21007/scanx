@@ -1,0 +1,17 @@
+#!/bin/bash
+
+# Stop and unload service
+launchctl unload /Library/LaunchDaemons/com.company.scanx.plist 2>/dev/null || true
+launchctl remove com.company.scanx 2>/dev/null || true
+
+# Remove the configuration files
+rm -rf /etc/scanx 2>/dev/null || true
+
+# Remove the log files
+rm -rf /var/log/scanx 2>/dev/null || true
+
+# Remove the binary
+rm -f /usr/local/bin/scanx 2>/dev/null || true
+
+
+exit 0

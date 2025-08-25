@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Fragment>
+    <UI>
+      <Dialog Id="ConfigDialog" Width="370" Height="270" Title="scanx Configuration">
+        <Control Id="EmailLabel" Type="Text" X="20" Y="60" Width="100" Height="17" Text="Email Address:" />
+        <Control Id="EmailEdit" Type="Edit" X="20" Y="80" Width="200" Height="17" Property="USER_EMAIL" />
+        
+        <Control Id="IntervalLabel" Type="Text" X="20" Y="120" Width="100" Height="17" Text="Collection Interval:" />
+        <Control Id="IntervalCombo" Type="ComboBox" X="20" Y="140" Width="100" Height="17" Property="COLLECTION_INTERVAL">
+          <ComboBox Property="COLLECTION_INTERVAL">
+            <ListItem Text="5m" Value="5m" />
+            <ListItem Text="10m" Value="10m" />
+            <ListItem Text="15m" Value="15m" />
+            <ListItem Text="30m" Value="30m" />
+            <ListItem Text="1h" Value="1h" />
+            <ListItem Text="2h" Value="2h" />
+          </ComboBox>
+        </Control>
+
+        <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="Next" />
+        <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Cancel="yes" Text="Cancel" />
+      </Dialog>
+    </UI>
+  </Fragment>
+</Wix>
