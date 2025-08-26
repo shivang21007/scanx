@@ -63,7 +63,7 @@ if (-not $BypassExecutionPolicy) {
 }
 
 $AGENT_NAME = "scanx.exe"
-$INSTALL_DIR = "C:\Program Files\scanx"
+$INSTALL_DIR = "C:\Program Files (x86)\scanx"
 $CONFIG_DIR = "$INSTALL_DIR\config"
 $LOG_DIR = "$INSTALL_DIR\logs"
 $SERVICE_NAME = "scanx"

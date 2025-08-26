@@ -5,10 +5,10 @@
     <id>scanx</id>
     <name>scanx</name>
     <description>scanx - System Monitoring and Device Management Service</description>
-    <executable>C:\Program Files\scanx\scanx.exe</executable>
+    <executable>C:\Program Files (x86)\scanx\scanx.exe</executable>
     <arguments>-daemon</arguments>
-    <workingdirectory>C:\Program Files\scanx</workingdirectory>
-    <logpath>C:\Program Files\scanx\logs</logpath>
+    <workingdirectory>C:\Program Files (x86)\scanx</workingdirectory>
+    <logpath>C:\Program Files (x86)\scanx\logs</logpath>
     <log mode="roll-by-size">
         <sizeThreshold>10240</sizeThreshold>
         <keepFiles>8</keepFiles>

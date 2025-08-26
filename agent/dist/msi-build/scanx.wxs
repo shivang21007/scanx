@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
   <Product Id="*" 
-           Name="scanx" 
+           Name="ScanX" 
            Language="1033" 
            Version="1.0.0" 
            Manufacturer="Your Company" 
@@ -10,14 +10,16 @@
     <Package InstallerVersion="200" 
              Compressed="yes" 
              InstallScope="perMachine"
-             Description="scanx - System Monitoring and Device Management" />
+             Description="ScanX - System Monitoring and Device Management" />
 
     <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
     <MediaTemplate EmbedCab="yes" />
 
     <!-- Features -->
-    <Feature Id="ProductFeature" Title="scanx" Level="1">
-      <ComponentGroupRef Id="ProductComponents" />
+    <Feature Id="ProductFeature" Title="ScanX" Level="1">
+      <ComponentRef Id="MainExecutable" />
+      <ComponentRef Id="ConfigFiles" />
+      <ComponentRef Id="ConfigScript" />
       <ComponentRef Id="ServiceComponent" />
     </Feature>
 
@@ -29,30 +31,27 @@
           <Directory Id="LogsFolder" Name="logs" />
         </Directory>
       </Directory>
-      <Directory Id="CommonAppDataFolder">
-        <Directory Id="CompanyDataFolder" Name="scanx" />
-      </Directory>
     </Directory>
 
-    <!-- Components -->
-    <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
-      <Component Id="MainExecutable" Guid="11111111-1111-1111-1111-111111111111">
-        <File Id="scanx.exe" Source="dist/builds/scanx-windows-amd64.exe" KeyPath="yes" />
-      </Component>
-      
-      <Component Id="ConfigFiles" Guid="22222222-2222-2222-2222-222222222222" Directory="ConfigFolder">
-        <File Id="agent.conf" Source="config/agent.conf" />
-        <File Id="queries.yml" Source="config/queries.yml" />
-      </Component>
-    </ComponentGroup>
+    <!-- Main Executable -->
+    <Component Id="MainExecutable" Directory="INSTALLFOLDER" Guid="11111111-1111-1111-1111-111111111111">
+      <File Id="scanx.exe" Source="C:\Users\Octro\Downloads\scanx\agent\dist\builds\scanx-windows-amd64.exe" KeyPath="yes" />
+    </Component>
+    
+    <!-- Config Files -->
+    <Component Id="ConfigFiles" Directory="ConfigFolder" Guid="22222222-2222-2222-2222-222222222222">
+      <File Id="agent.conf" Source="C:\Users\Octro\Downloads\scanx\agent\config\agent.conf" />
+      <File Id="queries.yml" Source="C:\Users\Octro\Downloads\scanx\agent\config\queries.yml" />
+    </Component>
 
     <!-- Service Component -->
     <Component Id="ServiceComponent" Directory="INSTALLFOLDER" Guid="33333333-3333-3333-3333-333333333333">
+      <CreateFolder />
       <ServiceInstall Id="scanxService"
                       Type="ownProcess"
                       Name="scanx"
-                      DisplayName="scanx"
-                      Description="scanx - System Monitoring and Device Management"
+                      DisplayName="ScanX - System Monitoring"
+                      Description="ScanX - System Monitoring and Device Management Service"
                       Start="auto"
                       Account="LocalSystem"
                       ErrorControl="ignore"
@@ -66,26 +65,24 @@
                       Stop="both" 
                       Remove="uninstall" 
                       Name="scanx" 
-                      Wait="yes" />
+                      Wait="no" />
     </Component>
 
+    <!-- License -->
+    <WixVariable Id="WixUILicenseRtf" Value="license.rtf" />
+    
     <!-- UI -->
     <UI>
       <UIRef Id="WixUI_Minimal" />
-      <Publish Dialog="ExitDialog" Control="Finish" Event="DoAction" Value="LaunchConfigDialog">WIXUI_EXITDIALOGOPTIONALTEXT</Publish>
     </UI>
 
-    <!-- Custom Actions for Configuration -->
-    <CustomAction Id="LaunchConfigDialog" 
-                  BinaryKey="WixCA" 
-                  DllEntry="CAQuietExec" 
-                  Execute="immediate" 
-                  Return="ignore" />
-
     <!-- Properties -->
-    <Property Id="WIXUI_EXITDIALOGOPTIONALTEXT" Value="Configuration setup will launch after installation." />
-    <Property Id="USER_EMAIL" />
     <Property Id="COLLECTION_INTERVAL" Value="2h" />
+    
+    <!-- Include PowerShell script for configuration -->
+    <Component Id="ConfigScript" Directory="INSTALLFOLDER" Guid="44444444-4444-4444-4444-444444444444">
+      <File Id="configure_scanx_v1_ps1" Source="configure-scanx-v1.ps1" />
+    </Component>
 
   </Product>
 </Wix>

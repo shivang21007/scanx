@@ -7,7 +7,7 @@ set -e
 
 VERSION=$(cat config/agent.conf | grep -o '"version": "[^"]*"' | cut -d'"' -f4)
 MSI_NAME="scanx-${VERSION}"
-BUILD_DIR="dist/msi-build"
+BUILD_DIR="dist/msi-build_bash"
 WXS_FILE="$BUILD_DIR/scanx.wxs"
 
 echo "🪟 Creating Windows MSI Installer"
@@ -199,7 +199,7 @@ $okButton.Location = New-Object System.Drawing.Point(200, 160)
 $okButton.Size = New-Object System.Drawing.Size(75, 25)
 $okButton.Add_Click({
     if ($emailTextBox.Text -match "@") {
-        $configFile = "C:\Program Files\scanx\config\agent.conf"
+        $configFile = "C:\Program Files (x86)\scanx\config\agent.conf"
         $config = Get-Content $configFile -Raw
         $config = $config -replace '"user_email": "[^"]*"', "`"user_email`": `"$($emailTextBox.Text)`""
         $config = $config -replace '"interval": "[^"]*"', "`"interval`": `"$($intervalComboBox.SelectedItem)`""
