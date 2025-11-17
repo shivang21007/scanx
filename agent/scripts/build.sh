@@ -127,31 +127,45 @@ create_package() {
             cp "scripts/services/scanx.service" "$pkg_dir/services/"
             ;;
         "windows")
-            # Copy MSI build files
-            MSI_DIR="dist/msi-build/taskSchedulerApproach"
-            if [[ -d "$MSI_DIR" ]]; then
-                # Copy MSI-related files individually
-                for file in build-msi.ps1 scanx.wxs scanx-task.xml license.rtf scanx-manager.bat; do
-                    if [[ -f "$MSI_DIR/$file" ]]; then
-                        cp "$MSI_DIR/$file" "$pkg_dir/"
+            # Create proper folder structure for MSI building
+            # This structure allows the build-msi.ps1 script to work correctly
+            
+            # Create scripts directory structure
+            mkdir -p "$pkg_dir/scripts/windows"
+            
+            # Copy MSI build script
+            if [[ -f "scripts/build-msi.ps1" ]]; then
+                cp "scripts/build-msi.ps1" "$pkg_dir/scripts/"
+                echo "📦 Copied build-msi.ps1"
+            fi
+            
+            # Copy Windows build files from scripts/windows/
+            WINDOWS_SCRIPTS_DIR="scripts/windows"
+            if [[ -d "$WINDOWS_SCRIPTS_DIR" ]]; then
+                for file in scanx.wxs scanx-manager.bat scanx-task.xml license.rtf; do
+                    if [[ -f "$WINDOWS_SCRIPTS_DIR/$file" ]]; then
+                        cp "$WINDOWS_SCRIPTS_DIR/$file" "$pkg_dir/scripts/windows/"
+                        echo "📦 Copied $file"
                     fi
                 done
             fi
             
-            # Create directories for installation script and service files
-            mkdir -p "$pkg_dir/install"
-            mkdir -p "$pkg_dir/services"
+            # Create dist directory structure for binaries
+            mkdir -p "$pkg_dir/dist/builds"
+            mkdir -p "$pkg_dir/dist/builds-osquery"
             
-            # Copy installation script and service files
-            cp "scripts/install/install-windows.ps1" "$pkg_dir/install/"
-            cp "scripts/services/scanx-service.xml" "$pkg_dir/services/"
-            
-            # Copy binary (rename to scanx.exe)
-            cp "$BUILD_DIR/${BINARY_NAME}-${platform}-${arch}${ext}" "$pkg_dir/"
+            # Copy binary with proper naming (build script expects scanx-windows-{arch}.exe)
+            BINARY_SOURCE="$BUILD_DIR/${BINARY_NAME}-${platform}-${arch}${ext}"
+            BINARY_DEST="$pkg_dir/dist/builds/${BINARY_NAME}-${platform}-${arch}${ext}"
+            if [[ -f "$BINARY_SOURCE" ]]; then
+                cp "$BINARY_SOURCE" "$BINARY_DEST"
+                echo "📦 Copied binary: ${BINARY_NAME}-${platform}-${arch}${ext}"
+            fi
             
             # Copy config files
             mkdir -p "$pkg_dir/config"
             cp config/* "$pkg_dir/config/"
+            echo "📦 Copied config files"
             
             # Copy bundled osqueryi.exe based on architecture
             OSQUERY_SOURCE=""
@@ -162,9 +176,9 @@ create_package() {
             fi
             
             if [[ -f "$OSQUERY_SOURCE" ]]; then
-                echo "📦 Including bundled osqueryi.exe for ${arch}..."
-                cp "$OSQUERY_SOURCE" "$pkg_dir/osqueryi.exe"
-                echo "✅ Bundled osqueryi.exe included"
+                OSQUERY_DEST="$pkg_dir/dist/builds-osquery/$(basename $OSQUERY_SOURCE)"
+                cp "$OSQUERY_SOURCE" "$OSQUERY_DEST"
+                echo "📦 Copied bundled osqueryi.exe for ${arch}"
             else
                 echo "⚠️  Warning: Bundled osqueryi.exe not found at $OSQUERY_SOURCE"
                 echo "   Package will rely on system osquery installation"
@@ -173,7 +187,85 @@ create_package() {
     esac
     
     # Create README
-    cat > "$pkg_dir/README.md" << EOF
+    if [[ "$platform" == "windows" ]]; then
+        cat > "$pkg_dir/README.md" << EOF
+# scanx v$VERSION - Windows Package
+
+## Building MSI Installer
+
+This package contains all necessary files to build a Windows MSI installer locally.
+
+### Prerequisites:
+1. **WiX Toolset** - Download and install from https://wixtoolset.org/releases/
+2. **PowerShell** - Windows PowerShell 5.1 or later
+
+### Build MSI:
+
+\`\`\`powershell
+# Navigate to the package directory
+cd scanx-windows-${arch}-v${VERSION}
+
+# Build MSI (will prompt for architecture if not specified)
+.\scripts\build-msi.ps1 ${arch}
+
+# Or specify architecture directly:
+.\scripts\build-msi.ps1 amd64
+.\scripts\build-msi.ps1 arm64
+\`\`\`
+
+The MSI will be created at: \`dist\windows-build\${arch}-build\scanx-v${VERSION}-windows-${arch}.msi\`
+
+### Package Structure:
+\`\`\`
+scanx-windows-${arch}-v${VERSION}/
+├── scripts/
+│   ├── build-msi.ps1          # Main MSI build script
+│   └── windows/                # WiX source files
+│       ├── scanx.wxs
+│       ├── scanx-manager.bat
+│       ├── scanx-task.xml
+│       └── license.rtf
+├── dist/
+│   ├── builds/                 # Binary location
+│   │   └── scanx-windows-${arch}.exe
+│   └── builds-osquery/         # OSQuery binary
+│       └── osqueryi-5.20.0.windows_*.exe
+├── config/                     # Configuration files
+│   └── agent.conf
+├── install/                    # Installation scripts
+│   └── install-windows.ps1
+├── services/                   # Service files
+│   └── scanx-service.xml
+├── scanx.exe                   # Binary (root, for convenience)
+└── osqueryi.exe                # OSQuery (root, for convenience)
+\`\`\`
+
+## Manual Installation
+
+If you prefer manual installation instead of MSI:
+
+\`\`\`powershell
+# Run as Administrator
+.\install\install-windows.ps1
+\`\`\`
+
+## Configuration
+
+Edit \`config\agent.conf\` to set your email and preferences.
+
+## Service Management
+
+### Start the service:
+\`sc start scanx\`
+
+### Check status:
+\`sc query scanx\`
+
+### Stop the service:
+\`sc stop scanx\`
+EOF
+    else
+        cat > "$pkg_dir/README.md" << EOF
 # scanx v$VERSION
 
 ## Installation
@@ -190,11 +282,6 @@ sudo ./install/install-macos.sh
 sudo ./install/install-linux.sh
 \`\`\`
 
-### Windows (Run as Administrator):
-\`\`\`powershell
-.\install\install-windows.ps1
-\`\`\`
-
 ## Configuration
 
 Edit \`config/agent.conf\` to set your email and preferences.
@@ -204,13 +291,12 @@ Edit \`config/agent.conf\` to set your email and preferences.
 ### Start the service:
 - macOS: \`sudo launchctl load /Library/LaunchDaemons/com.company.scanx.plist\`
 - Linux: \`sudo systemctl start scanx\`
-- Windows: \`sc start scanx\`
 
 ### Check status:
 - macOS: \`sudo launchctl list | grep scanx\`
 - Linux: \`sudo systemctl status scanx\`
-- Windows: \`sc query scanx\`
 EOF
+    fi
     
     # Create tar.gz for Unix platforms
     if [[ "$platform" != "windows" ]]; then
@@ -250,7 +336,7 @@ echo "├── builds/                    # Raw binaries"
 echo "├── packages/                  # Platform-specific packages"
 echo "├── scanx-${VERSION}.pkg           # macOS installer (if built)"
 echo "├── linux-packages/           # DEB/RPM structures (if built)"
-echo "├── msi-build/                 # Windows MSI sources (if built)"
+echo "├── windows-build/            # Windows MSI build output (if built)"
 echo "└── tmp/                       # Temporary build files"
 echo ""
 ls -la $DIST_DIR/
@@ -269,6 +355,6 @@ echo "      • macOS .pkg (ARM64):  ./scripts/create-macos-pkg.sh arm64"
 echo "      • Linux DEB/RPM (AMD64): ./scripts/create-linux-packages.sh 3 amd64"
 echo "      • Linux DEB/RPM (ARM64): ./scripts/create-linux-packages.sh 3 arm64"
 echo "      • Linux DEB/RPM (Both):  ./scripts/create-linux-packages.sh 3 both"
-echo "      • Windows .msi: ./scripts/create-windows-msi.sh (requires Windows + WiX Toolset)"
+echo "      • Windows .msi: .\scripts\build-msi.ps1 [amd64|arm64] (requires Windows + WiX Toolset)"
 echo ""
 echo "3. Deploy via your organization's software distribution system"

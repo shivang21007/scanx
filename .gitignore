@@ -60,6 +60,7 @@ agent/dist/msi-build/*/*.wixobj
 agent/dist/msi-build/*/*.wixpdb
 agent/dist/msi-build/*/*.wixlib
 agent/dist/msi-build/*/*.wixlib
+agent/dist/windows-build/*
 
 
 # React/Vite specific
