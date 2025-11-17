@@ -1,0 +1,52 @@
+services:
+  mysql:
+    image: mysql:latest
+    container_name: mysql-scanx-1
+    environment:
+      - MYSQL_ROOT_PASSWORD=admin@123
+      - MYSQL_DATABASE=scanx
+      - MYSQL_USER=admin
+      - MYSQL_PASSWORD=Shivang@123
+    networks:
+      - scanx-network
+    volumes:
+      - mysql-scanx:/var/lib/mysql 
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 10s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: backend-scanx-1
+    depends_on:
+       mysql:
+        condition: service_healthy
+    networks:
+      - scanx-network
+    env_file:
+      - ./backend/.env.docker
+    command: ["/bin/sh", "/app/entrypoint.sh"]
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=/api
+    container_name: frontend-scanx-1
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    networks:
+      - scanx-network
+
+volumes:
+  mysql-scanx:
+
+networks:
+  scanx-network:
+    driver: bridge  
