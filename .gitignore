@@ -50,7 +50,7 @@ go.work
 # Agent specific
 agent/*.log
 agent/dist/builds/
-agent/dist/builds-osquery/osqueryi*
+agent/dist/builds-osquery/
 agent/dist/packages/
 agent/dist/linux-packages/
 agent/dist/macos-build-amd64/
