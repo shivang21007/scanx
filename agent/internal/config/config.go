@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"scanx/internal/utils"
 	"time"
 )
 
@@ -44,9 +43,10 @@ func LoadConfig() (*Config, error) {
 	// Try a series of candidate config directories so the binary works without -config
 	// this is a fallback for the case where the binary is not run with -config
 	candidateDirs := []string{
-		"config",                           // running from source tree / unpacked package
-		"/etc/scanx/config",                // standardized Unix install path
-		"C:\\Program Files\\scanx\\config", // Windows install path
+		"config",                                   // running from source tree / unpacked package
+		"/etc/scanx/config",                        // standardized Unix install path
+		"C:\\Program Files (x86)\\scanx\\config",   // Windows 32-bit install path (MSI default)
+		"C:\\Program Files\\scanx\\config",         // Windows 64-bit install path
 	}
 
 	var lastErr error
@@ -71,16 +71,13 @@ func LoadConfigFromPath(configDir string) (*Config, error) {
 	// Load agent configuration from file
 	agentConfig, err := loadAgentConfigFromPath(configDir)
 	if err != nil {
-		utils.Error("failed to load agent config: %w", err)
 		return nil, fmt.Errorf("failed to load agent config: %w", err)
 	}
 	config.Agent = *agentConfig
-	utils.Info("Agent config loaded successfully")
 
 	// Use embedded queries instead of loading from file
 	queriesConfig := GetQueriesConfig()
 	config.Queries = *queriesConfig
-	utils.Info("Embedded queries loaded successfully")
 
 	return config, nil
 }
@@ -119,37 +116,6 @@ func (c *Config) GetPlatformQueries() (PlatformQueries, error) {
 	return queries, nil
 }
 
-// UpdateUserEmail updates the user email in agent.conf
-func UpdateUserEmail(email string) error {
-	configPath := filepath.Join("config", "agent.conf")
-
-	// Read current config
-	data, err := os.ReadFile(configPath)
-	if err != nil {
-		return fmt.Errorf("failed to read agent config file: %w", err)
-	}
-
-	var config AgentConfig
-	if err := json.Unmarshal(data, &config); err != nil {
-		return fmt.Errorf("failed to parse agent config: %w", err)
-	}
-
-	// Update email
-	config.UserEmail = email
-
-	// Write back to file
-	updatedData, err := json.MarshalIndent(config, "", "    ")
-	if err != nil {
-		return fmt.Errorf("failed to marshal updated config: %w", err)
-	}
-
-	if err := os.WriteFile(configPath, updatedData, 0644); err != nil {
-		return fmt.Errorf("failed to write updated config: %w", err)
-	}
-
-	return nil
-}
-
 // GetInterval returns the parsed interval duration with fallback to 1 hour
 func (c *Config) GetInterval() time.Duration {
 	if c.Agent.Interval == "" {
@@ -158,6 +124,7 @@ func (c *Config) GetInterval() time.Duration {
 
 	duration, err := time.ParseDuration(c.Agent.Interval)
 	if err != nil {
+		// Note: Using fmt.Printf here because logger may not be initialized yet
 		fmt.Printf("Warning: Invalid interval '%s', using default 1h\n", c.Agent.Interval)
 		return time.Hour
 	}
@@ -176,7 +143,17 @@ func (c *Config) GetLogLevel() string {
 	case "debug", "info", "warning", "error":
 		return c.Agent.LogLevel
 	default:
+		// Note: Using fmt.Printf here because logger may not be initialized yet
 		fmt.Printf("Warning: Invalid log level '%s', using default 'info'\n", c.Agent.LogLevel)
 		return "info"
 	}
+}
+
+// GetBackendURL returns the backend URL with fallback to default
+func (c *Config) GetBackendURL() string {
+	if c.Agent.BackendURL != "" {
+		return c.Agent.BackendURL
+	}
+	// Fallback to default URL if not configured
+	return "http://192.168.22.22:5173"
 }

@@ -66,14 +66,22 @@ export const register = async (req: Request, res: Response) => {
       { expiresIn: '12h' }
     );
     
-    // Set secure httpOnly cookie  
+    // Get dynamic domain from request
+    const requestHost = req.get('host'); // Gets "localhost:5173" or "127.0.0.1:5173"
+    const hostname = requestHost?.split(':')[0]; // Gets "localhost" or "127.0.0.1"
+    
+    console.log('Registration: Request host:', requestHost, 'Hostname:', hostname);
+    
+    // Set secure httpOnly cookie with dynamic domain
     res.cookie('scanx_token', token, {
       httpOnly: true,
       secure: env.NODE_ENV === 'production',
       sameSite: env.NODE_ENV === 'production' ? 'strict' : 'lax',
       maxAge: 12 * 60 * 60 * 1000,
       path: '/',
-      domain: env.NODE_ENV === 'production' ? undefined : undefined
+      // In development: don't set domain (works with any host)
+      // In production: you might want to set a specific domain
+      domain: hostname ? hostname : undefined
     });
     
     console.log('Registration: Setting cookie with token:', token.substring(0, 20) + '...');
@@ -102,7 +110,7 @@ export const login = async (req: Request, res: Response) => {
     // Check if admin exists
     const admin = await AdminModel.findByEmail(email);
     if (!admin) {
-      return res.status(400).json({ message: 'Invalid credentials' });
+      return res.status(400).json({ message: 'User not found' });
     }
 
     // Check if password is correct
@@ -118,14 +126,22 @@ export const login = async (req: Request, res: Response) => {
       { expiresIn: '12h' }
     );
     
-    // Set secure httpOnly cookie
+    // Get dynamic domain from request
+    const requestHost = req.get('host'); // Gets "localhost:5173" or "127.0.0.1:5173"
+    const hostname = requestHost?.split(':')[0]; // Gets "localhost" or "127.0.0.1"
+    
+    console.log('Login: Request host:', requestHost, 'Hostname:', hostname);
+    
+    // Set secure httpOnly cookie with dynamic domain
     res.cookie('scanx_token', token, {
       httpOnly: true,
       secure: env.NODE_ENV === 'production', // Only over HTTPS in production
       sameSite: env.NODE_ENV === 'production' ? 'strict' : 'lax', // Prevent CSRF attacks
       maxAge: 12 * 60 * 60 * 1000, // 12 hours in milliseconds
       path: '/',
-      domain: env.NODE_ENV === 'production' ? undefined : undefined // Allow for localhost in dev
+      // In development: don't set domain (works with any host)
+      // In production: you might want to set a specific domain
+      domain: hostname ? hostname : undefined
     });
     
     console.log('Setting cookie with token:', token.substring(0, 20) + '...');
@@ -143,12 +159,21 @@ export const login = async (req: Request, res: Response) => {
 };
 
 export const logout = async (req: Request, res: Response) => {
-  // Clear the httpOnly cookie
+  // Get dynamic domain from request
+  const requestHost = req.get('host'); // Gets "localhost:5173" or "127.0.0.1:5173"
+  const hostname = requestHost?.split(':')[0]; // Gets "localhost" or "127.0.0.1"
+  
+  console.log('Logout: Request host:', requestHost, 'Hostname:', hostname);
+  
+  // Clear the httpOnly cookie with same settings as when it was set
   res.clearCookie('scanx_token', {
     httpOnly: true,
     secure: env.NODE_ENV === 'production',
     sameSite: env.NODE_ENV === 'production' ? 'strict' : 'lax',
-    path: '/'
+    path: '/',
+    // In development: don't set domain (works with any host)
+    // In production: you might want to set a specific domain
+    domain: hostname ? hostname : undefined
   });
   
   console.log('User logged out, cookie cleared');

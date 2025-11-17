@@ -143,6 +143,22 @@ func (c *Collector) CollectData() (*CollectedData, error) {
 	data := make(map[string][]map[string]interface{})
 
 	for queryName, queryConfig := range queries {
+		// Special handling for Windows screen lock detection
+		if runtime.GOOS == "windows" && queryName == "screen_lock_info" && queryConfig.Query == "WINDOWS_SPECIAL_HANDLER" {
+			utils.Info("Executing Windows screen lock detection with special handler")
+			results, err := c.runner.ExecuteWindowsScreenLockQuery()
+			if err != nil {
+				utils.Info("Failed to collect Windows screen lock info: %v", err)
+				// Fallback to false
+				data[queryName] = []map[string]interface{}{{"screen_lock": "false", "grace_period": ""}}
+			} else {
+				data[queryName] = results
+				// Log screen lock results
+				utils.Info("🔍 Results of Special Screen lock handler '%s': %v", queryName, results)
+			}
+			continue
+		}
+		
 		results, err := c.runner.ExecuteQuery(queryName, queryConfig.Query)
 		if err != nil {
 			// Log error but continue with other queries
@@ -158,7 +174,6 @@ func (c *Collector) CollectData() (*CollectedData, error) {
 
 		if queryName == "screen_lock_info" || queryName == "antivirus_info" || queryName == "disk_encryption_info" || queryName == "password_manager_info" {
 			utils.Info("🔍 Results of query '%s': %v", queryName, results)
-			fmt.Printf("🔍 Results of query '%s': %v\n", queryName, results)
 		}
 
 		if len(results) == 0 {
@@ -173,6 +188,10 @@ func (c *Collector) CollectData() (*CollectedData, error) {
 		data[queryName] = results
 	}
 
+	// Detect password manager from apps_info data (more reliable than separate query)
+	passwordManagerData := c.detectPasswordManagerFromApps(data["apps_info"])
+	data["password_manager_info"] = passwordManagerData
+
 	// Build final payload
 	collectedData := &CollectedData{
 		User:         c.config.Agent.UserEmail,
@@ -186,6 +205,62 @@ func (c *Collector) CollectData() (*CollectedData, error) {
 	}
 
 	return collectedData, nil
+}
+
+// detectPasswordManagerFromApps checks apps_info data for password manager apps
+func (c *Collector) detectPasswordManagerFromApps(appsData []map[string]interface{}) []map[string]interface{} {
+	// Get allowed password manager apps for current platform
+	allowedApps := config.GetPasswordManagerApps(runtime.GOOS)
+	
+	if len(appsData) == 0 || len(allowedApps) == 0 {
+		return []map[string]interface{}{
+			{"password_manager": "false"},
+		}
+	}
+
+	// Determine which field to check based on platform
+	var nameField string
+	switch runtime.GOOS {
+	case "darwin":
+		nameField = "name" // macOS uses bundle_name
+	case "windows":
+		nameField = "name" // Windows uses name
+	case "linux":
+		nameField = "name" // Linux uses name
+	default:
+		nameField = "name"
+	}
+
+	// Check if any installed app matches password manager list
+	foundManagers := []string{}
+	for _, app := range appsData {
+		appName, ok := app[nameField].(string)
+		if !ok || appName == "" {
+			continue
+		}
+
+		// Check if app name contains any of the allowed password managers (case-insensitive substring match)
+		appNameLower := strings.ToLower(appName)
+		for _, allowedApp := range allowedApps {
+			allowedAppLower := strings.ToLower(allowedApp)
+			if strings.Contains(appNameLower, allowedAppLower) {
+				foundManagers = append(foundManagers, appName)
+				break // Found a match, no need to check other allowed apps for this installed app
+			}
+		}
+	}
+
+	// Return result
+	if len(foundManagers) > 0 {
+		utils.Info("🔐 Password managers detected: %v", foundManagers)
+		return []map[string]interface{}{
+			{"password_manager": "true"},
+		}
+	}
+
+	return []map[string]interface{}{
+		{"password_manager": "false"},
+	}
 }
 
 // GetSystemInfo returns the extracted system information
@@ -212,4 +287,20 @@ func (c *Collector) ValidateConfiguration() error {
 	}
 
 	return nil
+}
+
+// LogCollectionSummary logs a summary of the collected data
+func (c *Collector) LogCollectionSummary(data *CollectedData) {
+	utils.Info("Data collection completed:")
+	utils.Info("  User: %s", data.User)
+	utils.Info("  OS Type: %s", data.OSType)
+	utils.Info("  OS Version: %s", data.OSVersion)
+	utils.Info("  Agent Version: %s", data.Version)
+	utils.Info("  Serial No: %s", data.SerialNo)
+	utils.Info("  Timestamp: %s", data.Timestamp)
+	utils.Info("  Queries executed: %d", len(data.Data))
+
+	for queryName, results := range data.Data {
+		utils.Info("    %s: %d records", queryName, len(results))
+	}
 }

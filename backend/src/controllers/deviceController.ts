@@ -2,6 +2,7 @@ import { DeviceModel, DeviceSummaryModel, IndividualDataModel, AgentPayload } fr
 import { UsersModel } from '../models/Users';
 import { Request, Response } from 'express';
 import { parseToIST, getCurrentISTString } from '../utils/timezone';
+import { getConnection } from '../db/connection';
 
 // Function to check if data indicates compliance based on data type
 function checkDataCompliance(dataType: string, data: any[]): boolean {
@@ -20,7 +21,9 @@ function checkDataCompliance(dataType: string, data: any[]): boolean {
       
     case 'antivirus_info':
       // Check if antivirus is "true" (enabled)
-      return item.antivirus_info === 'true' || item.antivirus_info === true;
+      // Windows returns 'antivirus_status', macOS returns 'antivirus_info'
+      return (item.antivirus_info === 'true' || item.antivirus_info === true) ||
+             (item.antivirus_status === 'true' || item.antivirus_status === true);
       
     case 'screen_lock_info':
       // Check if screen_lock is "true" (enabled)
@@ -44,8 +47,6 @@ function checkDataCompliance(dataType: string, data: any[]): boolean {
 export const receiveAgentData = async (req: Request, res: Response) => {
   try {
     const agentData: AgentPayload = req.body;
-    console.log( "screen_lock_info of", agentData.serial_no, "is", agentData.data.screen_lock_info);
-    
     // Validate required fields
     if (!agentData.user || !agentData.serial_no || !agentData.os_type) {
       return res.status(400).json({ 
@@ -54,6 +55,11 @@ export const receiveAgentData = async (req: Request, res: Response) => {
     }
 
     console.log(`Received agent data from device: ${agentData.serial_no} (${agentData.user} ${agentData.timestamp})`);
+    console.log( "screen_lock_info of", agentData.serial_no, "is", agentData.data.screen_lock_info);
+    console.log( "antivirus_info of", agentData.serial_no, "is", agentData.data.antivirus_info);
+    console.log( "disk_encryption_info of", agentData.serial_no, "is", agentData.data.disk_encryption_info);
+    console.log( "password_manager_info of", agentData.serial_no, "is", agentData.data.password_manager_info);
+    
 
     // Parse agent timestamp to IST
     const istTimestamp = parseToIST(agentData.timestamp);
@@ -103,8 +109,7 @@ export const receiveAgentData = async (req: Request, res: Response) => {
       timestamp = istTimestamp.toISOString().slice(0, 19).replace('T', ' ');
     }
     const lastReportTimestamp = agentData.timestamp ? new Date(agentData.timestamp) : istTimestamp;
-    const { getConnection } = require('../db');
-    const connection = getConnection();
+    const connection = await getConnection();
     
     // Track which data types were received
     const receivedDataTypes = {
@@ -178,6 +183,7 @@ export const receiveAgentData = async (req: Request, res: Response) => {
       last_report: lastReportTimestamp,
       ...receivedDataTypes
     });
+    
 
     console.log(`✅ Processed agent data: ${Object.keys(agentData.data).length} data types stored`);
 
@@ -253,6 +259,19 @@ export const getDeviceById = async (req: Request, res: Response) => {
   } catch (err: any) {
     console.error('Error getting device by ID:', err);
     res.status(500).json({ error: err.message });
+  }
+};
+
+// Remove device by ID
+export const removeDeviceById = async (req: Request, res: Response) => {
+  try {
+    const deviceId = parseInt(req.params.id);
+    console.log('Removing device by ID:', deviceId);
+    await DeviceModel.deleteById(deviceId);
+    res.status(200).json({ message: 'DeviceID: ' + deviceId + ' removed successfully' });
+  } catch (err: any) {
+    console.error('Error removing device by ID:', err);
+    res.status(500).json({ error: 'Error removing device by ID: ' + err.message });
   }
 };
 

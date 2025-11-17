@@ -16,9 +16,8 @@ export const auth = (req: AuthRequest, res: Response, next: NextFunction) => {
   const token = req.cookies?.scanx_token || 
     (req.header('Authorization')?.startsWith('Bearer ') ? req.header('Authorization')!.split(' ')[1] : null);
   
-  console.log('Auth middleware called for:', req.path);
-  console.log('Cookies received:', Object.keys(req.cookies || {}));
-  console.log('Token found:', !!token);
+  // console.log('Auth middleware called for:', req.path);
+  // console.log('Cookies received:', Object.keys(req.cookies || {}));
   
   if (!token) {
     console.log('No token provided, returning 401');
@@ -30,7 +29,6 @@ export const auth = (req: AuthRequest, res: Response, next: NextFunction) => {
 
   try {
     const decoded = jwt.verify(token, env.JWT_SECRET as string) as any;
-    console.log('Token decoded successfully for user:', decoded.email);
     
     // Check if token is expired (using IST time)
     const currentTime = Math.floor(getCurrentIST().getTime() / 1000);
@@ -44,10 +42,9 @@ export const auth = (req: AuthRequest, res: Response, next: NextFunction) => {
     }
     
     req.admin = { id: decoded.id, email: decoded.email };
-    console.log('Auth successful, proceeding to next middleware');
     next();
   } catch (err: any) {
-    console.log('Token verification failed:', err.message);
+    // console.log('Token verification failed:', err.message);
     
     if (err.name === 'TokenExpiredError') {
       return res.status(401).json({ 

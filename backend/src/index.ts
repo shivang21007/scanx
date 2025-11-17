@@ -11,13 +11,47 @@ import { getCurrentISTString } from './utils/timezone';
 
 const app = express();
 
+// CORS configuration
+const cors_allowed_origins = env.FRONTEND_URL_CORS_ALLOWED?.split(',').map((url: string) => url.trim()) || []; 
+
+// Fallback origins for development if no env variable is set
+const defaultOrigins = [
+  'http://localhost:5173', // Vite dev server
+  'http://127.0.0.1:5173',
+  'http://172.0.10.183:5173',
+  'http://192.168.22.22:5173',
+  'http://scanx.com:5173',
+  'https://scanx.com'
+];
+
+const allowedOrigins = cors_allowed_origins.length > 0 ? cors_allowed_origins : defaultOrigins;
+console.log('Final CORS allowed origins:', allowedOrigins);
+
 // Middleware
 app.use(cors({
-  origin: [env.FRONTEND_URL || 'http://localhost:5173', 'http://localhost:4173', 'http://172.0.10.183:5173'],
+  origin: function (origin: any, callback: any) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.warn(`CORS blocked origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true, // Allow cookies to be sent
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  exposedHeaders: ['Set-Cookie']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: [
+    'Content-Type', 
+    'Authorization', 
+    'X-Requested-With',
+    'Accept',
+    'Origin'
+  ],
+  exposedHeaders: ['Set-Cookie'],
+  optionsSuccessStatus: 200, // Some legacy browsers (IE11, various SmartTVs) choke on 204
+  preflightContinue: false
 }));
 app.use(cookieParser());
 app.use(express.json({ limit: '10mb' })); // Increase limit for agent data
@@ -30,24 +64,21 @@ initializeDatabase().catch(err => {
 });
 
 // Health check endpoint
-app.get('/', (req, res) => {
-  res.json({ 
+app.get(['/', '/api', '/api/health'], (req: express.Request, res: express.Response) => {
+  res.status(200).json({ 
     message: 'ScanX Backend API is running 🚀',
     version: '1.0.0',
     endpoints: {
       auth: '/api/auth',
       devices: '/api/devices',
-      agent: '/api/devices/agent/report'
-    }
+      agent: '/api/devices/agent/report',
+      health: '/api/health'
+    },
+    timestamp: getCurrentISTString(),
+    uptime: process.uptime().toFixed(3) + " seconds"
   });
 });
 
-app.get('/health', (req, res) => {
-  res.status(200).json({ 
-    message: 'Server is healthy 🚀',
-    timestamp: getCurrentISTString()
-  });
-});
 
 // API Routes
 app.use('/api/auth', authRoutes);
@@ -55,7 +86,7 @@ app.use('/api/devices', deviceRoutes);
 app.use('/api/users', userRoutes);
 
 // 404 handler
-app.use('*', (req, res) => {
+app.use('*', (req: express.Request, res: express.Response) => {
   res.status(404).json({ message: 'Endpoint not found' });
 });
 
@@ -68,7 +99,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   });
 });
 
-const PORT = env.PORT || 3000;
+const PORT = env.PORT || 5000;
 
 app.listen(PORT, () => {
   console.log(`🚀 ScanX Backend Server running on port ${PORT}`);

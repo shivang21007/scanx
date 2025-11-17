@@ -5,7 +5,7 @@ const MIGRATIONS_TABLE = 'migrations';
 
 // Create migrations tracking table
 export const createMigrationsTable = async () => {
-    const connection = getConnection();
+    const connection = await getConnection();
     
     await connection.execute(`
         CREATE TABLE IF NOT EXISTS ${MIGRATIONS_TABLE} (
@@ -18,7 +18,7 @@ export const createMigrationsTable = async () => {
 
 // Check if migration has been executed
 export const isMigrationExecuted = async (migrationName: string): Promise<boolean> => {
-    const connection = getConnection();
+    const connection = await getConnection();
     
     const [rows] = await connection.execute(
         `SELECT COUNT(*) as count FROM ${MIGRATIONS_TABLE} WHERE migration_name = ?`,
@@ -30,7 +30,7 @@ export const isMigrationExecuted = async (migrationName: string): Promise<boolea
 
 // Mark migration as executed
 export const markMigrationExecuted = async (migrationName: string) => {
-    const connection = getConnection();
+    const connection = await getConnection();
     
     await connection.execute(
         `INSERT INTO ${MIGRATIONS_TABLE} (migration_name) VALUES (?)`,
@@ -68,7 +68,7 @@ export const migration_002_add_users_table = async () => {
     
     console.log(`🔧 Executing migration: ${migrationName}`);
     
-    const connection = getConnection();
+    const connection = await getConnection();
     
     try {
         // Create users table if it doesn't exist
@@ -116,7 +116,7 @@ export const runMigrations = async () => {
 
 // Get list of executed migrations
 export const getExecutedMigrations = async (): Promise<string[]> => {
-    const connection = getConnection();
+    const connection = await getConnection();
     
     try {
         const [rows] = await connection.execute(

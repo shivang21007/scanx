@@ -2,11 +2,9 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
-	"runtime"
 	"syscall"
 
 	"scanx/internal/collector"
@@ -19,40 +17,11 @@ import (
 func main() {
 	// Parse command line flags
 	var (
-		email      = flag.String("email", "", "Employee email for device identification")
-		install    = flag.Bool("install", false, "Install mode: generate config files and setup")
 		daemon     = flag.Bool("daemon", false, "Run as daemon with periodic data collection")
 		test       = flag.Bool("test", false, "Test mode: run single data collection and exit")
-		service    = flag.String("service", "", "Service management: install, uninstall, start, stop, status")
 		configPath = flag.String("config", "", "Custom configuration directory path")
 	)
 	flag.Parse()
-
-	// Service management mode (not implemented - use installation scripts instead)
-	if *service != "" {
-		log.Fatalf("Service management commands not implemented. Use installation scripts instead:\n" +
-			"  macOS: sudo ./install/install-macos.sh\n" +
-			"  Linux: sudo ./install/install-linux.sh\n" +
-			"  Windows: Run install-windows.ps1 as Administrator")
-	}
-
-	// Installation mode: generate config files
-	if *install {
-		if err := installAgent(*email); err != nil {
-			log.Fatalf("Installation failed: %v", err)
-		}
-		fmt.Println("Agent installation completed successfully!")
-		return
-	}
-
-	// If email provided, update configuration and exit
-	if *email != "" {
-		if err := config.UpdateUserEmail(*email); err != nil {
-			log.Fatalf("Failed to update user email: %v", err)
-		}
-		fmt.Printf("Successfully updated user email to: %s\n", *email)
-		return
-	}
 
 	// Load configuration first (needed for log level)
 	var cfg *config.Config
@@ -69,7 +38,7 @@ func main() {
 	}
 
 	// Initialize logging with configured level
-	if err := utils.InitLoggerWithLevel(cfg.GetLogLevel()); err != nil {
+	if err := utils.InitLogger(cfg.GetLogLevel()); err != nil {
 		log.Printf("Warning: Failed to initialize system logger: %v", err)
 		log.Println("Continuing with standard logging...")
 	}
@@ -107,21 +76,11 @@ func main() {
 		}
 
 		// Display collected data summary
-		utils.Info("Data Collection Summary:")
-		utils.Info("  User: %s", data.User)
-		utils.Info("  OS Type: %s", data.OSType)
-		utils.Info("  OS Version: %s", data.OSVersion)
-		utils.Info("  Serial No: %s", data.SerialNo)
-		utils.Info("  Timestamp: %s", data.Timestamp)
-		utils.Info("  Queries executed: %d", len(data.Data))
-
-		for queryName, results := range data.Data {
-			utils.Info("    %s: %d records", queryName, len(results))
-		}
+		collector.LogCollectionSummary(data)
 
 		// Test backend transmission
 		utils.Info("📡 Testing backend transmission...")
-		backendURL := sender.GetBackendURLFromConfig(cfg)
+		backendURL := cfg.GetBackendURL()
 		backendSender := sender.NewBackendSender(backendURL)
 
 		// Test connection first
@@ -155,17 +114,7 @@ func main() {
 		}
 
 		// Display collected data summary
-		utils.Info("Data Collection Summary:")
-		utils.Info("  User: %s", data.User)
-		utils.Info("  OS Type: %s", data.OSType)
-		utils.Info("  OS Version: %s", data.OSVersion)
-		utils.Info("  Serial No: %s", data.SerialNo)
-		utils.Info("  Timestamp: %s", data.Timestamp)
-		utils.Info("  Queries executed: %d", len(data.Data))
-
-		for queryName, results := range data.Data {
-			utils.Info("    %s: %d records", queryName, len(results))
-		}
+		collector.LogCollectionSummary(data)
 
 		utils.Info("Agent run completed successfully!")
 	}
@@ -193,61 +142,4 @@ func runDaemon(cfg *config.Config, collector *collector.Collector) {
 	utils.Info("Shutdown signal received...")
 	sch.Stop()
 	utils.Info("Agent stopped gracefully")
-}
-
-// installAgent handles the installation process
-func installAgent(email string) error {
-	fmt.Println("Installing ScanX...")
-
-	// Check if osquery is installed
-	runner := &collector.OSQueryRunner{}
-	expectedPath := getExpectedOSQueryPath()
-	if !runner.IsExecutable(expectedPath) {
-		fmt.Printf("WARNING: OSQuery not found at expected path: %s\n", expectedPath)
-		fmt.Println("Please install osquery before running the agent:")
-		switch runtime.GOOS {
-		case "darwin":
-			fmt.Println("  brew install osquery")
-		case "linux":
-			fmt.Println("  # Follow instructions at https://osquery.io/downloads/linux")
-		case "windows":
-			fmt.Println("  # Download and install from https://osquery.io/downloads/windows")
-		}
-	} else {
-		fmt.Printf("OSQuery found at: %s ✓\n", expectedPath)
-	}
-
-	// Generate config files at system location
-	if err := os.MkdirAll("config", 0755); err != nil {
-		return fmt.Errorf("failed to create config directory: %w", err)
-	}
-
-	// Update email if provided
-	if email != "" {
-		if err := config.UpdateUserEmail(email); err != nil {
-			return fmt.Errorf("failed to set user email: %w", err)
-		}
-		fmt.Printf("Set user email to: %s\n", email)
-	}
-
-	// TODO: Copy binary to system location (e.g., /usr/local/bin/, C:\Program Files\)
-	// TODO: Create system service/daemon
-	// TODO: Set appropriate permissions
-
-	fmt.Println("Configuration files generated at current location")
-	fmt.Println("Note: In production, these should be at system paths like /etc/scanx/")
-
-	return nil
-}
-
-// getExpectedOSQueryPath returns the expected osquery installation path
-func getExpectedOSQueryPath() string {
-	switch runtime.GOOS {
-	case "windows":
-		return `C:\Program Files\osquery\osqueryi.exe`
-	case "darwin", "linux":
-		return "/usr/local/bin/osqueryi"
-	default:
-		return "/usr/local/bin/osqueryi"
-	}
 }

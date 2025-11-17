@@ -1,5 +1,5 @@
 # Builder stage
-FROM node:18-alpine as builder
+FROM node:18-alpine AS builder
 
 # Set working directory
 WORKDIR /app
@@ -18,13 +18,10 @@ RUN npm run build
 
 #--------------------------------------------
 # Runner stage
-FROM node:18-alpine as runner
+FROM node:18-alpine AS runner
 
 # Set working directory
 WORKDIR /app
-
-# Copy build files
-COPY --from=builder /app/dist ./dist
 
 # Copy package files    
 COPY package*.json ./
@@ -32,11 +29,20 @@ COPY package*.json ./
 # Install dependencies
 RUN npm install --only=production
 
-# Copy app source
-COPY . .    
+# Copy dist files
+COPY --from=builder /app/dist ./dist
 
-# Expose the port the app runs on
-EXPOSE 3000
+# Copy Google Service Account Key File
+COPY scanx-468705-b3849805bd57.json .
 
-# Run the app
-CMD ["npm", "start"]
+# Copy entrypoint script
+COPY entrypoint.sh /app/entrypoint.sh
+
+# Make entrypoint script executable
+RUN chmod +x /app/entrypoint.sh
+
+# Expose port
+EXPOSE 5000
+
+# Run app
+CMD ["npm", "run", "start"]

@@ -45,7 +45,7 @@ export interface AgentPayload {
 export class DeviceModel {
     // Create or update device
     static async createOrUpdate(deviceData: Omit<Device, 'id' | 'created_at' | 'updated_at'>): Promise<number> {
-        const connection = getConnection();
+        const connection = await getConnection();
         
         // First try to find existing device by serial number
         const [existing] = await connection.execute<RowDataPacket[]>(
@@ -95,7 +95,7 @@ export class DeviceModel {
 
     // Get all devices (simplified for dashboard)
     static async findAll(): Promise<Device[]> {
-        const connection = getConnection();
+        const connection = await getConnection();
         
         const [rows] = await connection.execute<RowDataPacket[]>(
             'SELECT * FROM devices ORDER BY last_seen DESC, created_at DESC'
@@ -106,7 +106,7 @@ export class DeviceModel {
 
     // Get all devices with enriched data for devices table
     static async findAllEnriched(searchTerm?: string, osTypeFilter?: string): Promise<any[]> {
-        const connection = getConnection();
+        const connection = await getConnection();
         
         let query = `
             SELECT 
@@ -181,7 +181,7 @@ export class DeviceModel {
 
     // Find device by serial number
     static async findBySerial(serial_no: string): Promise<Device | null> {
-        const connection = getConnection();
+        const connection = await getConnection();
         const [rows] = await connection.execute<RowDataPacket[]>(
             'SELECT * FROM devices WHERE serial_no = ?',
             [serial_no]
@@ -191,7 +191,7 @@ export class DeviceModel {
 
     // Find device by ID
     static async findById(id: number): Promise<Device | null> {
-        const connection = getConnection();
+        const connection = await getConnection();
         const [rows] = await connection.execute<RowDataPacket[]>(
             'SELECT * FROM devices WHERE id = ?',
             [id]
@@ -199,9 +199,18 @@ export class DeviceModel {
         return rows.length > 0 ? rows[0] as Device : null;
     }
 
+    // Delete device by ID
+    static async deleteById(id: number): Promise<void> {
+        const connection = await getConnection();
+        await connection.execute<ResultSetHeader>(
+            'DELETE FROM devices WHERE id = ?',
+            [id]
+        );
+    }
+    
     // Search devices by user email
     static async findByUser(user_email: string): Promise<Device[]> {
-        const connection = getConnection();
+        const connection = await getConnection();
         const [rows] = await connection.execute<RowDataPacket[]>(
             'SELECT * FROM devices WHERE user_email LIKE ? ORDER BY last_seen DESC',
             [`%${user_email}%`]
@@ -211,7 +220,7 @@ export class DeviceModel {
 
     // Get device statistics
     static async getStats(): Promise<any> {
-        const connection = getConnection();
+        const connection = await getConnection();
         
         const [totalDevices] = await connection.execute<RowDataPacket[]>(
             'SELECT COUNT(*) as total FROM devices'
@@ -242,11 +251,12 @@ export class DeviceModel {
 export class IndividualDataModel {
     // Get LATEST data from specific table
     static async getDeviceDataByType(device_id: number, dataType: string): Promise<any> {
-        const connection = getConnection();
+        const connection = await getConnection();
         console.log('Getting LATEST data for device:', device_id, 'and type:', dataType);
         
         try {
             const [rows] = await connection.execute<RowDataPacket[]>(
+                // lastest data from the table
                 `SELECT * FROM ${dataType} WHERE device_id = ? ORDER BY timestamp DESC LIMIT 1`,
                 [device_id]
             );
@@ -303,7 +313,7 @@ export class IndividualDataModel {
 
     // Get HISTORICAL data from specific table with pagination
     static async getDeviceDataHistory(device_id: number, dataType: string, page: number = 1, limit: number = 10): Promise<{data: any[], total: number, page: number, limit: number, totalPages: number}> {
-        const connection = getConnection();
+        const connection = await getConnection();
         console.log('Getting HISTORICAL data for device:', device_id, 'type:', dataType, 'page:', page, 'limit:', limit);
         
         try {
@@ -392,39 +402,58 @@ export class IndividualDataModel {
 export class DeviceSummaryModel {
     // Create or update device summary
     static async createOrUpdate(summary: Omit<DeviceSummary, 'created_at' | 'updated_at'>): Promise<void> {
-        const connection = getConnection();
-        
-        await connection.execute<ResultSetHeader>(
-            `INSERT INTO device_summary (
-                device_id, last_report, system_info, password_manager_info, 
-                screen_lock_info, antivirus_info, disk_encryption_info, apps_info
-             ) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?) 
-             ON DUPLICATE KEY UPDATE 
-             last_report = VALUES(last_report),
-             system_info = VALUES(system_info),
-             password_manager_info = VALUES(password_manager_info),
-             screen_lock_info = VALUES(screen_lock_info),
-             antivirus_info = VALUES(antivirus_info),
-             disk_encryption_info = VALUES(disk_encryption_info),
-             apps_info = VALUES(apps_info),
-             updated_at = CONVERT_TZ(NOW(), 'UTC', '+05:30')`,
-            [
-                summary.device_id,
-                summary.last_report,
-                summary.system_info || false,
-                summary.password_manager_info || false,
-                summary.screen_lock_info || false,
-                summary.antivirus_info || false,
-                summary.disk_encryption_info || false,
-                summary.apps_info || false
-            ]
+        const connection = await getConnection();
+
+        // First try to find existing summary by device_id
+        const [existing] = await connection.execute<RowDataPacket[]>(
+            'SELECT device_id FROM device_summary WHERE device_id = ?',
+            [summary.device_id]
         );
+
+        if (existing.length > 0) {
+            // Update existing summary
+            await connection.execute<ResultSetHeader>(
+                `UPDATE device_summary SET 
+                 last_report = ?, system_info = ?, password_manager_info = ?, 
+                 screen_lock_info = ?, antivirus_info = ?, disk_encryption_info = ?, 
+                 apps_info = ?, updated_at = CURRENT_TIMESTAMP 
+                 WHERE device_id = ?`,
+                [
+                    summary.last_report,
+                    summary.system_info || false,
+                    summary.password_manager_info || false,
+                    summary.screen_lock_info || false,
+                    summary.antivirus_info || false,
+                    summary.disk_encryption_info || false,
+                    summary.apps_info || false,
+                    summary.device_id
+                ]
+            );
+        } else {
+            // Create new summary
+            await connection.execute<ResultSetHeader>(
+                `INSERT INTO device_summary (
+                    device_id, last_report, system_info, password_manager_info, 
+                    screen_lock_info, antivirus_info, disk_encryption_info, apps_info
+                 ) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                [
+                    summary.device_id,
+                    summary.last_report,
+                    summary.system_info || false,
+                    summary.password_manager_info || false,
+                    summary.screen_lock_info || false,
+                    summary.antivirus_info || false,
+                    summary.disk_encryption_info || false,
+                    summary.apps_info || false
+                ]
+            );
+        }
     }
 
     // Get device summary
     static async findByDevice(device_id: number): Promise<DeviceSummary | null> {
-        const connection = getConnection();
+        const connection = await getConnection();
         const [rows] = await connection.execute<RowDataPacket[]>(
             'SELECT * FROM device_summary WHERE device_id = ?',
             [device_id]

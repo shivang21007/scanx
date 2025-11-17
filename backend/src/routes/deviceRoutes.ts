@@ -7,7 +7,8 @@ import {
   getDeviceById,
   getDeviceDataHistory,
   getDashboardStats,
-  getDeviceData
+  getDeviceData,
+  removeDeviceById
 } from '../controllers/deviceController';
 
 const router: express.Router = express.Router();
@@ -22,6 +23,7 @@ router.get('/table', auth, getDevicesTable);
 
 router.get('/', auth, getDevices);
 router.get('/:id', auth, getDeviceById);
+router.delete('/:id', auth, removeDeviceById);
 router.get('/:id/data/:type', auth, getDeviceData);
 router.get('/:id/data/:type/history', auth, getDeviceDataHistory);
 

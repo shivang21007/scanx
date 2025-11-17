@@ -30,6 +30,15 @@ export function DevicesPage() {
 
   useEffect(() => {
     fetchDevicesData();
+
+    // Auto-refresh every 2 minutes (120000ms)
+    const refreshInterval = setInterval(() => {
+      console.log('Auto-refreshing devices data...');
+      fetchDevicesData();
+    }, 120000);
+
+    // Cleanup interval on unmount or filter change
+    return () => clearInterval(refreshInterval);
   }, [filters]);
 
   const fetchDevicesData = async () => {
@@ -203,6 +212,10 @@ export function DevicesPage() {
           <DevicesTable 
             devices={devicesData.devices}
             loading={loading}
+            onDeviceDeleted={async () => {
+              await fetchDevicesData();
+              return true;
+            }}
           />
         )}
       </main>

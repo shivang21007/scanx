@@ -53,11 +53,10 @@ build_platform "darwin" "arm64" ""
 
 # Windows
 build_platform "windows" "amd64" ".exe"
-build_platform "windows" "386" ".exe"
+build_platform "windows" "arm64" ".exe"
 
 # Linux
 build_platform "linux" "amd64" ""
-build_platform "linux" "386" ""
 build_platform "linux" "arm64" ""
 
 # macOS Code Signing Integration
@@ -128,8 +127,48 @@ create_package() {
             cp "scripts/services/scanx.service" "$pkg_dir/services/"
             ;;
         "windows")
+            # Copy MSI build files
+            MSI_DIR="dist/msi-build/taskSchedulerApproach"
+            if [[ -d "$MSI_DIR" ]]; then
+                # Copy MSI-related files individually
+                for file in build-msi.ps1 scanx.wxs scanx-task.xml license.rtf scanx-manager.bat; do
+                    if [[ -f "$MSI_DIR/$file" ]]; then
+                        cp "$MSI_DIR/$file" "$pkg_dir/"
+                    fi
+                done
+            fi
+            
+            # Create directories for installation script and service files
+            mkdir -p "$pkg_dir/install"
+            mkdir -p "$pkg_dir/services"
+            
+            # Copy installation script and service files
             cp "scripts/install/install-windows.ps1" "$pkg_dir/install/"
             cp "scripts/services/scanx-service.xml" "$pkg_dir/services/"
+            
+            # Copy binary (rename to scanx.exe)
+            cp "$BUILD_DIR/${BINARY_NAME}-${platform}-${arch}${ext}" "$pkg_dir/"
+            
+            # Copy config files
+            mkdir -p "$pkg_dir/config"
+            cp config/* "$pkg_dir/config/"
+            
+            # Copy bundled osqueryi.exe based on architecture
+            OSQUERY_SOURCE=""
+            if [[ "$arch" == "amd64" ]]; then
+                OSQUERY_SOURCE="dist/builds-osquery/osqueryi-5.20.0.windows_x86_64.exe"
+            elif [[ "$arch" == "arm64" ]]; then
+                OSQUERY_SOURCE="dist/builds-osquery/osqueryi-5.20.0.windows_arm64.exe"
+            fi
+            
+            if [[ -f "$OSQUERY_SOURCE" ]]; then
+                echo "📦 Including bundled osqueryi.exe for ${arch}..."
+                cp "$OSQUERY_SOURCE" "$pkg_dir/osqueryi.exe"
+                echo "✅ Bundled osqueryi.exe included"
+            else
+                echo "⚠️  Warning: Bundled osqueryi.exe not found at $OSQUERY_SOURCE"
+                echo "   Package will rely on system osquery installation"
+            fi
             ;;
     esac
     
@@ -178,14 +217,20 @@ EOF
         cd "$PACKAGES_DIR"
         tar -czf "${package_name}.tar.gz" "$package_name"
         cd - > /dev/null
+        echo "✅ Package created: $PACKAGES_DIR/${package_name}.tar.gz"
     else
         # Create zip for Windows
         cd "$PACKAGES_DIR"
-        zip -r "${package_name}.zip" "$package_name"
+        # Use zip with explicit file inclusion to ensure all files are added
+        zip -r "${package_name}.zip" "$package_name" -x "*.DS_Store" "*.git*"
         cd - > /dev/null
+        echo "✅ Windows package created: $PACKAGES_DIR/${package_name}.zip"
+        echo "   Contents:"
+        unzip -l "$PACKAGES_DIR/${package_name}.zip" 2>/dev/null | head -20 || echo "   (unzip not available to list contents)"
     fi
-    
-    echo "✅ Package created: $PACKAGES_DIR/$package_name"
+
+    #clean up the package directory
+    rm -rf "$pkg_dir"
 }
 
 # Create packages for all platforms
@@ -194,6 +239,7 @@ create_package "darwin" "arm64" ""
 create_package "linux" "amd64" ""
 create_package "linux" "arm64" ""
 create_package "windows" "amd64" ".exe"
+create_package "windows" "arm64" ".exe"
 
 
 
@@ -213,7 +259,16 @@ echo ""
 echo "📋 Next steps:"
 echo "1. Test packages: $PACKAGES_DIR/*.tar.gz"
 echo "2. Build native installers (optional):"
-echo "   • macOS .pkg: ./scripts/create-macos-pkg.sh (requires macOS)"
-echo "   • Linux .deb/.rpm: ./scripts/create-linux-packages.sh (requires Linux)"
-echo "   • Windows .msi: ./scripts/create-windows-msi.sh (requires Windows + WiX Toolset)"
+echo ""
+echo "   📦 Build All Packages (All Architectures):"
+echo "      ./scripts/build-all-packages.sh"
+echo ""
+echo "   📦 Build Individual Packages:"
+echo "      • macOS .pkg (AMD64):  ./scripts/create-macos-pkg.sh amd64"
+echo "      • macOS .pkg (ARM64):  ./scripts/create-macos-pkg.sh arm64"
+echo "      • Linux DEB/RPM (AMD64): ./scripts/create-linux-packages.sh 3 amd64"
+echo "      • Linux DEB/RPM (ARM64): ./scripts/create-linux-packages.sh 3 arm64"
+echo "      • Linux DEB/RPM (Both):  ./scripts/create-linux-packages.sh 3 both"
+echo "      • Windows .msi: ./scripts/create-windows-msi.sh (requires Windows + WiX Toolset)"
+echo ""
 echo "3. Deploy via your organization's software distribution system"

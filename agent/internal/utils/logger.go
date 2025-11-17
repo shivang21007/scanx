@@ -31,19 +31,8 @@ type Logger struct {
 
 var GlobalLogger *Logger
 
-// InitLogger initializes the global logger with system paths
-func InitLogger() error {
-	logger, err := NewLogger("info")
-	if err != nil {
-		return fmt.Errorf("failed to initialize logger: %w", err)
-	}
-
-	GlobalLogger = logger
-	return nil
-}
-
-// InitLoggerWithLevel initializes the global logger with specified level
-func InitLoggerWithLevel(levelStr string) error {
+// InitLogger initializes the global logger with specified level
+func InitLogger(levelStr string) error {
 	logger, err := NewLogger(levelStr)
 	if err != nil {
 		return fmt.Errorf("failed to initialize logger: %w", err)
@@ -113,7 +102,15 @@ func NewLogger(levelStr string) (*Logger, error) {
 func getSystemLogPath() string {
 	switch runtime.GOOS {
 	case "windows":
-		return `C:\ProgramData\scanx\logs\scanx.log`
+		// Try to use installation directory first
+		execPath, err := os.Executable()
+		if err == nil {
+			execDir := filepath.Dir(execPath)
+			logPath := filepath.Join(execDir, "logs", "scanx.log")
+			return logPath
+		}
+		// Fallback to installation directory
+		return `C:\Program Files (x86)\scanx\logs\scanx.log`
 	case "darwin", "linux":
 		return "/var/log/scanx/scanx.log"
 	default:

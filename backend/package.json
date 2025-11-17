@@ -8,8 +8,8 @@
     "dev": "nodemon src/index.ts",
     "migrate": "ts-node src/scripts/migrate.ts",
     "reset": "ts-node src/scripts/reset.ts",
-    "db:setup": "npm run migrate",
-    "db:reset": "ts-node scripts/reset.ts"
+    "db:migrate": "node dist/scripts/migrate.js",
+    "db:reset": "node dist/scripts/reset.js"
   },
   "keywords": [
     "scanx",

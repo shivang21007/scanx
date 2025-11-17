@@ -2,14 +2,18 @@ import { DeviceTableRow } from '../types/device';
 import { CheckCircle, XCircle, Monitor, Trash2, Apple, Square, Cpu } from 'lucide-react';
 import { formatRelative, getDeviceStatus } from '../utils/timezone';
 import { useNavigate } from 'react-router-dom';
+import { apiService } from '@/services/api';
+import toast, { Toaster } from 'react-hot-toast';
 
 interface DevicesTableProps {
   devices: DeviceTableRow[];
   loading?: boolean;
+  onDeviceDeleted?: () => Promise<any>;
 }
 
-export function DevicesTable({ devices, loading }: DevicesTableProps) {
+export function DevicesTable({ devices, loading, onDeviceDeleted }: DevicesTableProps) {
   const navigate = useNavigate();
+
 
   const handleDeviceClick = (deviceId: number) => {
     navigate(`/devices/${deviceId}`);
@@ -77,6 +81,7 @@ export function DevicesTable({ devices, loading }: DevicesTableProps) {
 
   return (
     <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+      <Toaster position="top-right" />
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
@@ -206,11 +211,24 @@ export function DevicesTable({ devices, loading }: DevicesTableProps) {
                 {/* Actions Column */}
                 <td className="px-6 py-4 whitespace-nowrap text-center">
                   <button
-                    onClick={() => {
-                      // TODO: Implement device removal
+                    className="text-red-600 hover:text-red-900 transition-all duration-150 cursor-pointer active:scale-75 hover:scale-110"
+                    onClick={async () => {
                       console.log('Remove device:', device.id);
+                      if (confirm(`Are you sure you want to remove ${device.computer_name} (${device.serial_no})? This action cannot be undone.`)) {
+                        try {
+                          const message = await apiService.deleteDeviceById(device.id);
+                          console.log('Device removed:', message);
+                          // Notify parent component to refresh the data
+                          if (onDeviceDeleted) {
+                            await onDeviceDeleted();
+                          }
+                          toast.success(`Device removed: ${message}`);
+                        } catch (error: any) {
+                          console.error('Failed to delete device:', error);
+                          toast.error(`Failed to delete device: ${error.message || 'Unknown error'}`);
+                        }
+                      }
                     }}
-                    className="text-red-600 hover:text-red-900 transition-colors"
                     title="Remove device"
                   >
                     <Trash2 className="h-4 w-4" />

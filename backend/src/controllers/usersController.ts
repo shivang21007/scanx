@@ -15,6 +15,46 @@ export async function getUsers(req: Request, res: Response) {
   res.json({ items, total, page, pageSize });
 }
 
+export async function createUser(req: Request, res: Response) {
+  try {
+    const { name, email, account_type } = req.body;
+    
+    // Validate required fields
+    if (!name || !email || !account_type) {
+      return res.status(400).json({ message: 'Name, email, and account type are required' });
+    }
+
+    // Check if user with this email already exists
+    const existingUser = await UsersModel.findByEmail(email);
+    if (existingUser) {
+      return res.status(409).json({ 
+        message: 'A user with this email already exists',
+        error: 'DUPLICATE_EMAIL'
+      });
+    }
+
+    // Create the user
+    const user = await UsersModel.create(name, email, account_type);
+    if (!user) {
+      return res.status(400).json({ message: 'Failed to create user' });
+    }
+    
+    res.status(201).json({ message: 'User created successfully', user });
+  } catch (error: any) {
+    console.error('Error creating user:', error);
+    
+    // Fallback: Check for duplicate email error (in case of race condition)
+    if (error.code === 'ER_DUP_ENTRY' && error.sqlMessage?.includes('email')) {
+      return res.status(409).json({ 
+        message: 'A user with this email already exists',
+        error: 'DUPLICATE_EMAIL'
+      });
+    }
+    
+    res.status(500).json({ message: 'Failed to create user' });
+  }
+}
+
 export async function getTotalUsers(req: Request, res: Response) {
   try {
     const total = await UsersModel.count();

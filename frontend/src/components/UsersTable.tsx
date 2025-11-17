@@ -162,7 +162,7 @@ export function UsersTable({ users, loading, onUpdateAccountType, onDeleteUser }
                                         <div className="relative inline-block" ref={(el) => { dropdownRefs.current[user.gid] = el; }}>
                                             <button
                                                 onClick={() => setOpenDropdown(openDropdown === user.gid ? null : user.gid)}
-                                                className="flex items-center space-x-1 text-sm text-gray-900 hover:text-gray-700 focus:outline-none"
+                                                className="flex items-center space-x-1 text-sm text-gray-900 hover:text-gray-700 focus:outline-none cursor-pointer active:scale-75 hover:scale-110"
                                                 disabled={updatingUser === user.gid}
                                             >
                                                 {getAccountTypeBadge(user.account_type)}
@@ -180,7 +180,7 @@ export function UsersTable({ users, loading, onUpdateAccountType, onDeleteUser }
                                                             onClick={() => handleAccountTypeChange(user.gid, 'user')}
                                                             disabled={updatingUser === user.gid}
                                                             className={`w-full flex items-center space-x-2 px-4 py-2 text-sm text-left hover:bg-gray-100 ${user.account_type === 'user' ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
-                                                                } ${updatingUser === user.gid ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                                } ${updatingUser === user.gid ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer active:scale-75 hover:scale-110'} `}
                                                         >
                                                             <UserIcon className="h-4 w-4" />
                                                             <span>User</span>
@@ -190,7 +190,7 @@ export function UsersTable({ users, loading, onUpdateAccountType, onDeleteUser }
                                                             onClick={() => handleAccountTypeChange(user.gid, 'service')}
                                                             disabled={updatingUser === user.gid}
                                                             className={`w-full flex items-center space-x-2 px-4 py-2 text-sm text-left hover:bg-gray-100 ${user.account_type === 'service' ? 'bg-purple-50 text-purple-700' : 'text-gray-700'
-                                                                } ${updatingUser === user.gid ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                                } ${updatingUser === user.gid ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer active:scale-75 hover:scale-110'} `}
                                                         >
                                                             <Settings className="h-4 w-4" />
                                                             <span>Service</span>
@@ -219,7 +219,7 @@ export function UsersTable({ users, loading, onUpdateAccountType, onDeleteUser }
                                     <button
                                         onClick={() => handleDeleteUser(user.gid)}
                                         disabled={deletingUser === user.gid}
-                                        className={`text-red-600 hover:text-red-900 transition-colors ${deletingUser === user.gid ? 'opacity-50 cursor-not-allowed' : ''
+                                        className={`text-red-600 hover:text-red-900 transition-all duration-150 ${deletingUser === user.gid ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer active:scale-75 hover:scale-110'
                                             }`}
                                         title="Delete user"
                                     >

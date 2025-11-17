@@ -49,7 +49,7 @@ export interface AgentPayload {
 export class DeviceModel {
     // Create or update device
     static async createOrUpdate(deviceData: Omit<Device, 'id' | 'created_at' | 'updated_at'>): Promise<number> {
-        const connection = getConnection();
+        const connection = await getConnection();
         
         // First try to find existing device by serial number
         const [existing] = await connection.execute<RowDataPacket[]>(
@@ -97,7 +97,7 @@ export class DeviceModel {
 
     // Get all devices with pagination
     static async findAll(page: number = 1, limit: number = 20): Promise<{ devices: Device[], total: number }> {
-        const connection = getConnection();
+        const connection = await getConnection();
         const offset = (page - 1) * limit;
         
         // Get total count
@@ -115,7 +115,7 @@ export class DeviceModel {
 
     // Find device by serial number
     static async findBySerial(serial_no: string): Promise<Device | null> {
-        const connection = getConnection();
+        const connection = await getConnection();
         const [rows] = await connection.execute<RowDataPacket[]>(
             'SELECT * FROM devices WHERE serial_no = ?',
             [serial_no]
@@ -125,7 +125,7 @@ export class DeviceModel {
 
     // Find device by ID
     static async findById(id: number): Promise<Device | null> {
-        const connection = getConnection();
+        const connection = await getConnection();
         const [rows] = await connection.execute<RowDataPacket[]>(
             'SELECT * FROM devices WHERE id = ?',
             [id]
@@ -135,7 +135,7 @@ export class DeviceModel {
 
     // Search devices by user email
     static async findByUser(user_email: string): Promise<Device[]> {
-        const connection = getConnection();
+        const connection = await getConnection();
         const [rows] = await connection.execute<RowDataPacket[]>(
             'SELECT * FROM devices WHERE user_email LIKE ? ORDER BY last_seen DESC',
             [`%${user_email}%`]
@@ -145,7 +145,7 @@ export class DeviceModel {
 
     // Get device statistics
     static async getStats(): Promise<any> {
-        const connection = getConnection();
+        const connection = await getConnection();
         
         const [totalDevices] = await connection.execute<RowDataPacket[]>(
             'SELECT COUNT(*) as total FROM devices'
@@ -176,7 +176,7 @@ export class DeviceModel {
 export class DeviceDataModel {
     // Store agent data
     static async create(deviceData: Omit<DeviceData, 'id' | 'created_at'>): Promise<number> {
-        const connection = getConnection();
+        const connection = await getConnection();
         const [result] = await connection.execute<ResultSetHeader>(
             'INSERT INTO device_data (device_id, timestamp, data_type, data) VALUES (?, ?, ?, ?)',
             [deviceData.device_id, deviceData.timestamp, deviceData.data_type, JSON.stringify(deviceData.data)]
@@ -186,7 +186,7 @@ export class DeviceDataModel {
 
     // Get device data by device ID
     static async findByDevice(device_id: number, data_type?: string): Promise<DeviceData[]> {
-        const connection = getConnection();
+        const connection = await getConnection();
         
         let query = 'SELECT * FROM device_data WHERE device_id = ?';
         let params: any[] = [device_id];
@@ -209,7 +209,7 @@ export class DeviceDataModel {
 export class DeviceSummaryModel {
     // Create or update device summary
     static async createOrUpdate(summary: Omit<DeviceSummary, 'created_at' | 'updated_at'>): Promise<void> {
-        const connection = getConnection();
+        const connection = await getConnection();
         
         await connection.execute<ResultSetHeader>(
             `INSERT INTO device_summary (device_id, system_info, security_info, apps_count, last_report) 
@@ -232,7 +232,7 @@ export class DeviceSummaryModel {
 
     // Get device summary
     static async findByDevice(device_id: number): Promise<DeviceSummary | null> {
-        const connection = getConnection();
+        const connection = await getConnection();
         const [rows] = await connection.execute<RowDataPacket[]>(
             'SELECT * FROM device_summary WHERE device_id = ?',
             [device_id]

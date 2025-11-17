@@ -1,27 +1,72 @@
 #!/bin/bash
 
-# macOS Code Signing Script for scanx
-# This script signs the macOS binary for seamless installation
+# macOS Code Signing Script for scanx and osqueryi
+# This script signs both the scanx and osqueryi binaries for seamless installation
 
-set -e
+# Don't exit on error - we want to try signing all binaries even if one fails
+set +e
 
 # Configuration
-BINARY_PATH="dist/builds/scanx-darwin-amd64"
 DEVELOPER_ID="${1:-}"
 ENTITLEMENTS_FILE="scripts/entitlements.plist"
 VERSION=$(cat config/agent.conf | grep -o '"version": "[^"]*"' | cut -d'"' -f4)
-PKG_NAME="scanx-${VERSION}"
-BUILD_DIR="dist/macos-build"
 
-echo "🍎 macOS Code Signing for scanx"
-echo "=================================="
+# Define binaries to sign
+SCANX_AMD64="dist/builds/scanx-darwin-amd64"
+SCANX_ARM64="dist/builds/scanx-darwin-arm64"
+# OSQUERYI_AMD64="dist/builds-osquery/osqueryi-5.20.0.darwin_x86_64"
+# OSQUERYI_ARM64="dist/builds-osquery/osqueryi-5.20.0.darwin_arm64"
 
-# Check if binary exists
-if [ ! -f "$BINARY_PATH" ]; then
-    echo "❌ Binary not found: $BINARY_PATH"
-    echo "Run './scripts/build.sh' first"
+echo "🍎 macOS Code Signing for scanx and osqueryi"
+echo "=============================================="
+echo ""
+
+# Check if binaries exist
+BINARIES_FOUND=0
+BINARIES_TO_SIGN=()
+
+if [ -f "$SCANX_AMD64" ]; then
+    BINARIES_TO_SIGN+=("$SCANX_AMD64")
+    BINARIES_FOUND=$((BINARIES_FOUND + 1))
+    echo "✅ Found: scanx-darwin-amd64"
+else
+    echo "⚠️  Not found: scanx-darwin-amd64"
+fi
+
+if [ -f "$SCANX_ARM64" ]; then
+    BINARIES_TO_SIGN+=("$SCANX_ARM64")
+    BINARIES_FOUND=$((BINARIES_FOUND + 1))
+    echo "✅ Found: scanx-darwin-arm64"
+else
+    echo "⚠️  Not found: scanx-darwin-arm64"
+fi
+
+if [ -f "$OSQUERYI_AMD64" ]; then
+    BINARIES_TO_SIGN+=("$OSQUERYI_AMD64")
+    BINARIES_FOUND=$((BINARIES_FOUND + 1))
+    echo "✅ Found: osqueryi-darwin-x86_64"
+else
+    echo "⚠️  Not found: osqueryi-darwin-x86_64"
+fi
+
+if [ -f "$OSQUERYI_ARM64" ]; then
+    BINARIES_TO_SIGN+=("$OSQUERYI_ARM64")
+    BINARIES_FOUND=$((BINARIES_FOUND + 1))
+    echo "✅ Found: osqueryi-darwin-arm64"
+else
+    echo "⚠️  Not found: osqueryi-darwin-arm64"
+fi
+
+echo ""
+
+if [ $BINARIES_FOUND -eq 0 ]; then
+    echo "❌ No binaries found to sign!"
+    echo "Run './scripts/build.sh' first to build the binaries"
     exit 1
 fi
+
+echo "📦 Found $BINARIES_FOUND binary/binaries to sign"
+echo ""
 
 # Create entitlements file
 echo "📝 Creating entitlements file..."
@@ -83,34 +128,76 @@ else
     SIGNING_IDENTITY="$DEVELOPER_ID"
 fi
 
-# Sign the binary
+# Sign all binaries
+echo "🔐 Signing binaries..."
 echo ""
-echo "🔐 Signing binary..."
-codesign --force --options runtime --entitlements "$ENTITLEMENTS_FILE" --sign "$SIGNING_IDENTITY" --timestamp "$BINARY_PATH"
 
-# Verify signature
-echo "✅ Verifying signature..."
-codesign --verify --verbose "$BINARY_PATH"
+SIGNED_BINARIES=()
+FAILED_BINARIES=()
+
+for binary in "${BINARIES_TO_SIGN[@]}"; do
+    binary_name=$(basename "$binary")
+    echo "📝 Signing: $binary_name"
+    
+    if codesign --force --options runtime --entitlements "$ENTITLEMENTS_FILE" --sign "$SIGNING_IDENTITY" --timestamp "$binary" 2>&1; then
+        # Verify signature
+        if codesign --verify --verbose "$binary" > /dev/null 2>&1; then
+            SIGNED_BINARIES+=("$binary")
+            echo "   ✅ Signed and verified: $binary_name"
+        else
+            FAILED_BINARIES+=("$binary")
+            echo "   ❌ Verification failed: $binary_name"
+        fi
+    else
+        FAILED_BINARIES+=("$binary")
+        echo "   ❌ Signing failed: $binary_name"
+    fi
+    echo ""
+done
+
+# Summary
+echo "📊 Signing Summary:"
+echo "==================="
+echo "✅ Successfully signed: ${#SIGNED_BINARIES[@]} binary/binaries"
+if [ ${#FAILED_BINARIES[@]} -gt 0 ]; then
+    echo "❌ Failed to sign: ${#FAILED_BINARIES[@]} binary/binaries"
+    for failed in "${FAILED_BINARIES[@]}"; do
+        echo "   - $(basename "$failed")"
+    done
+fi
 echo ""
 
 # Check if Developer ID was used (requires notarization)
 if [ "$SIGNING_IDENTITY" != "-" ]; then
     echo "📋 Next Steps for Distribution:"
-    echo "1. Notarize the binary:"
-    echo "   xcrun notarytool submit $BINARY_PATH --keychain-profile \"AC_PASSWORD\" --wait"
+    echo ""
+    echo "1. Notarize the binaries:"
+    for binary in "${SIGNED_BINARIES[@]}"; do
+        echo "   xcrun notarytool submit $binary --keychain-profile \"AC_PASSWORD\" --wait"
+    done
     echo ""
     echo "2. Staple the notarization:"
-    echo "   xcrun stapler staple $BINARY_PATH"
+    for binary in "${SIGNED_BINARIES[@]}"; do
+        echo "   xcrun stapler staple $binary"
+    done
     echo ""
     echo "📖 Setup notarization profile:"
     echo "   xcrun notarytool store-credentials \"AC_PASSWORD\" --apple-id \"your-apple-id@email.com\" --team-id \"TEAMID\" --password \"app-specific-password\""
 else
-    echo "✅ Ad-hoc signed binary ready for internal testing"
+    echo "✅ Ad-hoc signed binaries ready for internal testing"
 fi
 
 echo ""
-echo "🎉 Code signing completed!"
-echo "📁 Signed binary: $BINARY_PATH"
+if [ ${#FAILED_BINARIES[@]} -eq 0 ]; then
+    echo "🎉 Code signing completed successfully!"
+    echo "📁 Signed binaries:"
+    for binary in "${SIGNED_BINARIES[@]}"; do
+        echo "   - $binary"
+    done
+else
+    echo "⚠️  Code signing completed with errors"
+    exit 1
+fi
 
 # Clean up
 rm -f "$ENTITLEMENTS_FILE"

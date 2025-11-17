@@ -49,6 +49,17 @@ go.work
 
 # Agent specific
 agent/*.log
+agent/dist/builds/*
+agent/dist/packages/
+agent/dist/linux-packages/
+agent/dist/macos-build-amd64/
+agent/dist/macos-build-arm64/
+agent/dist/msi-build/*/*.msi
+agent/dist/msi-build/*/*.wixobj
+agent/dist/msi-build/*/*.wixpdb
+agent/dist/msi-build/*/*.wixlib
+agent/dist/msi-build/*/*.wixlib
+
 
 # React/Vite specific
 # Vite
@@ -60,6 +71,7 @@ vite.config.ts.timestamp-*
 /frontend/dist/
 /backend/build/
 /backend/dist/
+/backend/scanx-468705-b3849805bd57.json
 # TypeScript
 *.tsbuildinfo
 

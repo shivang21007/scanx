@@ -22,7 +22,7 @@ export class UsersModel {
     return trimmed.substring(0, 19); // 2024-06-07 08:44:33
   }
   static async findByEmail(email: string): Promise<UserRecord | null> {
-    const conn = getConnection();
+    const conn = await getConnection();
     const [rows] = await conn.execute<RowDataPacket[]>(
       'SELECT * FROM users WHERE email = ? LIMIT 1',
       [email]
@@ -43,7 +43,7 @@ export class UsersModel {
 
   static async upsertMany(records: Array<{ email: string; name: string; createdAt?: Date | string | null; account_type: AccountType }>): Promise<number> {
     if (!records.length) return 0;
-    const conn = getConnection();
+    const conn = await getConnection();
     let upserted = 0;
 
     for (const rec of records) {
@@ -77,7 +77,7 @@ export class UsersModel {
   }
 
   static async list(params: { search?: string; limit?: number; offset?: number } = {}): Promise<UserRecord[]> {
-    const conn = getConnection();
+    const conn = await getConnection();
     const limit = Math.max(0, Math.min(params.limit ?? 50, 200));
     const offset = Math.max(0, params.offset ?? 0);
     const search = (params.search || '').trim();
@@ -94,7 +94,7 @@ export class UsersModel {
   }
 
   static async count(params: { search?: string } = {}): Promise<number> {
-    const conn = getConnection();
+    const conn = await getConnection();
     const search = (params.search || '').trim();
     if (search) {
       const [rows] = await conn.execute<RowDataPacket[]>(
@@ -110,7 +110,7 @@ export class UsersModel {
   }
 
   static async updateAccountType(gid: number, accountType: AccountType): Promise<boolean> {
-    const conn = getConnection();
+    const conn = await getConnection();
     const normalizedType = this.normalizeAccountType(accountType);
     
     const [result] = await conn.execute<ResultSetHeader>(
@@ -122,7 +122,7 @@ export class UsersModel {
   }
 
   static async delete(gid: number): Promise<boolean> {
-    const conn = getConnection();
+    const conn = await getConnection();
     
     const [result] = await conn.execute<ResultSetHeader>(
       'DELETE FROM users WHERE gid = ?',
@@ -130,6 +130,17 @@ export class UsersModel {
     );
     
     return result.affectedRows > 0;
+  }
+
+  static async create(name: string, email: string, account_type: AccountType): Promise<UserRecord> {
+    const conn = await getConnection();
+    const createdAt = this.toMySQLDateTime(new Date());
+    const normalizedType = this.normalizeAccountType(account_type);
+    const [result] = await conn.execute<ResultSetHeader>(
+      'INSERT INTO users (name, email, account_type, created_at) VALUES (?, ?, ?, ?)',
+      [name, email, normalizedType, createdAt]
+    );
+    return { gid: result.insertId, name, email, account_type, created_at: createdAt };
   }
 }
 

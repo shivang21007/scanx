@@ -2,19 +2,48 @@
 
 # Create macOS Installer Package (.pkg) for scanx
 # This creates a signed installer package for seamless distribution
+# Supports both AMD64 and ARM64 architectures
 
 set -e
 
 # Configuration
 VERSION=$(cat config/agent.conf | grep -o '"version": "[^"]*"' | cut -d'"' -f4)
-PKG_NAME="scanx-${VERSION}"
 
-BUILD_DIR="dist/macos-build"
+# Detect architecture or use argument
+if [[ -n "$1" ]]; then
+    ARCH="$1"
+else
+    # Detect current system architecture
+    ARCH=$(uname -m)
+    if [[ "$ARCH" == "x86_64" ]]; then
+        ARCH="amd64"
+    elif [[ "$ARCH" == "arm64" ]]; then
+        ARCH="arm64"
+    else
+        echo "❌ Unsupported architecture: $ARCH"
+        exit 1
+    fi
+fi
+
+PKG_NAME="scanx-${VERSION}-darwin-${ARCH}"
+BINARY_NAME="scanx-darwin-${ARCH}"
+
+BUILD_DIR="dist/macos-build-${ARCH}"
 SCRIPTS_DIR="$BUILD_DIR/scripts"
 PAYLOAD_DIR="$BUILD_DIR/payload"
 
-echo "📦 Creating macOS Installer Package"
-echo "================================="
+echo "📦 Creating macOS Installer Package for ${ARCH}"
+echo "================================================"
+echo "Version: ${VERSION}"
+echo "Architecture: ${ARCH}"
+echo ""
+
+# Check if binary exists
+if [[ ! -f "dist/builds/${BINARY_NAME}" ]]; then
+    echo "❌ Binary not found: dist/builds/${BINARY_NAME}"
+    echo "Please run ./scripts/build.sh first to build the binaries."
+    exit 1
+fi
 
 # Clean and create build directories
 rm -rf "$BUILD_DIR"
@@ -23,19 +52,39 @@ mkdir -p "$SCRIPTS_DIR" "$PAYLOAD_DIR"
 # Create payload structure
 echo "📁 Creating payload structure..."
 mkdir -p "$PAYLOAD_DIR/usr/local/bin"
+mkdir -p "$PAYLOAD_DIR/usr/local/lib/scanx"
 mkdir -p "$PAYLOAD_DIR/etc/scanx"
 mkdir -p "$PAYLOAD_DIR/var/log/scanx"
 mkdir -p "$PAYLOAD_DIR/var/lib/scanx"
 mkdir -p "$PAYLOAD_DIR/Library/LaunchDaemons"
 
 # Copy files to payload (using standard paths)
-cp "dist/builds/scanx-darwin-amd64" "$PAYLOAD_DIR/usr/local/bin/scanx"
+cp "dist/builds/${BINARY_NAME}" "$PAYLOAD_DIR/usr/local/bin/scanx"
 mkdir -p "$PAYLOAD_DIR/etc/scanx/config"
 cp "config/agent.conf" "$PAYLOAD_DIR/etc/scanx/config/"
 cp "scripts/services/com.company.scanx.plist" "$PAYLOAD_DIR/Library/LaunchDaemons/"
 
+# Copy bundled osqueryi binary based on architecture
+OSQUERY_SOURCE=""
+if [[ "$ARCH" == "amd64" ]]; then
+    OSQUERY_SOURCE="dist/builds-osquery/osqueryi-5.20.0.darwin_x86_64"
+elif [[ "$ARCH" == "arm64" ]]; then
+    OSQUERY_SOURCE="dist/builds-osquery/osqueryi-5.20.0.darwin_arm64"
+fi
+
+if [[ -f "$OSQUERY_SOURCE" ]]; then
+    echo "📦 Including bundled osqueryi for ${ARCH}..."
+    cp "$OSQUERY_SOURCE" "$PAYLOAD_DIR/usr/local/lib/scanx/osqueryi"
+    chmod +x "$PAYLOAD_DIR/usr/local/lib/scanx/osqueryi"
+    echo "✅ Bundled osqueryi included"
+else
+    echo "⚠️  Warning: Bundled osqueryi not found at $OSQUERY_SOURCE"
+    echo "   Package will rely on system osquery installation"
+fi
+
 # Set permissions
 chmod +x "$PAYLOAD_DIR/usr/local/bin/scanx"
+chmod 755 "$PAYLOAD_DIR/usr/local/lib/scanx"
 chmod 644 "$PAYLOAD_DIR/etc/scanx/config/"*
 chmod 644 "$PAYLOAD_DIR/Library/LaunchDaemons/com.company.scanx.plist"
 chmod 755 "$PAYLOAD_DIR/var/log/scanx"
@@ -93,32 +142,47 @@ EOF
 cat > "$SCRIPTS_DIR/postinstall" << 'EOF'
 #!/bin/bash
 
-# Remove quarantine attributes
+# Remove quarantine attributes from binaries
 xattr -rd com.apple.quarantine /usr/local/bin/scanx 2>/dev/null || true
+xattr -rd com.apple.quarantine /usr/local/lib/scanx/osqueryi 2>/dev/null || true
 
-# Ad-hoc sign the binary
+# Ad-hoc sign the binaries
 codesign --force --deep --sign - /usr/local/bin/scanx 2>/dev/null || true
+if [ -f "/usr/local/lib/scanx/osqueryi" ]; then
+    codesign --force --deep --sign - /usr/local/lib/scanx/osqueryi 2>/dev/null || true
+fi
 
-# Check if osquery is installed first (check multiple common locations)
+# Check if osquery is installed (check bundled first, then system)
 osquery_found=false
 
-# Check PATH
-if command -v osqueryi &> /dev/null; then
+# Priority 1: Check bundled osqueryi
+if [ -f "/usr/local/lib/scanx/osqueryi" ] && [ -x "/usr/local/lib/scanx/osqueryi" ]; then
     osquery_found=true
+    echo "✅ Using bundled osqueryi from /usr/local/lib/scanx/osqueryi"
 fi
 
-# Check common installation locations
-if [ -f "/usr/local/bin/osqueryi" ] || [ -f "/opt/osquery/bin/osqueryi" ] || [ -f "/usr/bin/osqueryi" ]; then
+# Priority 2: Check PATH
+if [ "$osquery_found" = false ] && command -v osqueryi &> /dev/null; then
     osquery_found=true
+    echo "✅ Using system osqueryi from PATH"
 fi
 
-# Check Homebrew location
-if [ -f "/opt/homebrew/bin/osqueryi" ]; then
+# Priority 3: Check common installation locations
+if [ "$osquery_found" = false ]; then
+    if [ -f "/usr/local/bin/osqueryi" ] || [ -f "/opt/osquery/bin/osqueryi" ] || [ -f "/usr/bin/osqueryi" ]; then
+        osquery_found=true
+        echo "✅ Using system osqueryi from standard location"
+    fi
+fi
+
+# Priority 4: Check Homebrew location
+if [ "$osquery_found" = false ] && [ -f "/opt/homebrew/bin/osqueryi" ]; then
     osquery_found=true
+    echo "✅ Using osqueryi from Homebrew"
 fi
 
 if [ "$osquery_found" = false ]; then
-    osascript -e 'display dialog "❌ OSQuery not found!\n\nPlease install osquery first:\n  brew install osquery\n\nThen run this installer again." with title "scanx Setup Error" with icon stop buttons {"OK"} default button "OK"'
+    osascript -e 'display dialog "❌ OSQuery not found!\n\nThe bundled osqueryi was not found and no system osquery installation was detected.\n\nPlease install osquery:\n  brew install osquery\n\nOr reinstall this package to ensure bundled osqueryi is included." with title "scanx Setup Error" with icon stop buttons {"OK"} default button "OK"'
     exit 1
 fi
 
@@ -165,6 +229,7 @@ osascript -e "display dialog \"✅ Configuration saved:\n\n📧 Email: $email\n�
 # Create directory structure and set permissions
 mkdir -p /var/log/scanx
 mkdir -p /var/lib/scanx
+mkdir -p /usr/local/lib/scanx
 touch /var/log/scanx/scanx-std.log
 
 # Set proper permissions for user access
@@ -177,8 +242,12 @@ chmod -R 777 /etc/scanx
 chmod -R 777 /etc/scanx/config
 chmod 644 /etc/scanx/config/agent.conf
 
-# Ensure binary is executable by the service user
+# Ensure binaries are executable by the service user
 chmod -R 777 /usr/local/bin/scanx
+chmod -R 755 /usr/local/lib/scanx
+if [ -f "/usr/local/lib/scanx/osqueryi" ]; then
+    chmod +x /usr/local/lib/scanx/osqueryi
+fi
 
 # Verify permissions are correct
 echo "🔍 Verifying permissions..."
@@ -255,13 +324,15 @@ else
 fi
 
 #clean up
-# rm -rf "$BUILD_DIR/payload"
-# rm -rf "$BUILD_DIR/scripts"
+rm -rf "$BUILD_DIR/payload"
+rm -rf "$BUILD_DIR/scripts"
 
 
 echo ""
 echo "🎉 macOS Installer Package created!"
 echo "📁 Package: $BUILD_DIR/${PKG_NAME}.pkg"
+echo "📦 Architecture: ${ARCH}"
+echo "📦 Version: ${VERSION}"
 echo ""
 echo "📋 Installation:"
 echo "   sudo installer -pkg $BUILD_DIR/${PKG_NAME}.pkg -target /"
@@ -272,3 +343,8 @@ if [ -n "$INSTALLER_ID" ]; then
     echo "   xcrun notarytool submit $BUILD_DIR/${PKG_NAME}.pkg --keychain-profile \"AC_PASSWORD\" --wait"
     echo "   xcrun stapler staple $BUILD_DIR/${PKG_NAME}.pkg"
 fi
+
+echo ""
+echo "💡 To build for other architecture:"
+echo "   ./scripts/create-macos-pkg.sh amd64"
+echo "   ./scripts/create-macos-pkg.sh arm64"

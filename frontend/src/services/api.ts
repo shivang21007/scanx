@@ -9,7 +9,19 @@ class ApiService {
   private baseURL: string;
 
   constructor() {
-    this.baseURL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    // Dynamic API URL - uses current origin in development, env var in production
+    const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+    const envApiUrl = import.meta.env.VITE_API_URL;
+    
+    // If VITE_API_URL is relative (starts with /), use current origin 
+    if (envApiUrl && envApiUrl.startsWith('/')) {
+      this.baseURL = `${currentOrigin}${envApiUrl}`;
+    } else {
+      // If absolute URL (http://your-domain.com) or fallback
+      this.baseURL = envApiUrl || `${currentOrigin}/api`;
+    }
+    
+    console.log('API Service initialized with baseURL:', this.baseURL);
     
     this.api = axios.create({
       baseURL: this.baseURL,
@@ -42,7 +54,7 @@ class ApiService {
   // Auth endpoints
   async login(credentials: LoginRequest): Promise<LoginResponse> {
     try {
-      const response: AxiosResponse<LoginResponse> = await this.api.post('/api/auth/login', credentials);
+      const response: AxiosResponse<LoginResponse> = await this.api.post('/auth/login', credentials);
       return response.data;
     } catch (error: any) {
       throw this.handleError(error);
@@ -51,7 +63,7 @@ class ApiService {
 
   async register(userData: RegisterRequest): Promise<RegisterResponse> {
     try {
-      const response: AxiosResponse<RegisterResponse> = await this.api.post('/api/auth/register', userData);
+      const response: AxiosResponse<RegisterResponse> = await this.api.post('/auth/register', userData);
       return response.data;
     } catch (error: any) {
       throw this.handleError(error);
@@ -60,9 +72,8 @@ class ApiService {
 
   async getCurrentAdmin(): Promise<Admin> {
     try {
-      console.log('Making request to /api/auth/me...');
-      const response: AxiosResponse<Admin> = await this.api.get('/api/auth/me');
-      console.log('Current admin response:', response.data);
+      console.log('Making request to /auth/me...');
+      const response: AxiosResponse<Admin> = await this.api.get('/auth/me');
       return response.data;
     } catch (error: any) {
       console.log('getCurrentAdmin error:', error.response?.status, error.response?.data);
@@ -72,7 +83,7 @@ class ApiService {
 
   async logout(): Promise<void> {
     try {
-      await this.api.get('/api/auth/logout');
+      await this.api.get('/auth/logout');
     } catch (error: any) {
       // Logout can fail silently as it's mostly client-side
       console.warn('Logout request failed:', error);
@@ -120,7 +131,7 @@ class ApiService {
   // Device endpoints
   async getDashboardStats(): Promise<DashboardStats> {
     try {
-      const response: AxiosResponse<DashboardStats> = await this.api.get('/api/devices/dashboard/stats');
+      const response: AxiosResponse<DashboardStats> = await this.api.get('/devices/dashboard/stats');
       return response.data;
     } catch (error: any) {
       throw this.handleError(error);
@@ -129,7 +140,7 @@ class ApiService {
 
   async getDevices(): Promise<Device[]> {
     try {
-      const response: AxiosResponse<Device[]> = await this.api.get('/api/devices');
+      const response: AxiosResponse<Device[]> = await this.api.get('/devices');
       return response.data;
     } catch (error: any) {
       throw this.handleError(error);
@@ -146,7 +157,7 @@ class ApiService {
         params.append('os_type', filters.os_type);
       }
       
-      const url = `/api/devices/table${params.toString() ? `?${params.toString()}` : ''}`;
+      const url = `/devices/table${params.toString() ? `?${params.toString()}` : ''}`;
       console.log('Fetching devices table data from:', url);
       
       const response: AxiosResponse<DevicesTableResponse> = await this.api.get(url);
@@ -158,8 +169,18 @@ class ApiService {
 
   async getDeviceById(id: number): Promise<DeviceDetails> {
     try {
-      const response: AxiosResponse<DeviceDetails> = await this.api.get(`/api/devices/${id}`);
+      const response: AxiosResponse<DeviceDetails> = await this.api.get(`/devices/${id}`);
       return response.data;
+    } catch (error: any) {
+      throw this.handleError(error);
+    }
+  }
+
+  // Remove device by ID
+  async deleteDeviceById(id: number): Promise<string> {
+    try {
+      const response: AxiosResponse<{ message: string }> = await this.api.delete(`/devices/${id}`);
+      return response.data.message;
     } catch (error: any) {
       throw this.handleError(error);
     }
@@ -168,7 +189,7 @@ class ApiService {
   // User endpoints
   async getTotalUsers(): Promise<TotalUsersResponse> {
     try {
-      const response: AxiosResponse<TotalUsersResponse> = await this.api.get('/api/users/totalusers');
+      const response: AxiosResponse<TotalUsersResponse> = await this.api.get('/users/totalusers');
       return response.data;
     } catch (error: any) {
       throw this.handleError(error);
@@ -188,7 +209,7 @@ class ApiService {
         params.append('pageSize', filters.pageSize.toString());
       }
       
-      const url = `/api/users${params.toString() ? `?${params.toString()}` : ''}`;
+      const url = `/users${params.toString() ? `?${params.toString()}` : ''}`;
       const response: AxiosResponse<UsersResponse> = await this.api.get(url);
       return response.data;
     } catch (error: any) {
@@ -198,7 +219,7 @@ class ApiService {
 
   async updateUserAccountType(gid: number, accountType: 'user' | 'service'): Promise<void> {
     try {
-      await this.api.put(`/api/users/${gid}/account-type`, { account_type: accountType });
+      await this.api.put(`/users/${gid}/account-type`, { account_type: accountType });
     } catch (error: any) {
       throw this.handleError(error);
     }
@@ -206,7 +227,15 @@ class ApiService {
 
   async deleteUser(gid: number): Promise<void> {
     try {
-      await this.api.delete(`/api/users/${gid}`);
+      await this.api.delete(`/users/${gid}`);
+    } catch (error: any) {
+      throw this.handleError(error);
+    }
+  }
+
+  async createUser(name: string, email: string, accountType: 'user' | 'service'): Promise<void> {
+    try {
+      await this.api.post('/users', { name, email, account_type: accountType });
     } catch (error: any) {
       throw this.handleError(error);
     }

@@ -46,7 +46,17 @@ export function DeviceDetailPage() {
       }
     };
 
+    // Initial fetch
     fetchDeviceDetails();
+
+    // Auto-refresh every 2 minutes (120000ms)
+    const refreshInterval = setInterval(() => {
+      console.log('Auto-refreshing device details...');
+      fetchDeviceDetails();
+    }, 120000);
+
+    // Cleanup interval on unmount or device ID change
+    return () => clearInterval(refreshInterval);
   }, [deviceId]);
 
   const handleLogout = async () => {
@@ -136,26 +146,35 @@ export function DeviceDetailPage() {
           </div>
         );
       case 'apps_info':
+        // Get keys from the FIRST app only (assumes all apps have same structure)
+        const allKeys = dataArray.length > 0 && dataArray[0]
+          ? Object.keys(dataArray[0])
+          : [];
+        
         return (
           <div className="space-y-3">
             {dataArray.length > 0 ? (
               <div className="max-h-96 overflow-y-auto">
                 <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+                  <thead className="bg-gray-50 sticky top-0">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bundle Name</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Display Name</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bundle ID</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Version</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">#</th>
+                      {allKeys.map((key) => (
+                        <th key={key} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">
+                          {key.replace(/_/g, ' ')}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-200">
+                  <tbody className="divide-y divide-gray-200 bg-white">
                     {dataArray.map((app: any, index: number) => (
-                      <tr key={index}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{app.bundle_name || 'N/A'}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{app.display_name || 'N/A'}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{app.bundle_identifier || 'N/A'}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{app.bundle_version || app.bundle_short_version || 'N/A'}</td>
+                      <tr key={index} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{index + 1}</td>
+                        {allKeys.map((key) => (
+                          <td key={key} className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate" title={app[key] || 'N/A'}>
+                            {app[key] || 'N/A'}
+                          </td>
+                        ))}
                       </tr>
                     ))}
                   </tbody>

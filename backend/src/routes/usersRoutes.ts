@@ -1,11 +1,14 @@
 import express from 'express';
 import { auth } from '../middleware/authMiddleware';
-import { getUsers, getTotalUsers, updateUserAccountType, deleteUser } from '../controllers/usersController';
+import { getUsers, getTotalUsers, updateUserAccountType, deleteUser, createUser } from '../controllers/usersController';
 
 const router: express.Router = express.Router();
 
 // GET /api/users - list users (for frontend table)
 router.get('/', auth, getUsers);
+
+// POST /api/users - create user
+router.post('/', auth, createUser);
 
 // GET /api/users/totalusers - get total users count (for dashboard)
 router.get('/totalusers', auth, getTotalUsers);

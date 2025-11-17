@@ -6,9 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"time"
-
 	"scanx/internal/collector"
-	"scanx/internal/config"
 	"scanx/internal/utils"
 )
 
@@ -79,7 +77,7 @@ func (s *BackendSender) SendAgentData(data *collector.CollectedData) error {
 		return nil
 	}
 
-	utils.Info("✅ Successfully sent agent data to backend")
+	utils.Info("✅ Successfully sent agent data to backend_url: %s", s.baseURL)
 	utils.Info("   Device ID: %d", sendResponse.DeviceID)
 	utils.Info("   Backend timestamp: %s", sendResponse.Timestamp)
 
@@ -88,7 +86,7 @@ func (s *BackendSender) SendAgentData(data *collector.CollectedData) error {
 
 // TestConnection tests connectivity to the backend
 func (s *BackendSender) TestConnection() error {
-	url := fmt.Sprintf("%s/health", s.baseURL)
+	url := fmt.Sprintf("%s/api/health", s.baseURL)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -111,11 +109,3 @@ func (s *BackendSender) TestConnection() error {
 	return nil
 }
 
-// GetBackendURLFromConfig returns the backend URL from configuration
-func GetBackendURLFromConfig(cfg *config.Config) string {
-	if cfg.Agent.BackendURL != "" {
-		return cfg.Agent.BackendURL
-	}
-	// Fallback to default URL if not configured
-	return "http://172.0.10.183:3000"
-}

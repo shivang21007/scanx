@@ -25,7 +25,7 @@ func NewScheduler(cfg *config.Config, collectorInstance *collector.Collector, in
 	ctx, cancel := context.WithCancel(context.Background())
 
 	// Initialize backend sender
-	backendURL := sender.GetBackendURLFromConfig(cfg)
+	backendURL := cfg.GetBackendURL()
 	backendSender := sender.NewBackendSender(backendURL)
 
 	return &Scheduler{
@@ -84,17 +84,7 @@ func (s *Scheduler) runCollection() {
 	}
 
 	// Display collection summary
-	utils.Info("Data collection completed:")
-	utils.Info("  User: %s", data.User)
-	utils.Info("  OS Type: %s", data.OSType)
-	utils.Info("  OS Version: %s", data.OSVersion)
-	utils.Info("  Serial No: %s", data.SerialNo)
-	utils.Info("  Timestamp: %s", data.Timestamp)
-	utils.Info("  Queries executed: %d", len(data.Data))
-
-	for queryName, results := range data.Data {
-		utils.Info("    %s: %d records", queryName, len(results))
-	}
+	s.collector.LogCollectionSummary(data)
 
 	// Send data to backend server
 	utils.Info("📡 Sending data to backend...")

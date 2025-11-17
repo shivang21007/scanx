@@ -16,7 +16,7 @@ export const TABLES = {
 
 // Create admins table
 export const createAdminsTable = async () => {
-    const connection = getConnection();
+    const connection = await getConnection();
     // set time zone to IST in database
     await connection.execute(`SET time_zone = '+05:30';`);
     console.log("✅ Time zone set to IST");
@@ -38,7 +38,7 @@ export const createAdminsTable = async () => {
 
 // Create users table for Google Workspace employees
 export const createUsersTable = async () => {
-    const connection = getConnection();
+    const connection = await getConnection();
     
     await connection.execute(`
         CREATE TABLE IF NOT EXISTS ${TABLES.USERS} (
@@ -58,7 +58,7 @@ export const createUsersTable = async () => {
 
 // Create devices table (starting ID from 101)
 export const createDevicesTable = async () => {
-    const connection = getConnection();
+    const connection = await getConnection();
     
     await connection.execute(`
         CREATE TABLE IF NOT EXISTS ${TABLES.DEVICES} (
@@ -87,7 +87,7 @@ export const createDevicesTable = async () => {
 
 // Create individual data tables for each query type
 export const createSystemInfoTable = async () => {
-    const connection = getConnection();
+    const connection = await getConnection();
     
     await connection.execute(`
         CREATE TABLE IF NOT EXISTS ${TABLES.SYSTEM_INFO} (
@@ -107,7 +107,7 @@ export const createSystemInfoTable = async () => {
 };
 
 export const createDiskEncryptionInfoTable = async () => {
-    const connection = getConnection();
+    const connection = await getConnection();
     
     await connection.execute(`
         CREATE TABLE IF NOT EXISTS ${TABLES.DISK_ENCRYPTION_INFO} (
@@ -127,7 +127,7 @@ export const createDiskEncryptionInfoTable = async () => {
 };
 
 export const createPasswordManagerInfoTable = async () => {
-    const connection = getConnection();
+    const connection = await getConnection();
     
     await connection.execute(`
         CREATE TABLE IF NOT EXISTS ${TABLES.PASSWORD_MANAGER_INFO} (
@@ -147,7 +147,7 @@ export const createPasswordManagerInfoTable = async () => {
 };
 
 export const createAntivirusInfoTable = async () => {
-    const connection = getConnection();
+    const connection = await getConnection();
     
     await connection.execute(`
         CREATE TABLE IF NOT EXISTS ${TABLES.ANTIVIRUS_INFO} (
@@ -167,7 +167,7 @@ export const createAntivirusInfoTable = async () => {
 };
 
 export const createScreenLockInfoTable = async () => {
-    const connection = getConnection();
+    const connection = await getConnection();
     
     await connection.execute(`
         CREATE TABLE IF NOT EXISTS ${TABLES.SCREEN_LOCK_INFO} (
@@ -187,7 +187,7 @@ export const createScreenLockInfoTable = async () => {
 };
 
 export const createAppsInfoTable = async () => {
-    const connection = getConnection();
+    const connection = await getConnection();
     
     await connection.execute(`
         CREATE TABLE IF NOT EXISTS ${TABLES.APPS_INFO} (
@@ -208,7 +208,7 @@ export const createAppsInfoTable = async () => {
 
 // Create device_summary table for overview (which data types received)
 export const createDeviceSummaryTable = async () => {
-    const connection = getConnection();
+    const connection = await getConnection();
     
     await connection.execute(`
         CREATE TABLE IF NOT EXISTS ${TABLES.DEVICE_SUMMARY} (
@@ -255,7 +255,7 @@ export const initializeSchema = async () => {
 
 // Drop all tables (for development/testing)
 export const dropAllTables = async () => {
-    const connection = getConnection();
+    const connection = await getConnection();
     
     try {
         console.log("⚠️  Dropping all tables...");

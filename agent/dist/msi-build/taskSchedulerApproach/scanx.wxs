@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"
+     xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
+  <Product Id="*" 
+           Name="ScanX Agent" 
+           Language="1033" 
+           Version="1.0.0" 
+           Manufacturer="ScanX Company" 
+           UpgradeCode="87654321-4321-4321-4321-210987654321">
+    
+    <Package InstallerVersion="200" 
+             Compressed="yes" 
+             InstallScope="perMachine"
+             Description="ScanX - System Monitoring and Device Management" />
+
+    <!-- Allow reinstall and upgrades without version checks -->
+    <MajorUpgrade 
+        Schedule="afterInstallInitialize"
+        AllowDowngrades="yes" />
+    
+    <MediaTemplate EmbedCab="yes" />
+
+    <!-- Custom Actions -->
+    
+    <!-- Stop any running ScanX process and scheduled task before installation -->
+    <CustomAction Id="StopDaemon"
+                  Directory="INSTALLFOLDER"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="ignore"
+                  ExeCommand="powershell.exe -NoProfile -ExecutionPolicy Bypass -Command &quot;$taskName = 'ScanX Background Service'; Stop-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue; Stop-Process -Name 'scanx' -Force -ErrorAction SilentlyContinue; Start-Sleep -Seconds 3; if (Get-Process -Name 'scanx' -ErrorAction SilentlyContinue) { Stop-Process -Name 'scanx' -Force -ErrorAction SilentlyContinue; Start-Sleep -Seconds 2 }&quot;" />
+
+    <!-- Force delete installation directory for clean install -->
+    <CustomAction Id="ForceCleanInstall"
+                  Directory="INSTALLFOLDER"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="ignore"
+                  ExeCommand="powershell.exe -NoProfile -ExecutionPolicy Bypass -Command &quot;$installPath = 'C:\Program Files (x86)\scanx'; if (Test-Path $installPath) { Write-Host 'Removing old installation...'; Remove-Item -Path $installPath -Recurse -Force -ErrorAction SilentlyContinue; Start-Sleep -Seconds 2; if (Test-Path $installPath) { Get-ChildItem -Path $installPath -Recurse -Force | Remove-Item -Force -Recurse -ErrorAction SilentlyContinue; Remove-Item -Path $installPath -Force -ErrorAction SilentlyContinue } }&quot;" />
+
+    <!-- Create scheduled task after installation -->
+    <CustomAction Id="CreateScheduledTask"
+                  Directory="INSTALLFOLDER"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="check"
+                  ExeCommand="powershell.exe -NoProfile -ExecutionPolicy Bypass -Command &quot;$taskName = 'ScanX Background Service'; $xmlPath = 'C:\Program Files (x86)\scanx\scanx-task.xml'; $existingTask = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue; if ($existingTask) { Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue }; if (Test-Path $xmlPath) { Register-ScheduledTask -Xml (Get-Content $xmlPath | Out-String) -TaskName $taskName -Force }&quot;" />
+
+    <!-- Remove scheduled task on uninstallation -->
+    <CustomAction Id="RemoveScheduledTask"
+                  Directory="INSTALLFOLDER"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="ignore"
+                  ExeCommand="powershell.exe -NoProfile -ExecutionPolicy Bypass -Command &quot;$taskName = 'ScanX Background Service'; Stop-Process -Name 'scanx' -Force -ErrorAction SilentlyContinue; Start-Sleep -Seconds 2; Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue&quot;" />
+
+    <!-- Installation Sequence -->
+    <InstallExecuteSequence>
+      <!-- Step 1: Stop daemon and task EARLY before any file operations -->
+      <Custom Action="StopDaemon" After="InstallInitialize">NOT REMOVE</Custom>
+      
+      <!-- Step 2: Force clean the installation directory for fresh install -->
+      <Custom Action="ForceCleanInstall" After="StopDaemon">NOT REMOVE</Custom>
+      
+      <!-- Step 3: Create scheduled task after files are installed -->
+      <Custom Action="CreateScheduledTask" After="InstallFiles">NOT REMOVE</Custom>
+      
+      <!-- Step 4: Remove scheduled task during uninstall BEFORE removing files -->
+      <Custom Action="RemoveScheduledTask" Before="RemoveFiles">REMOVE="ALL"</Custom>
+    </InstallExecuteSequence>
+
+    <!-- Features -->
+    <Feature Id="ProductFeature" Title="ScanX" Level="1">
+      <ComponentRef Id="MainExecutable" />
+      <ComponentRef Id="BundledOSQuery" />
+      <ComponentRef Id="ConfigFiles" />
+      <ComponentRef Id="LogsFolder" />
+      <ComponentRef Id="ManagerScript" />
+      <ComponentRef Id="TaskXML" />
+      <ComponentRef Id="DesktopShortcut" />
+    </Feature>
+
+    <!-- Directory Structure -->
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFilesFolder">
+        <Directory Id="INSTALLFOLDER" Name="scanx">
+          <Directory Id="ConfigFolder" Name="config" />
+          <Directory Id="LogsFolder" Name="logs" />
+        </Directory>
+      </Directory>
+      <Directory Id="DesktopFolder" Name="Desktop" />
+    </Directory>
+
+    <!-- Main Executable -->
+    <Component Id="MainExecutable" Directory="INSTALLFOLDER" Guid="11111111-1111-1111-1111-111111111111">
+      <File Id="scanx.exe" Source="SourceDir\scanx-windows-amd64.exe" KeyPath="yes" Name="scanx.exe" />
+    </Component>
+    
+    <!-- Bundled OSQuery -->
+    <Component Id="BundledOSQuery" Directory="INSTALLFOLDER" Guid="66666666-6666-6666-6666-666666666666">
+      <File Id="osqueryi.exe" Source="SourceDir\osqueryi.exe" KeyPath="yes" Name="osqueryi.exe" />
+    </Component>
+    
+    <!-- Config Files -->
+    <Component Id="ConfigFiles" Directory="ConfigFolder" Guid="22222222-2222-2222-2222-222222222222">
+      <File Id="agent.conf" Source="SourceDir\agent.conf" />
+      <File Id="queries.yml" Source="SourceDir\queries.yml" />
+    </Component>
+
+    <!-- Logs Folder - Create and manage the logs directory -->
+    <Component Id="LogsFolder" Directory="LogsFolder" Guid="77777777-7777-7777-7777-777777777777">
+      <CreateFolder />
+      <RemoveFolder Id="RemoveLogsFolder" On="uninstall" />
+      <RegistryValue Root="HKCU" Key="Software\ScanX" Name="LogsFolder" Type="string" Value="[LogsFolder]" KeyPath="yes" />
+    </Component>
+
+    <!-- Task Scheduler XML -->
+    <Component Id="TaskXML" Directory="INSTALLFOLDER" Guid="33333333-3333-3333-3333-333333333333">
+      <File Id="scanx_task_xml" Source="SourceDir\scanx-task.xml" KeyPath="yes" />
+    </Component>
+
+    <!-- License -->
+    <WixVariable Id="WixUILicenseRtf" Value="license.rtf" />
+    
+    <!-- Manager Script -->
+    <Component Id="ManagerScript" Directory="INSTALLFOLDER" Guid="44444444-4444-4444-4444-444444444444">
+      <File Id="scanx_manager_bat" Source="SourceDir\scanx-manager.bat" KeyPath="yes" />
+    </Component>
+
+    <!-- Desktop shortcut -->
+    <Component Id="DesktopShortcut" Directory="DesktopFolder" Guid="55555555-5555-5555-5555-555555555555">
+      <Shortcut Id="ManagerShortcut"
+                Name="ScanX Manager (Run as Admin)"
+                Description="Configure and manage ScanX daemon - Requires Administrator"
+                Target="[System64Folder]cmd.exe"
+                Arguments="/c &quot;[INSTALLFOLDER]scanx-manager.bat&quot;"
+                WorkingDirectory="INSTALLFOLDER"
+                Icon="scanx.exe" />
+      <RemoveFolder Id="DesktopFolder" On="uninstall" />
+      <RegistryValue Root="HKCU" Key="Software\ScanX" Name="installed" Type="string" Value="yes" KeyPath="yes" />
+    </Component>
+
+    <!-- Icon -->
+    <Icon Id="scanx.exe" SourceFile="SourceDir\scanx-windows-amd64.exe" />
+
+    <!-- UI -->
+    <UI>
+      <UIRef Id="WixUI_Minimal" />
+    </UI>
+
+  </Product>
+</Wix>

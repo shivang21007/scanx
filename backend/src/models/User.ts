@@ -13,7 +13,7 @@ export interface Admin {
 export class AdminModel {
     // Create new admin
     static async create(admin: Omit<Admin, 'id' | 'created_at' | 'updated_at'>): Promise<number> {
-        const connection = getConnection();
+        const connection = await getConnection();
         const [result] = await connection.execute<ResultSetHeader>(
             'INSERT INTO admins (email, password, name) VALUES (?, ?, ?)',
             [admin.email, admin.password, admin.name || null]
@@ -23,7 +23,7 @@ export class AdminModel {
 
     // Find admin by email
     static async findByEmail(email: string): Promise<Admin | null> {
-        const connection = getConnection();
+        const connection = await getConnection();
         const [rows] = await connection.execute<RowDataPacket[]>(
             'SELECT * FROM admins WHERE email = ?',
             [email]
@@ -33,7 +33,7 @@ export class AdminModel {
 
     // Find admin by ID
     static async findById(id: number): Promise<Admin | null> {
-        const connection = getConnection();
+        const connection = await getConnection();
         const [rows] = await connection.execute<RowDataPacket[]>(
             'SELECT * FROM admins WHERE id = ?',
             [id]
@@ -43,7 +43,7 @@ export class AdminModel {
 
     // Get all admins
     static async findAll(): Promise<Admin[]> {
-        const connection = getConnection();
+        const connection = await getConnection();
         const [rows] = await connection.execute<RowDataPacket[]>(
             'SELECT id, email, name, created_at, updated_at FROM admins ORDER BY created_at DESC'
         );
@@ -52,7 +52,7 @@ export class AdminModel {
 
     // Update admin
     static async update(id: number, updates: Partial<Admin>): Promise<boolean> {
-        const connection = getConnection();
+        const connection = await getConnection();
         const fields = Object.keys(updates).filter(key => key !== 'id');
         const values = fields.map(key => updates[key as keyof Admin]);
         
@@ -68,7 +68,7 @@ export class AdminModel {
 
     // Delete admin
     static async delete(id: number): Promise<boolean> {
-        const connection = getConnection();
+        const connection = await getConnection();
         const [result] = await connection.execute<ResultSetHeader>(
             'DELETE FROM admins WHERE id = ?',
             [id]
