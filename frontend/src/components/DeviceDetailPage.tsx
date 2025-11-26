@@ -32,10 +32,10 @@ export function DeviceDetailPage() {
 
         // Single API call to get everything
         const response = await apiService.getDeviceById(deviceId);
-        console.log('Complete device response:', response);
-        console.log('Device basic info:', response.device);
-        console.log('Device summary:', response.summary);
-        console.log('Available data types:', Object.keys(response.data || {}));
+        //console.log('Complete device response:', response);
+        //console.log('Device basic info:', response.device);
+        //console.log('Device summary:', response.summary);
+        //console.log('Available data types:', Object.keys(response.data || {}));
 
         setDeviceInfo(response);
       } catch (err: any) {
@@ -51,7 +51,7 @@ export function DeviceDetailPage() {
 
     // Auto-refresh every 1 minutes (60000ms)
     const refreshInterval = setInterval(() => {
-      console.log('Auto-refreshing device details...');
+      //console.log('Auto-refreshing device details...');
       fetchDeviceDetails();
     }, 60000);
 
@@ -75,12 +75,12 @@ export function DeviceDetailPage() {
   };
 
   const formatDataForDisplay = (dataObject: any, type: string) => {
-    console.log(`Formatting data for ${type}:`, dataObject);
+    //console.log(`Formatting data for ${type}:`, dataObject);
 
     // Extract actual data from the response object
     const dataArray = dataObject?.data;
     if (!dataArray || !Array.isArray(dataArray) || dataArray.length === 0) {
-      console.log(`No data available for ${type}`);
+      //console.log(`No data available for ${type}`);
       return <p className="text-gray-500">No {type.replace('_', ' ')} information available</p>;
     }
 

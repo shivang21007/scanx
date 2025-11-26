@@ -94,7 +94,48 @@ export const migration_002_add_users_table = async () => {
     await markMigrationExecuted(migrationName);
 };
 
-
+// Migration: Add devices JSON field to users table
+export const migration_003_add_devices_field = async () => {
+    const migrationName = '003_add_devices_field';
+    
+    if (await isMigrationExecuted(migrationName)) {
+        console.log(`⏭️  Migration '${migrationName}' already executed`);
+        return;
+    }
+    
+    console.log(`🔧 Executing migration: ${migrationName}`);
+    
+    const connection = await getConnection();
+    
+    try {
+        // Check if column already exists
+        const [columns] = await connection.execute(
+            `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+             WHERE TABLE_SCHEMA = DATABASE() 
+             AND TABLE_NAME = 'users' 
+             AND COLUMN_NAME = 'device_id'`
+        );
+        
+        if ((columns as any[]).length === 0) {
+            // Add devices JSON column
+            await connection.execute(`
+                ALTER TABLE users 
+                ADD COLUMN device_id JSON DEFAULT NULL 
+                AFTER account_type
+            `);
+            
+            console.log('✅ Added devices JSON field to users table');
+        } else {
+            console.log('ℹ️  Devices column already exists');
+        }
+        
+    } catch (err: any) {
+        console.error(`❌ Error adding devices field: ${err.message}`);
+        throw err;
+    }
+    
+    await markMigrationExecuted(migrationName);
+};
 
 // Run all migrations
 export const runMigrations = async () => {
@@ -106,6 +147,7 @@ export const runMigrations = async () => {
         // Execute migrations in order
         await migration_001_add_backend_config();
         await migration_002_add_users_table();
+        await migration_003_add_devices_field();
         console.log("🎯 All migrations completed successfully!");
         
     } catch (err: any) {

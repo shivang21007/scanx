@@ -47,6 +47,7 @@ export const createUsersTable = async () => {
             name VARCHAR(255) NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             account_type ENUM('user', 'service') DEFAULT 'user',
+            device_id JSON DEFAULT NULL,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             INDEX idx_email (email),
             INDEX idx_account_type (account_type)

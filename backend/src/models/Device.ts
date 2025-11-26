@@ -206,6 +206,34 @@ export class DeviceModel {
             'DELETE FROM devices WHERE id = ?',
             [id]
         );
+        await connection.execute<ResultSetHeader>(
+            'DELETE FROM device_summary WHERE device_id = ?',
+            [id]
+        );
+        await connection.execute<ResultSetHeader>(
+            'DELETE FROM system_info WHERE device_id = ?',
+            [id]
+        );
+        await connection.execute<ResultSetHeader>(
+            'DELETE FROM password_manager_info WHERE device_id = ?',
+            [id]
+        );
+        await connection.execute<ResultSetHeader>(
+            'DELETE FROM screen_lock_info WHERE device_id = ?',
+            [id]
+        );
+        await connection.execute<ResultSetHeader>(
+            'DELETE FROM antivirus_info WHERE device_id = ?',
+            [id]
+        );
+        await connection.execute<ResultSetHeader>(
+            'DELETE FROM disk_encryption_info WHERE device_id = ?',
+            [id]
+        );
+        await connection.execute<ResultSetHeader>(
+            'DELETE FROM apps_info WHERE device_id = ?',
+            [id]
+        );
     }
     
     // Search devices by user email

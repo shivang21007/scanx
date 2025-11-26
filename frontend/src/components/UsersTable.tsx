@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { User } from '../types/user';
-import { Trash2, ChevronDown, User as UserIcon, Settings } from 'lucide-react';
+import { Trash2, ChevronDown, User as UserIcon, Settings, CheckCircle2 } from 'lucide-react';
 
 interface UsersTableProps {
     users: User[];
@@ -10,6 +11,7 @@ interface UsersTableProps {
 }
 
 export function UsersTable({ users, loading, onUpdateAccountType, onDeleteUser }: UsersTableProps) {
+    const navigate = useNavigate();
     const [updatingUser, setUpdatingUser] = useState<number | null>(null);
     const [deletingUser, setDeletingUser] = useState<number | null>(null);
     const [openDropdown, setOpenDropdown] = useState<number | null>(null);
@@ -35,11 +37,11 @@ export function UsersTable({ users, loading, onUpdateAccountType, onDeleteUser }
     }, []);
 
     const handleAccountTypeChange = async (gid: number, accountType: 'user' | 'service') => {
-        console.log('Updating account type for user', gid, 'to', accountType); // Debug log
+        //console.log('Updating account type for user', gid, 'to', accountType); // Debug log
         setUpdatingUser(gid);
         try {
             await onUpdateAccountType(gid, accountType);
-            console.log('Account type updated successfully'); // Debug log
+            //console.log('Account type updated successfully'); // Debug log
         } catch (error) {
             console.error('Failed to update account type:', error);
         } finally {
@@ -87,6 +89,17 @@ export function UsersTable({ users, loading, onUpdateAccountType, onDeleteUser }
             default:
                 return <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">Unknown</span>;
         }
+    };
+
+    const getDeviceCount = (user: User): number => {
+        if (!user.device_id || !Array.isArray(user.device_id)) {
+            return 0;
+        }
+        return user.device_id.length;
+    };
+
+    const handleDeviceCheckmarkClick = (email: string) => {
+        navigate(`/devices?search=${encodeURIComponent(email)}`);
     };
 
     if (users.length === 0) {
@@ -137,13 +150,30 @@ export function UsersTable({ users, loading, onUpdateAccountType, onDeleteUser }
                                                 <UserIcon className="h-6 w-6 text-gray-600" />
                                             </div>
                                         </div>
-                                        <div className="ml-4">
-                                            <div className="text-sm font-medium text-gray-900">
-                                                {user.name}
+                                        <div className="ml-4 flex items-center gap-2">
+                                            <div>
+                                                <div className="text-sm font-medium text-gray-900">
+                                                    {user.name}
+                                                </div>
+                                                <div className="text-sm text-gray-500">
+                                                    ID: {user.gid}
+                                                </div>
                                             </div>
-                                            <div className="text-sm text-gray-500">
-                                                ID: {user.gid}
-                                            </div>
+                                            {/* Device Checkmark with Count Badge */}
+                                            {getDeviceCount(user) > 0 && (
+                                                <button
+                                                    onClick={() => handleDeviceCheckmarkClick(user.email)}
+                                                    className="relative flex items-center justify-center group cursor-pointer active:scale-75 hover:scale-110"
+                                                    title={`${getDeviceCount(user)} device(s) registered. Click to view devices.`}
+                                                >
+                                                    <CheckCircle2 className="h-5 w-5 text-green-600 group-hover:text-green-700 transition-colors" />
+                                                    {getDeviceCount(user) > 1 && (
+                                                        <span className="absolute -top-1 -right-1 h-4 w-4 bg-green-600 text-white text-xs font-bold rounded-full flex items-center justify-center group-hover:bg-green-700 transition-colors">
+                                                            {getDeviceCount(user)}
+                                                        </span>
+                                                    )}
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 </td>

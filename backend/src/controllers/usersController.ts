@@ -5,11 +5,12 @@ export async function getUsers(req: Request, res: Response) {
   const page = Math.max(1, parseInt(String(req.query.page || '1'), 10));
   const pageSize = Math.max(1, Math.min(200, parseInt(String(req.query.pageSize || '50'), 10)));
   const search = String(req.query.search || '').trim();
+  const enrollment = req.query.enrollment as 'enrolled' | 'un-enrolled' | undefined;
   const offset = (page - 1) * pageSize;
 
   const [items, total] = await Promise.all([
-    UsersModel.list({ search, limit: pageSize, offset }),
-    UsersModel.count({ search }),
+    UsersModel.list({ search, limit: pageSize, offset, enrollment }),
+    UsersModel.count({ search, enrollment }),
   ]);
 
   res.json({ items, total, page, pageSize });

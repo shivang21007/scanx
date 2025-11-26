@@ -37,7 +37,7 @@ export function LoginPage() {
       return;
     }
 
-    console.log('Submitting login form...');
+    //console.log('Submitting login form...');
     
     // Clear previous errors
     setFieldErrors({ email: '', password: '' });
@@ -46,13 +46,13 @@ export function LoginPage() {
 
     try {
       const success = await login(email, password);
-      console.log('Login result:', success);
+      //console.log('Login result:', success);
       
       if (success) {
         navigate('/dashboard');
       } else {
         // Login failed, error should be in context now
-        console.log('Login failed, current error:', error);
+        //console.log('Login failed, current error:', error);
       }
     } catch (err) {
       console.error('Login error:', err);
@@ -63,10 +63,10 @@ export function LoginPage() {
 
   // Watch for error changes from auth context
   useEffect(() => {
-    console.log('Error state changed:', { error, loading, isSubmitting });
+    //console.log('Error state changed:', { error, loading, isSubmitting });
     
     if (error && !loading && !isSubmitting) {
-      console.log('Displaying login error:', error);
+      //console.log('Displaying login error:', error);
       
       // Handle specific error types
       let emailError = '';

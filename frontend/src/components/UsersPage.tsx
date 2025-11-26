@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, Users, Search, LogOut, X } from 'lucide-react';
+import { ChevronLeft, Users, Search, LogOut, X, Filter } from 'lucide-react';
 import { apiService } from '../services/api';
 import { User, UsersTableFilters } from '../types/user';
 import { LoadingSpinner } from './LoadingSpinner';
@@ -15,6 +15,7 @@ export function UsersPage() {
   const [createUserDialog, setCreateUserDialog] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [enrollmentFilter, setEnrollmentFilter] = useState<'enrolled' | 'un-enrolled' | ''>('');
   const [filters, setFilters] = useState<UsersTableFilters>({
     page: 1,
     pageSize: 10
@@ -54,7 +55,7 @@ export function UsersPage() {
 
     // Auto-refresh every 1 minutes (60000ms)
     const refreshInterval = setInterval(() => {
-      console.log('Auto-refreshing users data...');
+      //console.log('Auto-refreshing users data...');
       fetchUsers();
     }, 60000);
 
@@ -69,6 +70,15 @@ export function UsersPage() {
     setFilters(prev => ({ ...prev, search: e.target.value, page: 1 }));
   };
 
+  const handleEnrollmentFilter = (filter: 'enrolled' | 'un-enrolled' | '') => {
+    setEnrollmentFilter(filter);
+    setFilters(prev => ({ 
+      ...prev, 
+      enrollment: filter || undefined,
+      page: 1 
+    }));
+  };
+
   const handlePageChange = (page: number) => {
     setFilters(prev => ({ ...prev, page }));
   };
@@ -79,6 +89,7 @@ export function UsersPage() {
 
   const handleClearFilters = () => {
     setSearchTerm('');
+    setEnrollmentFilter('');
     setFilters({ page: 1, pageSize: 10 });
   };
 
@@ -183,43 +194,114 @@ export function UsersPage() {
       <main className="px-4 sm:px-6 lg:px-12 xl:px-16 py-8">
         {/* Filters Section */}
         <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
-          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-            {/* Search left side of the page */}
-            <div className="flex-1 max-w-md">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search by email or name..."
-                  value={searchTerm}
-                  onChange={handleSearchChange}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                />
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
+            {/* Left side - Search and Enrollment Filter */}
+            <div className="flex flex-col sm:flex-row gap-4 flex-1">
+              {/* Search */}
+              <div className="flex-1 max-w-md">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search by email or name..."
+                    value={searchTerm}
+                    onChange={handleSearchChange}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              {/* Enrollment Filter */}
+              <div className="flex items-center space-x-2">
+                <Filter className="h-4 w-4 text-gray-400" />
+                <span className="text-sm text-gray-600 mr-2">Enrollment:</span>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => handleEnrollmentFilter(enrollmentFilter === 'enrolled' ? '' : 'enrolled')}
+                    className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                      enrollmentFilter === 'enrolled'
+                        ? 'bg-green-100 text-green-700 border border-green-200'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    Enrolled
+                  </button>
+                  <button
+                    onClick={() => handleEnrollmentFilter(enrollmentFilter === 'un-enrolled' ? '' : 'un-enrolled')}
+                    className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                      enrollmentFilter === 'un-enrolled'
+                        ? 'bg-orange-100 text-orange-700 border border-orange-200'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    Un-enrolled
+                  </button>
+                  {enrollmentFilter && (
+                    <button
+                      onClick={() => handleEnrollmentFilter('')}
+                      className="px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
-            {/* Add User right side of the page */}
-            <button
-              onClick={() => {
-                setCreateUserDialog(!createUserDialog);
-                if (!createUserDialog) {
-                  setFormData({ name: '', email: '', accountType: 'user' });
-                }
-              }}
-              disabled={submitting}
-              className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 hover:scale-105 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-            >
-              {createUserDialog ? 'Close' : 'Create User'}
-            </button>
 
-            {/* Clear Filters */}
-            {(searchTerm) && (
+            {/* Right side - Actions */}
+            <div className="flex items-center space-x-2">
+              {/* Add User button */}
               <button
-                onClick={handleClearFilters}
-                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                onClick={() => {
+                  setCreateUserDialog(!createUserDialog);
+                  if (!createUserDialog) {
+                    setFormData({ name: '', email: '', accountType: 'user' });
+                  }
+                }}
+                disabled={submitting}
+                className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 hover:scale-105 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
               >
-                Clear Filters
+                {createUserDialog ? 'Close' : 'Create User'}
               </button>
-            )}
+
+              {/* Clear All Filters */}
+              {(searchTerm || enrollmentFilter) && (
+                <button
+                  onClick={handleClearFilters}
+                  className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                >
+                  Clear All
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Results Summary */}
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-gray-600">
+                {users.length > 0 ? (
+                  <>
+                    Showing <span className="font-medium">{users.length}</span> of{' '}
+                    <span className="font-medium">{totalUsers}</span> users
+                    {searchTerm && (
+                      <span> matching "{searchTerm}"</span>
+                    )}
+                    {enrollmentFilter && (
+                      <span> - {enrollmentFilter === 'enrolled' ? 'Enrolled' : 'Un-enrolled'}</span>
+                    )}
+                  </>
+                ) : (
+                  'No users found'
+                )}
+              </div>
+              {loading && (
+                <div className="flex items-center text-sm text-gray-500">
+                  <LoadingSpinner size="sm" />
+                  <span className="ml-2">Updating...</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

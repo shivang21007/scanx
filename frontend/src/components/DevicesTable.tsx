@@ -213,11 +213,11 @@ export function DevicesTable({ devices, loading, onDeviceDeleted }: DevicesTable
                   <button
                     className="text-red-600 hover:text-red-900 transition-all duration-150 cursor-pointer active:scale-75 hover:scale-110"
                     onClick={async () => {
-                      console.log('Remove device:', device.id);
+                      //console.log('Remove device:', device.id);
                       if (confirm(`Are you sure you want to remove ${device.computer_name} (${device.serial_no})? This action cannot be undone.`)) {
                         try {
                           const message = await apiService.deleteDeviceById(device.id);
-                          console.log('Device removed:', message);
+                          //console.log('Device removed:', message);
                           // Notify parent component to refresh the data
                           if (onDeviceDeleted) {
                             await onDeviceDeleted();

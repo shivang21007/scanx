@@ -4,6 +4,7 @@ export interface User {
   name: string;
   created_at: string;
   account_type: 'user' | 'service';
+  device_id?: number[] | null;
   updated_at: string;
 }
 
@@ -22,4 +23,5 @@ export interface UsersTableFilters {
   search?: string;
   page?: number;
   pageSize?: number;
+  enrollment?: 'enrolled' | 'un-enrolled';
 }

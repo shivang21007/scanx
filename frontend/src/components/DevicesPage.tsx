@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { LogOut, Search, Filter, Monitor, ChevronLeft } from 'lucide-react';
 import { apiService } from '../services/api';
 import { DevicesTableResponse, DevicesTableFilters } from '../types/device';
@@ -9,16 +9,20 @@ import { DevicesTable } from './DevicesTable';
 
 export function DevicesPage() {
   const { admin, logout } = useAuth();
+  const [searchParams] = useSearchParams();
   const [devicesData, setDevicesData] = useState<DevicesTableResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Initialize search from URL query parameter if present
+  const initialSearch = searchParams.get('search') || '';
   const [filters, setFilters] = useState<DevicesTableFilters>({
-    search: '',
+    search: initialSearch,
     os_type: ''
   });
 
-  // Debounced search state
-  const [searchInput, setSearchInput] = useState('');
+  // Debounced search state - initialize from URL
+  const [searchInput, setSearchInput] = useState(initialSearch);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -33,7 +37,7 @@ export function DevicesPage() {
 
     // Auto-refresh every 1 minutes (60000ms)
     const refreshInterval = setInterval(() => {
-      console.log('Auto-refreshing devices data...');
+      //console.log('Auto-refreshing devices data...');
       fetchDevicesData();
     }, 60000);
 
@@ -45,11 +49,11 @@ export function DevicesPage() {
     try {
       setLoading(true);
       setError(null);
-      console.log('Fetching devices with filters:', filters);
+      //console.log('Fetching devices with filters:', filters);
       
       const data = await apiService.getDevicesTable(filters);
       setDevicesData(data);
-      console.log('Devices data loaded:', data);
+      //console.log('Devices data loaded:', data);
     } catch (err: any) {
       console.error('Failed to fetch devices data:', err);
       setError(err.message || 'Failed to load devices data');

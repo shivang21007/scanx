@@ -64,28 +64,18 @@ export const receiveAgentData = async (req: Request, res: Response) => {
     // Parse agent timestamp to IST
     const istTimestamp = parseToIST(agentData.timestamp);
     
-    // Validate user ownership:
-    // 1) If a device with this serial exists, proceed (update path below)
-    // 2) If not, ensure no other device uses this email (unique owner per email)
-    // 3) Verify user exists in users table and is a 'user', not 'service'
-
-    const existingDevice = await DeviceModel.findBySerial(agentData.serial_no);
-    if (!existingDevice) {
-      // Check if email is already bound to another device
-      const existingByEmail = await DeviceModel.findByUser(agentData.user);
-      if (existingByEmail.length > 0) {
-        return res.status(409).json({ message: 'email already associated with another device' });
-      }
-
-      // Verify user in users table
-      const userRec = await UsersModel.findByEmail(agentData.user);
-      if (!userRec) {
-        return res.status(404).json({ message: 'user_email not found' });
-      }
-      if (userRec.account_type !== 'user') {
-        return res.status(401).json({ message: 'service account cannot send data' });
-      }
+    // Validate user exists and is a 'user' account (not 'service')
+    const userRec = await UsersModel.findByEmail(agentData.user);
+    if (!userRec) {
+      return res.status(404).json({ message: 'user_email not found' });
     }
+    if (userRec.account_type !== 'user') {
+      return res.status(401).json({ message: 'service account cannot send data' });
+    }
+
+    // Check if device exists BEFORE creating/updating (to know if it's new)
+    const existingDevice = await DeviceModel.findBySerial(agentData.serial_no);
+    const isNewDevice = !existingDevice;
 
     // Create or update device record
     const deviceId = await DeviceModel.createOrUpdate({
@@ -184,6 +174,15 @@ export const receiveAgentData = async (req: Request, res: Response) => {
       ...receivedDataTypes
     });
     
+    // Add device_id to user's device_id array
+    // Always try to add it - addDevice will check if it already exists
+    const added = await UsersModel.addDevice(agentData.user, deviceId);
+    if (added) {
+      console.log(`✅ Added device ${deviceId} to user ${agentData.user}'s device_id array`);
+    } else if (isNewDevice) {
+      // If it's a new device but addDevice returned false, log a warning
+      console.log(`⚠️  Device ${deviceId} already exists in user ${agentData.user}'s device_id array (unexpected for new device)`);
+    }
 
     console.log(`✅ Processed agent data: ${Object.keys(agentData.data).length} data types stored`);
 
@@ -267,7 +266,22 @@ export const removeDeviceById = async (req: Request, res: Response) => {
   try {
     const deviceId = parseInt(req.params.id);
     console.log('Removing device by ID:', deviceId);
+    
+    // Get device info before deletion to get user_email
+    const device = await DeviceModel.findById(deviceId);
+    if (!device) {
+      return res.status(404).json({ message: 'Device not found' });
+    }
+    
+    // Remove device_id from user's devices array
+    if (device.user_email) {
+      await UsersModel.removeDevice(device.user_email, deviceId);
+      console.log(`✅ Removed device ${deviceId} from user ${device.user_email}'s devices array`);
+    }
+    
+    // Delete device (CASCADE will handle related tables: device_summary, system_info, etc.)
     await DeviceModel.deleteById(deviceId);
+    
     res.status(200).json({ message: 'DeviceID: ' + deviceId + ' removed successfully' });
   } catch (err: any) {
     console.error('Error removing device by ID:', err);

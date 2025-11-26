@@ -21,7 +21,7 @@ class ApiService {
       this.baseURL = envApiUrl || `${currentOrigin}/api`;
     }
     
-    console.log('API Service initialized with baseURL:', this.baseURL);
+    //console.log('API Service initialized with baseURL:', this.baseURL);
     
     this.api = axios.create({
       baseURL: this.baseURL,
@@ -36,13 +36,13 @@ class ApiService {
       (response) => response,
       (error) => {
         if (error.response?.status === 401) {
-          console.log('401 Unauthorized - clearing auth state');
+          //console.log('401 Unauthorized - clearing auth state');
           // Token expired or invalid, clear frontend state
           this.clearAuthCookie();
           this.removeStoredAdmin();
           // Only redirect if not already on auth pages
           if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
-            console.log('Redirecting to login due to auth failure');
+            //console.log('Redirecting to login due to auth failure');
             window.location.href = '/login';
           }
         }
@@ -72,11 +72,11 @@ class ApiService {
 
   async getCurrentAdmin(): Promise<Admin> {
     try {
-      console.log('Making request to /auth/me...');
+      //console.log('Making request to /auth/me...');
       const response: AxiosResponse<Admin> = await this.api.get('/auth/me');
       return response.data;
     } catch (error: any) {
-      console.log('getCurrentAdmin error:', error.response?.status, error.response?.data);
+      //console.log('getCurrentAdmin error:', error.response?.status, error.response?.data);
       throw this.handleError(error);
     }
   }
@@ -158,7 +158,7 @@ class ApiService {
       }
       
       const url = `/devices/table${params.toString() ? `?${params.toString()}` : ''}`;
-      console.log('Fetching devices table data from:', url);
+      //console.log('Fetching devices table data from:', url);
       
       const response: AxiosResponse<DevicesTableResponse> = await this.api.get(url);
       return response.data;
@@ -207,6 +207,9 @@ class ApiService {
       }
       if (filters?.pageSize) {
         params.append('pageSize', filters.pageSize.toString());
+      }
+      if (filters?.enrollment) {
+        params.append('enrollment', filters.enrollment);
       }
       
       const url = `/users${params.toString() ? `?${params.toString()}` : ''}`;

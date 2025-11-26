@@ -126,13 +126,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
       dispatch({ type: 'CHECK_AUTH_START' });
       
       // Always try to validate with server (httpOnly cookies are sent automatically)
-      console.log('Checking authentication with server...');
+      //console.log('Checking authentication with server...');
       const admin = await apiService.getCurrentAdmin();
       apiService.setStoredAdmin(admin);
       dispatch({ type: 'CHECK_AUTH_SUCCESS', payload: admin });
-      console.log('Authentication successful');
+      //console.log('Authentication successful');
     } catch (error: any) {
-      console.log('Authentication failed:', error.message);
+      //console.log('Authentication failed:', error.message);
       // Clear everything on auth failure
       apiService.clearAuthCookie();
       apiService.removeStoredAdmin();

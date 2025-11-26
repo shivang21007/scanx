@@ -46,7 +46,7 @@ export function DashboardPage() {
 
     // Auto-refresh every 1 minutes (60000ms)
     const refreshInterval = setInterval(() => {
-      console.log('Auto-refreshing dashboard data...');
+      //console.log('Auto-refreshing dashboard data...');
       fetchDashboardData();
     }, 60000);
 
