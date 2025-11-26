@@ -52,11 +52,11 @@ export function UsersPage() {
       fetchUsers();
     }, 500); // Debounce search
 
-    // Auto-refresh every 2 minutes (120000ms)
+    // Auto-refresh every 1 minutes (60000ms)
     const refreshInterval = setInterval(() => {
       console.log('Auto-refreshing users data...');
       fetchUsers();
-    }, 120000);
+    }, 60000);
 
     return () => {
       clearTimeout(handler);

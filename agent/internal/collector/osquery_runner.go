@@ -187,7 +187,10 @@ func (r *OSQueryRunner) ExecuteQueryAsUser(queryName string, query string, usern
 	defer cancel()
 
 	// Execute osquery as the specified user using su
-	suCmd := fmt.Sprintf("osqueryi --json < %s", queryFile)
+	// Use the full path to osqueryi (r.osqueryPath) instead of relying on PATH
+	// This ensures bundled osquery at /usr/local/lib/scanx/osqueryi is found
+	// even when switching to a fresh user context with su -
+	suCmd := fmt.Sprintf("%s --json < %s", r.osqueryPath, queryFile)
 	cmd := exec.CommandContext(ctx, "su", "-", username, "-c", suCmd)
 
 	// Capture both stdout and stderr

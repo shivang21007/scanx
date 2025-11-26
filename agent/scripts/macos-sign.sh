@@ -14,8 +14,8 @@ VERSION=$(cat config/agent.conf | grep -o '"version": "[^"]*"' | cut -d'"' -f4)
 # Define binaries to sign
 SCANX_AMD64="dist/builds/scanx-darwin-amd64"
 SCANX_ARM64="dist/builds/scanx-darwin-arm64"
-# OSQUERYI_AMD64="dist/builds-osquery/osqueryi-5.20.0.darwin_x86_64"
-# OSQUERYI_ARM64="dist/builds-osquery/osqueryi-5.20.0.darwin_arm64"
+OSQUERYI_AMD64="dist/builds-osquery/osqueryi-5.20.0.darwin_x86_64"
+OSQUERYI_ARM64="dist/builds-osquery/osqueryi-5.20.0.darwin_arm64"
 
 echo "🍎 macOS Code Signing for scanx and osqueryi"
 echo "=============================================="
@@ -128,7 +128,7 @@ else
     SIGNING_IDENTITY="$DEVELOPER_ID"
 fi
 
-# Sign all binaries
+# Sign all binaries and Remove quarantine attributes from binaries
 echo "🔐 Signing binaries..."
 echo ""
 
@@ -139,9 +139,17 @@ for binary in "${BINARIES_TO_SIGN[@]}"; do
     binary_name=$(basename "$binary")
     echo "📝 Signing: $binary_name"
     
+    # Remove quarantine attribute BEFORE signing (best practice)
+    if xattr -rd com.apple.quarantine "$binary" 2>/dev/null; then
+        echo "   🧹 Removed quarantine attribute"
+    fi
+    
+    # Sign the binary
     if codesign --force --options runtime --entitlements "$ENTITLEMENTS_FILE" --sign "$SIGNING_IDENTITY" --timestamp "$binary" 2>&1; then
         # Verify signature
         if codesign --verify --verbose "$binary" > /dev/null 2>&1; then
+            # Remove quarantine again after signing (ensure it's gone)
+            xattr -rd com.apple.quarantine "$binary" 2>/dev/null || true
             SIGNED_BINARIES+=("$binary")
             echo "   ✅ Signed and verified: $binary_name"
         else

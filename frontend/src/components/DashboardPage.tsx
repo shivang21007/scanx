@@ -44,11 +44,11 @@ export function DashboardPage() {
     // Initial fetch
     fetchDashboardData();
 
-    // Auto-refresh every 2 minutes (120000ms)
+    // Auto-refresh every 1 minutes (60000ms)
     const refreshInterval = setInterval(() => {
       console.log('Auto-refreshing dashboard data...');
       fetchDashboardData();
-    }, 120000);
+    }, 60000);
 
     // Cleanup interval on unmount
     return () => clearInterval(refreshInterval);

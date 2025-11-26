@@ -254,6 +254,28 @@ if [ -f "/usr/local/lib/scanx/osqueryi" ]; then
     chmod 755 /usr/local/lib/scanx
 fi
 
+# Add /usr/local/lib/scanx to system PATH via /etc/profile.d/ (idempotent - safe to run multiple times)
+# This ensures osqueryi can be found even in fresh user contexts
+# Using /etc/profile.d/ is the standard Linux way (more modular than /etc/environment)
+mkdir -p /etc/profile.d
+if [ ! -f "/etc/profile.d/scanx.sh" ] || ! grep -q "/usr/local/lib/scanx" /etc/profile.d/scanx.sh; then
+    echo "📝 Adding /usr/local/lib/scanx to system PATH..."
+    cat > /etc/profile.d/scanx.sh << 'PROFILE_EOF'
+#!/bin/bash
+# scanx PATH configuration
+# This file is sourced by login shells to add scanx tools to PATH
+if [[ ":$PATH:" != *":/usr/local/lib/scanx:"* ]]; then
+    export PATH="$PATH:/usr/local/lib/scanx"
+fi
+PROFILE_EOF
+    chmod 644 /etc/profile.d/scanx.sh
+    echo "✅ Created /etc/profile.d/scanx.sh for PATH configuration"
+    echo "   Note: New login sessions will have /usr/local/lib/scanx in PATH"
+    echo "   Current session: export PATH=\"\$PATH:/usr/local/lib/scanx\" (if needed)"
+else
+    echo "✅ /usr/local/lib/scanx already configured in PATH"
+fi
+
 # Enable and start service
 systemctl daemon-reload
 systemctl enable scanx
@@ -302,6 +324,13 @@ rm -rf /var/log/scanx/*
 
 # Remove data files
 rm -rf /var/lib/scanx/*
+
+# Remove /usr/local/lib/scanx from system PATH
+if [ -f "/etc/profile.d/scanx.sh" ]; then
+    echo "📝 Removing /usr/local/lib/scanx from system PATH..."
+    rm -f /etc/profile.d/scanx.sh
+    echo "✅ Removed /etc/profile.d/scanx.sh"
+fi
 
 exit 0
 EOF
@@ -556,6 +585,28 @@ if [ -f "/usr/local/lib/scanx/osqueryi" ]; then
     chmod 755 /usr/local/lib/scanx
 fi
 
+# Add /usr/local/lib/scanx to system PATH via /etc/profile.d/ (idempotent - safe to run multiple times)
+# This ensures osqueryi can be found even in fresh user contexts
+# Using /etc/profile.d/ is the standard Linux way (more modular than /etc/environment)
+mkdir -p /etc/profile.d
+if [ ! -f "/etc/profile.d/scanx.sh" ] || ! grep -q "/usr/local/lib/scanx" /etc/profile.d/scanx.sh; then
+    echo "📝 Adding /usr/local/lib/scanx to system PATH..."
+    cat > /etc/profile.d/scanx.sh << 'PROFILE_EOF'
+#!/bin/bash
+# scanx PATH configuration
+# This file is sourced by login shells to add scanx tools to PATH
+if [[ ":$PATH:" != *":/usr/local/lib/scanx:"* ]]; then
+    export PATH="$PATH:/usr/local/lib/scanx"
+fi
+PROFILE_EOF
+    chmod 644 /etc/profile.d/scanx.sh
+    echo "✅ Created /etc/profile.d/scanx.sh for PATH configuration"
+    echo "   Note: New login sessions will have /usr/local/lib/scanx in PATH"
+    echo "   Current session: export PATH=\"\$PATH:/usr/local/lib/scanx\" (if needed)"
+else
+    echo "✅ /usr/local/lib/scanx already configured in PATH"
+fi
+
 # Enable and start service
 %systemd_post scanx.service
 systemctl daemon-reload
@@ -578,6 +629,13 @@ echo "   Stop:    systemctl stop scanx"
 
 %preun
 %systemd_preun scanx.service
+
+# Remove /usr/local/lib/scanx from system PATH
+if [ -f "/etc/profile.d/scanx.sh" ]; then
+    echo "📝 Removing /usr/local/lib/scanx from system PATH..."
+    rm -f /etc/profile.d/scanx.sh
+    echo "✅ Removed /etc/profile.d/scanx.sh"
+fi
 
 %postun
 %systemd_postun_with_restart scanx.service
@@ -809,6 +867,28 @@ if [ -f "/usr/local/lib/scanx/osqueryi" ]; then
     chmod 755 /usr/local/lib/scanx
 fi
 
+# Add /usr/local/lib/scanx to system PATH via /etc/profile.d/ (idempotent - safe to run multiple times)
+# This ensures osqueryi can be found even in fresh user contexts
+# Using /etc/profile.d/ is the standard Linux way (more modular than /etc/environment)
+mkdir -p /etc/profile.d
+if [ ! -f "/etc/profile.d/scanx.sh" ] || ! grep -q "/usr/local/lib/scanx" /etc/profile.d/scanx.sh; then
+    echo "📝 Adding /usr/local/lib/scanx to system PATH..."
+    cat > /etc/profile.d/scanx.sh << 'PROFILE_EOF'
+#!/bin/bash
+# scanx PATH configuration
+# This file is sourced by login shells to add scanx tools to PATH
+if [[ ":$PATH:" != *":/usr/local/lib/scanx:"* ]]; then
+    export PATH="$PATH:/usr/local/lib/scanx"
+fi
+PROFILE_EOF
+    chmod 644 /etc/profile.d/scanx.sh
+    echo "✅ Created /etc/profile.d/scanx.sh for PATH configuration"
+    echo "   Note: New login sessions will have /usr/local/lib/scanx in PATH"
+    echo "   Current session: export PATH=\"\$PATH:/usr/local/lib/scanx\" (if needed)"
+else
+    echo "✅ /usr/local/lib/scanx already configured in PATH"
+fi
+
 # Enable and start service
 %systemd_post scanx.service
 systemctl daemon-reload
@@ -831,6 +911,13 @@ echo "   Stop:    systemctl stop scanx"
 
 %preun
 %systemd_preun scanx.service
+
+# Remove /usr/local/lib/scanx from system PATH
+if [ -f "/etc/profile.d/scanx.sh" ]; then
+    echo "📝 Removing /usr/local/lib/scanx from system PATH..."
+    rm -f /etc/profile.d/scanx.sh
+    echo "✅ Removed /etc/profile.d/scanx.sh"
+fi
 
 %postun
 %systemd_postun_with_restart scanx.service

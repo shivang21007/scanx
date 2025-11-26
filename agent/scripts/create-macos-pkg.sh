@@ -249,6 +249,20 @@ if [ -f "/usr/local/lib/scanx/osqueryi" ]; then
     chmod +x /usr/local/lib/scanx/osqueryi
 fi
 
+# Add /usr/local/lib/scanx to system PATH (idempotent - safe to run multiple times)
+# This ensures osqueryi can be found even in fresh user contexts
+if [ -f "/etc/paths" ]; then
+    if ! grep -q "^/usr/local/lib/scanx$" /etc/paths; then
+        echo "📝 Adding /usr/local/lib/scanx to system PATH..."
+        echo "/usr/local/lib/scanx" >> /etc/paths
+        echo "✅ Added /usr/local/lib/scanx to /etc/paths"
+    else
+        echo "✅ /usr/local/lib/scanx already in /etc/paths"
+    fi
+else
+    echo "⚠️  /etc/paths not found, skipping PATH modification"
+fi
+
 # Verify permissions are correct
 echo "🔍 Verifying permissions..."
 ls -la /usr/local/bin/scanx
@@ -292,6 +306,14 @@ rm -rf /var/log/scanx 2>/dev/null || true
 # Remove the binary
 rm -f /usr/local/bin/scanx 2>/dev/null || true
 
+# Remove /usr/local/lib/scanx from system PATH if it exists
+if [ -f "/etc/paths" ]; then
+    if grep -q "^/usr/local/lib/scanx$" /etc/paths; then
+        echo "📝 Removing /usr/local/lib/scanx from system PATH..."
+        sed -i '' '/^\/usr\/local\/lib\/scanx$/d' /etc/paths
+        echo "✅ Removed /usr/local/lib/scanx from /etc/paths"
+    fi
+fi
 
 exit 0
 EOF

@@ -49,11 +49,11 @@ export function DeviceDetailPage() {
     // Initial fetch
     fetchDeviceDetails();
 
-    // Auto-refresh every 2 minutes (120000ms)
+    // Auto-refresh every 1 minutes (60000ms)
     const refreshInterval = setInterval(() => {
       console.log('Auto-refreshing device details...');
       fetchDeviceDetails();
-    }, 120000);
+    }, 60000);
 
     // Cleanup interval on unmount or device ID change
     return () => clearInterval(refreshInterval);
