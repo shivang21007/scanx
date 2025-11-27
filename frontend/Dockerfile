@@ -26,6 +26,8 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 WORKDIR /usr/share/nginx/html
 # Copy dist files
 COPY --from=builder /app/dist .
+# Copy custom error pages
+COPY public/429.html .
 # Fix permissions for all files
 RUN chmod -R 644 /usr/share/nginx/html/* && \
     find /usr/share/nginx/html -type d -exec chmod 755 {} \;
