@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
+import { isRegisterEnabled } from '../utils/registerEnabled';
 
 export function RegisterPage() {
   const [email, setEmail] = useState('');
@@ -12,6 +13,26 @@ export function RegisterPage() {
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const { register, isAuthenticated, loading, error, clearError } = useAuth();
   const navigate = useNavigate();
+
+  // Redirect to login if registration is disabled (405 Method Not Allowed)
+  useEffect(() => {
+    if (!isRegisterEnabled()) {
+      // Simulate 405 response - redirect to login
+      navigate('/login', { 
+        replace: true,
+        state: { 
+          error: 'Registration is not available. Method Not Allowed (405). Please use the login page.',
+          statusCode: 405
+        }
+      });
+      return;
+    }
+  }, [navigate]);
+
+  // Don't render if registration is disabled
+  if (!isRegisterEnabled()) {
+    return null;
+  }
 
   // Redirect if already authenticated
   useEffect(() => {

@@ -115,13 +115,13 @@ app.listen(PORT, () => {
     if (keyFile && adminEmail) {
       const client = new GoogleApiDirectoryClient({ keyFile, adminEmail, customer });
       startUsersSyncScheduler(client);
-      console.log('⏱️  Users sync scheduler (Google API) started (every 24h)');
+      console.log('⏱️  Users sync scheduler (Google API) started - runs daily at 12:00 PM IST');
     } else {
       const path = require('path');
       const filePath = path.join(process.cwd(), 'test_dir', 'users.json');
       const client = new FileDirectoryClient(filePath);
       startUsersSyncScheduler(client);
-      console.log('⏱️  Users sync scheduler (file) started (every 24h)');
+      console.log('⏱️  Users sync scheduler (file) started - runs daily at 12:00 PM IST');
     }
   } catch (e) {
     console.error('Failed to start users sync scheduler:', (e as any)?.message || e);

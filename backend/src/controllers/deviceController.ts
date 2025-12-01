@@ -212,13 +212,37 @@ export const getDevices = async (req: Request, res: Response) => {
 // Get enriched devices data for devices table page
 export const getDevicesTable = async (req: Request, res: Response) => {
   try {
-    const { search, os_type } = req.query;
+    const { 
+      search, 
+      os_type, 
+      sort_by, 
+      sort_order,
+      password_manager,
+      disk_encryption,
+      antivirus,
+      screen_lock
+    } = req.query;
     
-    console.log('Fetching enriched devices data with filters:', { search, os_type });
+    console.log('Fetching enriched devices data with filters:', { 
+      search, 
+      os_type, 
+      sort_by, 
+      sort_order,
+      password_manager,
+      disk_encryption,
+      antivirus,
+      screen_lock
+    });
     
     const devices = await DeviceModel.findAllEnriched(
       search as string,
-      os_type as string
+      os_type as string,
+      sort_by as string,
+      sort_order as 'asc' | 'desc',
+      password_manager as 'true' | 'false' | undefined,
+      disk_encryption as 'true' | 'false' | undefined,
+      antivirus as 'true' | 'false' | undefined,
+      screen_lock as 'true' | 'false' | undefined
     );
     
     console.log(`Found ${devices.length} devices with enriched data`);

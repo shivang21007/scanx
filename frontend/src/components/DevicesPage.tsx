@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Link, useSearchParams } from 'react-router-dom';
-import { LogOut, Search, Filter, Monitor, ChevronLeft } from 'lucide-react';
+import { LogOut, Search, Filter, Monitor, ChevronLeft, X } from 'lucide-react';
 import { apiService } from '../services/api';
 import { DevicesTableResponse, DevicesTableFilters } from '../types/device';
 import { LoadingSpinner } from './LoadingSpinner';
@@ -24,6 +24,18 @@ export function DevicesPage() {
   // Debounced search state - initialize from URL
   const [searchInput, setSearchInput] = useState(initialSearch);
 
+  // OS version sort state: null = no sort, 'asc' = ascending, 'desc' = descending
+  const [osVersionSort, setOsVersionSort] = useState<'asc' | 'desc' | null>(null);
+
+  // Security filter states: null = no filter, 'false' = show false (red), 'true' = show true (green)
+  const [passwordManagerFilter, setPasswordManagerFilter] = useState<'true' | 'false' | null>(null);
+  const [diskEncryptionFilter, setDiskEncryptionFilter] = useState<'true' | 'false' | null>(null);
+  const [antivirusFilter, setAntivirusFilter] = useState<'true' | 'false' | null>(null);
+  const [screenLockFilter, setScreenLockFilter] = useState<'true' | 'false' | null>(null);
+
+  // Last Check sort state: 'desc' = latest first (default), 'asc' = oldest first
+  const [lastCheckSort, setLastCheckSort] = useState<'asc' | 'desc'>('desc');
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setFilters(prev => ({ ...prev, search: searchInput }));
@@ -43,7 +55,7 @@ export function DevicesPage() {
 
     // Cleanup interval on unmount or filter change
     return () => clearInterval(refreshInterval);
-  }, [filters]);
+  }, [filters, osVersionSort, passwordManagerFilter, diskEncryptionFilter, antivirusFilter, screenLockFilter, lastCheckSort]);
 
   const fetchDevicesData = async () => {
     try {
@@ -51,7 +63,19 @@ export function DevicesPage() {
       setError(null);
       //console.log('Fetching devices with filters:', filters);
       
-      const data = await apiService.getDevicesTable(filters);
+      // Build filters with sort and security filter parameters
+      const filtersWithSort: DevicesTableFilters = {
+        ...filters,
+        ...(osVersionSort ? { sort_by: 'os_version', sort_order: osVersionSort } : {}),
+        // Last Check sort takes precedence if OS version sort is not active
+        ...(!osVersionSort && lastCheckSort ? { sort_by: 'last_seen', sort_order: lastCheckSort } : {}),
+        ...(passwordManagerFilter ? { password_manager: passwordManagerFilter } : {}),
+        ...(diskEncryptionFilter ? { disk_encryption: diskEncryptionFilter } : {}),
+        ...(antivirusFilter ? { antivirus: antivirusFilter } : {}),
+        ...(screenLockFilter ? { screen_lock: screenLockFilter } : {})
+      };
+      
+      const data = await apiService.getDevicesTable(filtersWithSort);
       setDevicesData(data);
       //console.log('Devices data loaded:', data);
     } catch (err: any) {
@@ -60,6 +84,52 @@ export function DevicesPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleOsVersionSort = () => {
+    // Cycle through: null -> 'asc' -> 'desc' -> null
+    if (osVersionSort === null) {
+      setOsVersionSort('asc');
+    } else if (osVersionSort === 'asc') {
+      setOsVersionSort('desc');
+    } else {
+      setOsVersionSort(null);
+    }
+  };
+
+  const handleSecurityFilter = (
+    filterType: 'password_manager' | 'disk_encryption' | 'antivirus' | 'screen_lock'
+  ) => {
+    const setters = {
+      password_manager: setPasswordManagerFilter,
+      disk_encryption: setDiskEncryptionFilter,
+      antivirus: setAntivirusFilter,
+      screen_lock: setScreenLockFilter
+    };
+    
+    const getters = {
+      password_manager: passwordManagerFilter,
+      disk_encryption: diskEncryptionFilter,
+      antivirus: antivirusFilter,
+      screen_lock: screenLockFilter
+    };
+
+    const currentValue = getters[filterType];
+    const setter = setters[filterType];
+
+    // Cycle through: null -> 'false' -> 'true' -> null
+    if (currentValue === null) {
+      setter('false');
+    } else if (currentValue === 'false') {
+      setter('true');
+    } else {
+      setter(null);
+    }
+  };
+
+  const handleLastCheckSort = () => {
+    // Toggle between 'desc' (latest first) and 'asc' (oldest first)
+    setLastCheckSort(prev => prev === 'desc' ? 'asc' : 'desc');
   };
 
   const handleOsTypeFilter = (osType: string) => {
@@ -144,7 +214,7 @@ export function DevicesPage() {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Search by computer name, serial number, or email..."
+                  placeholder="Search by serial number, email, os version or computer name..."
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -185,20 +255,181 @@ export function DevicesPage() {
           {/* Results Summary */}
           <div className="mt-4 pt-4 border-t border-gray-200">
             <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-600">
+              <div className="flex flex-wrap items-center gap-2 text-sm">
                 {devicesData ? (
                   <>
-                    Showing <span className="font-medium">{devicesData.devices.length}</span> of{' '}
-                    <span className="font-medium">{devicesData.total}</span> devices
+                    <span className="text-gray-600">
+                      Showing <span className="font-medium">{devicesData.devices.length}</span> of{' '}
+                      <span className="font-medium">{devicesData.total}</span> devices
+                    </span>
+                    
+                    {/* Search Filter */}
                     {filters.search && (
-                      <span> matching "{filters.search}"</span>
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-md">
+                        <span className="text-blue-700 text-sm">
+                          Search: "{filters.search}"
+                        </span>
+                        <button
+                          onClick={() => setSearchInput('')}
+                          className="text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded p-0.5 transition-colors"
+                          title="Clear search"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                     )}
+                    
+                    {/* OS Type Filter */}
                     {filters.os_type && (
-                      <span> on {filters.os_type === 'darwin' ? 'macOS' : filters.os_type}</span>
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-md">
+                        <span className="text-blue-700 text-sm">
+                          OS: {filters.os_type === 'darwin' ? 'macOS' : filters.os_type}
+                        </span>
+                        <button
+                          onClick={() => setFilters(prev => ({ ...prev, os_type: '' }))}
+                          className="text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded p-0.5 transition-colors"
+                          title="Clear OS type filter"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    )}
+                    
+                    {/* OS Version Sort */}
+                    {osVersionSort && (
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 border border-purple-200 rounded-md">
+                        <span className="text-purple-700 text-sm">
+                          Sort: OS Version ({osVersionSort === 'asc' ? 'Ascending' : 'Descending'})
+                        </span>
+                        <button
+                          onClick={() => setOsVersionSort(null)}
+                          className="text-purple-600 hover:text-purple-800 hover:bg-purple-100 rounded p-0.5 transition-colors"
+                          title="Clear OS version sort"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    )}
+                    
+                    {/* Last Check Sort */}
+                    {lastCheckSort === 'asc' && !osVersionSort && (
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 border border-purple-200 rounded-md">
+                        <span className="text-purple-700 text-sm">
+                          Sort: Last Check (Oldest First)
+                        </span>
+                        <button
+                          onClick={() => setLastCheckSort('desc')}
+                          className="text-purple-600 hover:text-purple-800 hover:bg-purple-100 rounded p-0.5 transition-colors"
+                          title="Reset to default sort"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    )}
+                    
+                    {/* Security Filters */}
+                    {passwordManagerFilter && (
+                      <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 border rounded-md ${
+                        passwordManagerFilter === 'false' 
+                          ? 'bg-red-50 border-red-200' 
+                          : 'bg-green-50 border-green-200'
+                      }`}>
+                        <span className={`text-sm ${
+                          passwordManagerFilter === 'false' ? 'text-red-700' : 'text-green-700'
+                        }`}>
+                          PW: {passwordManagerFilter === 'false' ? 'Disabled' : 'Enabled'}
+                        </span>
+                        <button
+                          onClick={() => setPasswordManagerFilter(null)}
+                          className={`hover:bg-opacity-20 rounded p-0.5 transition-colors ${
+                            passwordManagerFilter === 'false' 
+                              ? 'text-red-600 hover:bg-red-100' 
+                              : 'text-green-600 hover:bg-green-100'
+                          }`}
+                          title="Clear password manager filter"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    )}
+                    
+                    {diskEncryptionFilter && (
+                      <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 border rounded-md ${
+                        diskEncryptionFilter === 'false' 
+                          ? 'bg-red-50 border-red-200' 
+                          : 'bg-green-50 border-green-200'
+                      }`}>
+                        <span className={`text-sm ${
+                          diskEncryptionFilter === 'false' ? 'text-red-700' : 'text-green-700'
+                        }`}>
+                          HD: {diskEncryptionFilter === 'false' ? 'Disabled' : 'Enabled'}
+                        </span>
+                        <button
+                          onClick={() => setDiskEncryptionFilter(null)}
+                          className={`hover:bg-opacity-20 rounded p-0.5 transition-colors ${
+                            diskEncryptionFilter === 'false' 
+                              ? 'text-red-600 hover:bg-red-100' 
+                              : 'text-green-600 hover:bg-green-100'
+                          }`}
+                          title="Clear disk encryption filter"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    )}
+                    
+                    {antivirusFilter && (
+                      <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 border rounded-md ${
+                        antivirusFilter === 'false' 
+                          ? 'bg-red-50 border-red-200' 
+                          : 'bg-green-50 border-green-200'
+                      }`}>
+                        <span className={`text-sm ${
+                          antivirusFilter === 'false' ? 'text-red-700' : 'text-green-700'
+                        }`}>
+                          AV: {antivirusFilter === 'false' ? 'Disabled' : 'Enabled'}
+                        </span>
+                        <button
+                          onClick={() => setAntivirusFilter(null)}
+                          className={`hover:bg-opacity-20 rounded p-0.5 transition-colors ${
+                            antivirusFilter === 'false' 
+                              ? 'text-red-600 hover:bg-red-100' 
+                              : 'text-green-600 hover:bg-green-100'
+                          }`}
+                          title="Clear antivirus filter"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    )}
+                    
+                    {screenLockFilter && (
+                      <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 border rounded-md ${
+                        screenLockFilter === 'false' 
+                          ? 'bg-red-50 border-red-200' 
+                          : 'bg-green-50 border-green-200'
+                      }`}>
+                        <span className={`text-sm ${
+                          screenLockFilter === 'false' ? 'text-red-700' : 'text-green-700'
+                        }`}>
+                          SL: {screenLockFilter === 'false' ? 'Disabled' : 'Enabled'}
+                        </span>
+                        <button
+                          onClick={() => setScreenLockFilter(null)}
+                          className={`hover:bg-opacity-20 rounded p-0.5 transition-colors ${
+                            screenLockFilter === 'false' 
+                              ? 'text-red-600 hover:bg-red-100' 
+                              : 'text-green-600 hover:bg-green-100'
+                          }`}
+                          title="Clear screen lock filter"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                     )}
                   </>
                 ) : (
-                  'Loading devices...'
+                  <span className="text-gray-600">Loading devices...</span>
                 )}
               </div>
               {loading && (
@@ -216,6 +447,15 @@ export function DevicesPage() {
           <DevicesTable 
             devices={devicesData.devices}
             loading={loading}
+            osVersionSort={osVersionSort}
+            onOsVersionSort={handleOsVersionSort}
+            passwordManagerFilter={passwordManagerFilter}
+            diskEncryptionFilter={diskEncryptionFilter}
+            antivirusFilter={antivirusFilter}
+            screenLockFilter={screenLockFilter}
+            onSecurityFilter={handleSecurityFilter}
+            lastCheckSort={lastCheckSort}
+            onLastCheckSort={handleLastCheckSort}
             onDeviceDeleted={async () => {
               await fetchDevicesData();
               return true;

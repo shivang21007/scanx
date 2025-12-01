@@ -66,6 +66,12 @@ class ApiService {
       const response: AxiosResponse<RegisterResponse> = await this.api.post('/auth/register', userData);
       return response.data;
     } catch (error: any) {
+      // Handle 405 Method Not Allowed (registration disabled)
+      if (error.response?.status === 405) {
+        // Redirect to login page
+        window.location.href = '/login';
+        throw new Error(error.response?.data?.message || 'Registration is not available. Please use the login page.');
+      }
       throw this.handleError(error);
     }
   }
@@ -155,6 +161,24 @@ class ApiService {
       }
       if (filters?.os_type) {
         params.append('os_type', filters.os_type);
+      }
+      if (filters?.sort_by) {
+        params.append('sort_by', filters.sort_by);
+      }
+      if (filters?.sort_order) {
+        params.append('sort_order', filters.sort_order);
+      }
+      if (filters?.password_manager) {
+        params.append('password_manager', filters.password_manager);
+      }
+      if (filters?.disk_encryption) {
+        params.append('disk_encryption', filters.disk_encryption);
+      }
+      if (filters?.antivirus) {
+        params.append('antivirus', filters.antivirus);
+      }
+      if (filters?.screen_lock) {
+        params.append('screen_lock', filters.screen_lock);
       }
       
       const url = `/devices/table${params.toString() ? `?${params.toString()}` : ''}`;

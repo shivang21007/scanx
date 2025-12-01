@@ -15,4 +15,9 @@ export const env = {
     GOOGLE_SERVICE_ACCOUNT_KEY_FILE: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_FILE,
     GOOGLE_WORKSPACE_ADMIN_EMAIL: process.env.GOOGLE_WORKSPACE_ADMIN_EMAIL,
     GOOGLE_WORKSPACE_CUSTOMER: process.env.GOOGLE_WORKSPACE_CUSTOMER,
+    // Enable register endpoint: 'true' or '1' to enable, anything else (including undefined) to disable
+    ENABLE_REGISTER_ENDPOINT: (() => {
+      const value = process.env.ENABLE_REGISTER_ENDPOINT;
+      return value === 'true' || value === '1';
+    })()
 }

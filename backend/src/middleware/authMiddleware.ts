@@ -3,6 +3,21 @@ import { env } from '../env/env';
 import { Request, Response, NextFunction } from 'express';
 import { getCurrentIST } from '../utils/timezone';
 
+/**
+ * Middleware to check if registration endpoint is enabled
+ * Returns 405 Method Not Allowed if registration is disabled
+ */
+export const checkRegisterEnabled = (req: Request, res: Response, next: NextFunction) => {
+  if (!env.ENABLE_REGISTER_ENDPOINT) {
+    return res.status(405).json({
+      message: 'Registration is not available. Please use the login endpoint.',
+      error: 'Method Not Allowed',
+      redirectTo: '/login'
+    });
+  }
+  next();
+};
+
 // Extend Request interface to include admin info
 interface AuthRequest extends Request {
   admin?: {

@@ -9,6 +9,7 @@ import { DashboardPage } from './components/DashboardPage';
 import { DevicesPage } from './components/DevicesPage';
 import { DeviceDetailPage } from './components/DeviceDetailPage';
 import { UsersPage } from './components/UsersPage';
+import { isRegisterEnabled } from './utils/registerEnabled';
 
 function App() {
   return (
@@ -25,14 +26,22 @@ function App() {
                 </PublicRoute>
               } 
             />
-            <Route 
-              path="/register" 
-              element={
-                <PublicRoute>
-                  <RegisterPage />
-                </PublicRoute>
-              } 
-            />
+            {/* Register route - only available if ENABLE_REGISTER_ENDPOINT is true or 1 */}
+            {isRegisterEnabled() ? (
+              <Route 
+                path="/register" 
+                element={
+                  <PublicRoute>
+                    <RegisterPage />
+                  </PublicRoute>
+                } 
+              />
+            ) : (
+              <Route 
+                path="/register" 
+                element={<Navigate to="/login" replace state={{ error: 'Registration is not available. Method Not Allowed (405)', statusCode: 405 }} />} 
+              />
+            )}
 
             {/* Protected routes - require authentication */}
             <Route 

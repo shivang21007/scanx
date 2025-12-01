@@ -105,7 +105,16 @@ export class DeviceModel {
     }
 
     // Get all devices with enriched data for devices table
-    static async findAllEnriched(searchTerm?: string, osTypeFilter?: string): Promise<any[]> {
+    static async findAllEnriched(
+        searchTerm?: string, 
+        osTypeFilter?: string,
+        sortBy?: string,
+        sortOrder?: 'asc' | 'desc',
+        passwordManagerFilter?: 'true' | 'false',
+        diskEncryptionFilter?: 'true' | 'false',
+        antivirusFilter?: 'true' | 'false',
+        screenLockFilter?: 'true' | 'false'
+    ): Promise<any[]> {
         const connection = await getConnection();
         
         let query = `
@@ -125,15 +134,16 @@ export class DeviceModel {
         
         const params: any[] = [];
         
-        // Add search functionality - now using direct fields from devices table
+        // Add search functionality - now includes OS version
         if (searchTerm && searchTerm.trim() !== '') {
             query += ` AND (
                 d.serial_no LIKE ? OR
                 d.user_email LIKE ? OR
-                d.computer_name LIKE ?
+                d.computer_name LIKE ? OR
+                d.os_version LIKE ?
             )`;
             const searchPattern = `%${searchTerm.trim()}%`;
-            params.push(searchPattern, searchPattern, searchPattern);
+            params.push(searchPattern, searchPattern, searchPattern, searchPattern);
         }
         
         // Add OS type filter
@@ -142,7 +152,45 @@ export class DeviceModel {
             params.push(osTypeFilter.trim());
         }
         
-        query += ` ORDER BY d.last_seen DESC, d.created_at DESC`;
+        // Add security status filters (treat NULL as false)
+        if (passwordManagerFilter !== undefined) {
+            const value = passwordManagerFilter === 'true' ? 1 : 0;
+            query += ` AND COALESCE(ds.password_manager_info, 0) = ?`;
+            params.push(value);
+        }
+        
+        if (diskEncryptionFilter !== undefined) {
+            const value = diskEncryptionFilter === 'true' ? 1 : 0;
+            query += ` AND COALESCE(ds.disk_encryption_info, 0) = ?`;
+            params.push(value);
+        }
+        
+        if (antivirusFilter !== undefined) {
+            const value = antivirusFilter === 'true' ? 1 : 0;
+            query += ` AND COALESCE(ds.antivirus_info, 0) = ?`;
+            params.push(value);
+        }
+        
+        if (screenLockFilter !== undefined) {
+            const value = screenLockFilter === 'true' ? 1 : 0;
+            query += ` AND COALESCE(ds.screen_lock_info, 0) = ?`;
+            params.push(value);
+        }
+        
+        // Add sorting
+        const validSortFields = ['os_version', 'last_seen', 'created_at', 'computer_name', 'serial_no'];
+        
+        if (sortBy && validSortFields.includes(sortBy)) {
+            const order = sortOrder && (sortOrder === 'asc' || sortOrder === 'desc') ? sortOrder.toUpperCase() : 'ASC';
+            query += ` ORDER BY d.${sortBy} ${order}`;
+            // Add secondary sort for consistency
+            if (sortBy !== 'last_seen') {
+                query += `, d.last_seen DESC`;
+            }
+        } else {
+            // Default sorting if no sort specified
+            query += ` ORDER BY d.last_seen DESC, d.created_at DESC`;
+        }
         
         const [rows] = await connection.execute<RowDataPacket[]>(query, params);
         

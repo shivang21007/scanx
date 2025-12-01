@@ -29,7 +29,7 @@ build/
 # Logs
 logs/
 *.log
-
+tmp.txt
 # Go specific
 # Binaries for programs and plugins
 *.exe
@@ -50,7 +50,9 @@ go.work
 # Agent specific
 agent/*.log
 agent/dist/builds/
-agent/dist/builds-osquery/osqueryi*
+agent/dist/builds/*.json
+agent/dist/builds-osqueryi/osqueryi*
+agent/dist/builds-osqueryi/*.json
 agent/dist/packages/
 agent/dist/linux-packages/
 agent/dist/macos-build-amd64/

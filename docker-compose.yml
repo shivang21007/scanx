@@ -36,6 +36,7 @@ services:
       dockerfile: Dockerfile
       args:
         - VITE_API_URL=/api
+        - VITE_ENABLE_REGISTER_ENDPOINT=false
     container_name: frontend-scanx-1
     ports:
       - "5173:80"

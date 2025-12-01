@@ -2,9 +2,11 @@ import fs from 'fs';
 import path from 'path';
 import { UsersModel, AccountType } from '../models/Users';
 import { google } from 'googleapis';
+import { getCurrentIST, istToUTC, formatForDisplay } from '../utils/timezone';
 
-// Hardcoded refresh interval: 24 hours (in milliseconds)
-export const USERS_SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000;
+// Target sync time: 12:00 PM IST (noon) every day
+const SYNC_HOUR_IST = 12; // 12 PM
+const SYNC_MINUTE_IST = 0; // 0 minutes
 
 // Minimal pluggable interface for Google Directory list function
 export interface GoogleDirectoryUser {
@@ -88,18 +90,70 @@ export async function syncUsersFromGoogle(client: GoogleDirectoryClient): Promis
   return upserts;
 }
 
-export function startUsersSyncScheduler(client: GoogleDirectoryClient) {
-  // Initial kick
-  syncUsersFromGoogle(client)
-    .then(count => console.log(`👥 Users sync completed. Upserted ${count} records`))
-    .catch(err => console.error('Users sync failed:', err?.message || err));
+/**
+ * Calculate milliseconds until next 12 PM IST
+ */
+function getMsUntilNext12PMIST(): number {
+  const nowIST = getCurrentIST();
+  const targetIST = new Date(nowIST);
+  
+  // Set target to today at 12:00 PM IST
+  targetIST.setHours(SYNC_HOUR_IST, SYNC_MINUTE_IST, 0, 0);
+  
+  // If we've already passed 12 PM today, schedule for tomorrow
+  if (nowIST >= targetIST) {
+    targetIST.setDate(targetIST.getDate() + 1);
+  }
+  
+  // Convert IST target time to UTC for setTimeout
+  const targetUTC = istToUTC(targetIST);
+  const nowUTC = new Date();
+  
+  return targetUTC.getTime() - nowUTC.getTime();
+}
 
-  // Interval schedule
-  setInterval(() => {
+/**
+ * Schedule next sync at 12 PM IST
+ */
+function scheduleNextSync(client: GoogleDirectoryClient): void {
+  const msUntilNext = getMsUntilNext12PMIST();
+  const nowIST = getCurrentIST();
+  const nextIST = new Date(nowIST);
+  
+  // Set target to today at 12:00 PM IST
+  nextIST.setHours(SYNC_HOUR_IST, SYNC_MINUTE_IST, 0, 0);
+  
+  // If we've already passed 12 PM today, schedule for tomorrow
+  if (nowIST >= nextIST) {
+    nextIST.setDate(nextIST.getDate() + 1);
+  }
+  
+  console.log(`⏰ Next users sync scheduled for: ${formatForDisplay(nextIST)}`);
+  
+  setTimeout(() => {
     syncUsersFromGoogle(client)
-      .then(count => console.log(`👥 Users sync completed. Upserted ${count} records`))
-      .catch(err => console.error('Users sync failed:', err?.message || err));
-  }, USERS_SYNC_INTERVAL_MS);
+      .then(count => {
+        console.log(`👥 Users sync completed at 12 PM IST. Upserted ${count} records`);
+        // Schedule next sync for tomorrow at 12 PM IST
+        scheduleNextSync(client);
+      })
+      .catch(err => {
+        console.error('Users sync failed:', err?.message || err);
+        // Still schedule next sync even if this one failed
+        scheduleNextSync(client);
+      });
+  }, msUntilNext);
+}
+
+export function startUsersSyncScheduler(client: GoogleDirectoryClient) {
+  // Initial kick - sync immediately on startup
+  syncUsersFromGoogle(client)
+    .then(count => console.log(`👥 Initial users sync completed. Upserted ${count} records`))
+    .catch(err => console.error('Initial users sync failed:', err?.message || err));
+
+  // Schedule recurring syncs at 12 PM IST every day
+  scheduleNextSync(client);
+  console.log('⏱️  Users sync scheduler configured to run daily at 12:00 PM IST');
 }
 
  

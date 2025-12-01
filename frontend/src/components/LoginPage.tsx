@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
+import { isRegisterEnabled } from '../utils/registerEnabled';
 
 export function LoginPage() {
   const [email, setEmail] = useState('');
@@ -13,6 +14,16 @@ export function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { login, isAuthenticated, loading, error, clearError } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Check if redirected from register with 405 error
+  useEffect(() => {
+    const state = location.state as { error?: string; statusCode?: number } | null;
+    if (state?.statusCode === 405 && state?.error) {
+      // Show the error message from redirect
+      setFieldErrors({ email: state.error, password: '' });
+    }
+  }, [location.state]);
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -209,15 +220,17 @@ export function LoginPage() {
               )}
             </button>
 
-            {/* Register Link */}
-            <div className="text-center">
-              <p className="text-sm text-gray-600">
-                Don't have an account?{' '}
-                <Link to="/register" className="text-blue-600 hover:text-blue-500 font-medium underline">
-                  Sign up
-                </Link>
-              </p>
-            </div>
+            {/* Register Link - only show if registration is enabled */}
+            {isRegisterEnabled() && (
+              <div className="text-center">
+                <p className="text-sm text-gray-600">
+                  Don't have an account?{' '}
+                  <Link to="/register" className="text-blue-600 hover:text-blue-500 font-medium underline">
+                    Sign up
+                  </Link>
+                </p>
+              </div>
+            )}
           </form>
         </div>
       </div>

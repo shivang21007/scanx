@@ -107,6 +107,12 @@ export interface DevicesTableResponse {
 export interface DevicesTableFilters {
   search?: string;
   os_type?: string;
+  sort_by?: string;
+  sort_order?: 'asc' | 'desc';
+  password_manager?: 'true' | 'false';
+  disk_encryption?: 'true' | 'false';
+  antivirus?: 'true' | 'false';
+  screen_lock?: 'true' | 'false';
 }
 
 // Device details for individual device page

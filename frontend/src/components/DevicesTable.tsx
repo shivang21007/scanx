@@ -1,5 +1,5 @@
 import { DeviceTableRow } from '../types/device';
-import { CheckCircle, XCircle, Monitor, Trash2, Apple, Square, Cpu } from 'lucide-react';
+import { CheckCircle, XCircle, Monitor, Trash2, Apple, Square, Cpu, ChevronUp, ChevronDown } from 'lucide-react';
 import { formatRelative, getDeviceStatus } from '../utils/timezone';
 import { useNavigate } from 'react-router-dom';
 import { apiService } from '@/services/api';
@@ -8,11 +8,42 @@ import toast, { Toaster } from 'react-hot-toast';
 interface DevicesTableProps {
   devices: DeviceTableRow[];
   loading?: boolean;
+  osVersionSort?: 'asc' | 'desc' | null;
+  onOsVersionSort?: () => void;
+  passwordManagerFilter?: 'true' | 'false' | null;
+  diskEncryptionFilter?: 'true' | 'false' | null;
+  antivirusFilter?: 'true' | 'false' | null;
+  screenLockFilter?: 'true' | 'false' | null;
+  onSecurityFilter?: (filterType: 'password_manager' | 'disk_encryption' | 'antivirus' | 'screen_lock') => void;
+  lastCheckSort?: 'asc' | 'desc';
+  onLastCheckSort?: () => void;
   onDeviceDeleted?: () => Promise<any>;
 }
 
-export function DevicesTable({ devices, loading, onDeviceDeleted }: DevicesTableProps) {
+export function DevicesTable({ 
+  devices, 
+  loading, 
+  osVersionSort, 
+  onOsVersionSort,
+  passwordManagerFilter,
+  diskEncryptionFilter,
+  antivirusFilter,
+  screenLockFilter,
+  onSecurityFilter,
+  lastCheckSort,
+  onLastCheckSort,
+  onDeviceDeleted 
+}: DevicesTableProps) {
   const navigate = useNavigate();
+
+  const getSecurityHeaderClass = (filter: 'true' | 'false' | null | undefined) => {
+    if (filter === 'false') {
+      return 'text-red-600 font-semibold';
+    } else if (filter === 'true') {
+      return 'text-green-600 font-semibold';
+    }
+    return 'text-gray-500';
+  };
 
 
   const handleDeviceClick = (deviceId: number) => {
@@ -93,25 +124,107 @@ export function DevicesTable({ devices, loading, onDeviceDeleted }: DevicesTable
                 Owner
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                OS Version
+                <div className="flex items-center space-x-1">
+                  <span>OS Version</span>
+                  {onOsVersionSort && (
+                    <button
+                      onClick={onOsVersionSort}
+                      className="flex flex-col items-center justify-center ml-1 hover:bg-gray-100 rounded p-0.5 transition-colors"
+                      title={
+                        osVersionSort === null 
+                          ? 'Sort by OS Version (Ascending)' 
+                          : osVersionSort === 'asc' 
+                          ? 'Sort by OS Version (Descending)' 
+                          : 'Clear OS Version Sort'
+                      }
+                    >
+                      <ChevronUp 
+                        strokeWidth={osVersionSort === 'desc' ? 3 : 2}
+                        className={`h-3 w-3 transition-opacity ${
+                          osVersionSort === 'desc' 
+                            ? 'text-blue-600 opacity-100' 
+                            : osVersionSort === 'asc'
+                            ? 'text-gray-400 opacity-10'
+                            : 'text-gray-400 opacity-50'
+                        }`} 
+                      />
+                      <ChevronDown 
+                        strokeWidth={osVersionSort === 'asc' ? 3 : 2}
+                        className={`h-3 w-3 transition-opacity -mt-0.5 ${
+                          osVersionSort === 'asc' 
+                            ? 'text-blue-600 opacity-100' 
+                            : osVersionSort === 'desc'
+                            ? 'text-gray-400 opacity-10'
+                            : 'text-gray-400 opacity-50'
+                        }`} 
+                      />
+                    </button>
+                  )}
+                </div>
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Monitoring
               </th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" title="Password Manager">
+              <th 
+                className={`px-6 py-3 text-center text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors ${getSecurityHeaderClass(passwordManagerFilter)}`}
+                title="Password Manager - Click to filter"
+                onClick={() => onSecurityFilter?.('password_manager')}
+              >
                 PW
               </th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" title="Hard Disk Encryption">
+              <th 
+                className={`px-6 py-3 text-center text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors ${getSecurityHeaderClass(diskEncryptionFilter)}`}
+                title="Hard Disk Encryption - Click to filter"
+                onClick={() => onSecurityFilter?.('disk_encryption')}
+              >
                 HD
               </th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" title="Antivirus">
+              <th 
+                className={`px-6 py-3 text-center text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors ${getSecurityHeaderClass(antivirusFilter)}`}
+                title="Antivirus - Click to filter"
+                onClick={() => onSecurityFilter?.('antivirus')}
+              >
                 AV
               </th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" title="Screen Lock">
+              <th 
+                className={`px-6 py-3 text-center text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors ${getSecurityHeaderClass(screenLockFilter)}`}
+                title="Screen Lock - Click to filter"
+                onClick={() => onSecurityFilter?.('screen_lock')}
+              >
                 SL
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Last Check
+                <div className="flex items-center space-x-1">
+                  <span>Last Check</span>
+                  {onLastCheckSort && (
+                    <button
+                      onClick={onLastCheckSort}
+                      className="flex flex-col items-center justify-center ml-1 hover:bg-gray-100 rounded p-0.5 transition-colors"
+                      title={
+                        lastCheckSort === 'desc' 
+                          ? 'Sort by Last Check (Oldest First)' 
+                          : 'Sort by Last Check (Latest First)'
+                      }
+                    >
+                      <ChevronUp 
+                        strokeWidth={lastCheckSort === 'asc' ? 3 : 2}
+                        className={`h-3 w-3 transition-opacity ${
+                          lastCheckSort === 'asc' 
+                            ? 'text-blue-600 opacity-100' 
+                            : 'text-gray-400 opacity-50'
+                        }`} 
+                      />
+                      <ChevronDown 
+                        strokeWidth={lastCheckSort === 'desc' ? 3 : 2}
+                        className={`h-3 w-3 transition-opacity -mt-0.5 ${
+                          lastCheckSort === 'desc' 
+                            ? 'text-blue-600 opacity-100' 
+                            : 'text-gray-400 opacity-50'
+                        }`} 
+                      />
+                    </button>
+                  )}
+                </div>
               </th>
               <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Actions
