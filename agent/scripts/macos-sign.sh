@@ -10,12 +10,13 @@ set +e
 DEVELOPER_ID="${1:-}"
 ENTITLEMENTS_FILE="scripts/entitlements.plist"
 VERSION=$(cat config/agent.conf | grep -o '"version": "[^"]*"' | cut -d'"' -f4)
-
+OSQUERY_BUILD_DIR="dist/builds-osqueryi"
+BUILD_DIR="dist/builds"
 # Define binaries to sign
-SCANX_AMD64="dist/builds/scanx-darwin-amd64"
-SCANX_ARM64="dist/builds/scanx-darwin-arm64"
-OSQUERYI_AMD64="dist/builds-osquery/osqueryi-5.20.0.darwin_x86_64"
-OSQUERYI_ARM64="dist/builds-osquery/osqueryi-5.20.0.darwin_arm64"
+SCANX_AMD64="$BUILD_DIR/scanx-darwin-amd64"
+SCANX_ARM64="$BUILD_DIR/scanx-darwin-arm64"
+OSQUERYI_AMD64="$OSQUERY_BUILD_DIR/osqueryi-darwin-amd64"
+OSQUERYI_ARM64="$OSQUERY_BUILD_DIR/osqueryi-darwin-arm64"
 
 echo "🍎 macOS Code Signing for scanx and osqueryi"
 echo "=============================================="

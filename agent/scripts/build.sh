@@ -11,6 +11,7 @@ VERSION=$(cat config/agent.conf | grep -o '"version": "[^"]*"' | cut -d'"' -f4)
 DIST_DIR="dist"
 BUILD_DIR="$DIST_DIR/builds"
 PACKAGES_DIR="$DIST_DIR/packages"
+OSQUERY_BUILD_DIR="$DIST_DIR/builds-osqueryi"
 
 # Smart cleanup - only remove build artifacts, preserve existing packages
 echo "🧹 Cleaning build artifacts..."
@@ -151,12 +152,12 @@ create_package() {
             fi
             
             # Create dist directory structure for binaries
-            mkdir -p "$pkg_dir/dist/builds"
-            mkdir -p "$pkg_dir/dist/builds-osquery"
+            mkdir -p "$pkg_dir/$BUILD_DIR" 
+            mkdir -p "$pkg_dir/$OSQUERY_BUILD_DIR"
             
             # Copy binary with proper naming (build script expects scanx-windows-{arch}.exe)
             BINARY_SOURCE="$BUILD_DIR/${BINARY_NAME}-${platform}-${arch}${ext}"
-            BINARY_DEST="$pkg_dir/dist/builds/${BINARY_NAME}-${platform}-${arch}${ext}"
+            BINARY_DEST="$pkg_dir/$BUILD_DIR/${BINARY_NAME}-${platform}-${arch}${ext}"
             if [[ -f "$BINARY_SOURCE" ]]; then
                 cp "$BINARY_SOURCE" "$BINARY_DEST"
                 echo "📦 Copied binary: ${BINARY_NAME}-${platform}-${arch}${ext}"
@@ -170,13 +171,13 @@ create_package() {
             # Copy bundled osqueryi.exe based on architecture
             OSQUERY_SOURCE=""
             if [[ "$arch" == "amd64" ]]; then
-                OSQUERY_SOURCE="dist/builds-osquery/osqueryi-5.20.0.windows_x86_64.exe"
+                OSQUERY_SOURCE="$OSQUERY_BUILD_DIR/osqueryi-windows-amd64${ext}"
             elif [[ "$arch" == "arm64" ]]; then
-                OSQUERY_SOURCE="dist/builds-osquery/osqueryi-5.20.0.windows_arm64.exe"
+                OSQUERY_SOURCE="$OSQUERY_BUILD_DIR/osqueryi-windows-arm64${ext}"
             fi
             
             if [[ -f "$OSQUERY_SOURCE" ]]; then
-                OSQUERY_DEST="$pkg_dir/dist/builds-osquery/$(basename $OSQUERY_SOURCE)"
+                OSQUERY_DEST="$pkg_dir/$OSQUERY_BUILD_DIR/osqueryi-windows-${arch}${ext}"
                 cp "$OSQUERY_SOURCE" "$OSQUERY_DEST"
                 echo "📦 Copied bundled osqueryi.exe for ${arch}"
             else
@@ -228,8 +229,8 @@ scanx-windows-${arch}-v${VERSION}/
 ├── dist/
 │   ├── builds/                 # Binary location
 │   │   └── scanx-windows-${arch}.exe
-│   └── builds-osquery/         # OSQuery binary
-│       └── osqueryi-5.20.0.windows_*.exe
+│   └── builds-osqueryi/         # OSQuery binary
+│       └── osqueryi-windows-${arch}.exe
 ├── config/                     # Configuration files
 │   └── agent.conf
 ├── install/                    # Installation scripts
@@ -319,6 +320,88 @@ EOF
     rm -rf "$pkg_dir"
 }
 
+create_checksum_json(){
+    local dir=$1
+    local checksum_file="$dir/checksums.json"
+    
+    # Check if directory exists
+    if [[ ! -d "$dir" ]]; then
+        echo "⚠️  Directory not found: $dir (skipping checksum generation)"
+        return 0
+    fi
+    
+    # Check if directory has any files (excluding checksums.json itself)
+    local file_count=$(find "$dir" -type f ! -name "checksums.json" | wc -l | tr -d ' ')
+    if [[ "$file_count" -eq 0 ]]; then
+        echo "⚠️  No files found in $dir (skipping checksum generation)"
+        return 0
+    fi
+    
+    echo "📝 Generating checksums for files in $dir..."
+    
+    # Determine checksum command based on OS
+    local checksum_cmd=""
+    if command -v shasum &> /dev/null; then
+        # macOS/Linux with shasum
+        checksum_cmd="shasum -a 256"
+    elif command -v sha256sum &> /dev/null; then
+        # Linux with sha256sum
+        checksum_cmd="sha256sum"
+    else
+        echo "❌ No SHA256 checksum tool found (shasum or sha256sum required)"
+        return 1
+    fi
+    
+    # Start building JSON
+    local json_content="{\n"
+    json_content+="  \"version\": \"$VERSION\",\n"
+    json_content+="  \"algorithm\": \"SHA256\",\n"
+    json_content+="  \"checksums\": {\n"
+    
+    # Process each file in the directory and count processed files
+    local first=true
+    local processed_count=0
+    while IFS= read -r -d '' file; do
+        # Skip the checksums.json file itself
+        if [[ "$(basename "$file")" == "checksums.json" || "$(basename "$file")" == "naming_convention.conf" ]]; then
+            continue
+        fi
+        
+        # Calculate checksum
+        local checksum
+        if [[ "$checksum_cmd" == "shasum -a 256" ]]; then
+            checksum=$($checksum_cmd "$file" | awk '{print $1}')
+        else
+            checksum=$($checksum_cmd "$file" | awk '{print $1}')
+        fi
+        
+        # Get relative filename from directory
+        local filename=$(basename "$file")
+        
+        # Add comma if not first entry
+        if [[ "$first" == true ]]; then
+            first=false
+        else
+            json_content+=",\n"
+        fi
+        
+        # Add checksum entry
+        json_content+="    \"$filename\": \"$checksum\""
+        ((processed_count++))
+        
+    done < <(find "$dir" -type f ! -name "checksums.json" -print0 | sort -z)
+    
+    # Close JSON
+    json_content+="\n  }\n"
+    json_content+="}\n"
+    
+    # Write JSON to file
+    echo -e "$json_content" > "$checksum_file"
+    
+    echo "✅ Checksum file created: $checksum_file"
+    echo "   Generated checksums for $processed_count file(s)"
+}
+
 # Create packages for all platforms
 create_package "darwin" "amd64" ""
 create_package "darwin" "arm64" ""
@@ -327,6 +410,8 @@ create_package "linux" "arm64" ""
 create_package "windows" "amd64" ".exe"
 create_package "windows" "arm64" ".exe"
 
+create_checksum_json $BUILD_DIR
+create_checksum_json $OSQUERY_BUILD_DIR
 
 
 echo ""

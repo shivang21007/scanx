@@ -16,6 +16,7 @@ set -e
 VERSION=$(cat config/agent.conf | grep -o '"version": "[^"]*"' | cut -d'"' -f4)
 PACKAGE_NAME="scanx"
 BUILD_DIR="dist/linux-packages"
+OSQUERY_BUILD_DIR="dist/builds-osqueryi"
 
 echo "🐧 Creating Linux Packages (DEB & RPM)"
 echo "====================================="
@@ -124,9 +125,9 @@ create_deb_package_structure() {
     # Copy bundled osqueryi binary based on architecture
     OSQUERY_SOURCE=""
     if [[ "$arch" == "amd64" ]]; then
-        OSQUERY_SOURCE="dist/builds-osquery/osqueryi-5.20.0.linux_x86_64"
+        OSQUERY_SOURCE="$OSQUERY_BUILD_DIR/osqueryi-linux-amd64"
     elif [[ "$arch" == "arm64" ]]; then
-        OSQUERY_SOURCE="dist/builds-osquery/osqueryi-5.20.0.linux_arm64"
+        OSQUERY_SOURCE="$OSQUERY_BUILD_DIR/osqueryi-linux-arm64"
     fi
     
     if [[ -f "$OSQUERY_SOURCE" ]]; then
@@ -709,9 +710,9 @@ EOF
         echo "      scp -r $output_dir/* user@centos-server:/tmp/"
         echo "      scp dist/builds/scanx-linux-${arch} user@centos-server:/tmp/scanx"
         if [[ "$arch" == "amd64" ]]; then
-            echo "      scp dist/builds-osquery/osqueryi-5.20.0.linux_x86_64 user@centos-server:/tmp/osqueryi"
+            echo "      scp $OSQUERY_BUILD_DIR/osqueryi-linux-amd64 user@centos-server:/tmp/osqueryi"
         elif [[ "$arch" == "arm64" ]]; then
-            echo "      scp dist/builds-osquery/osqueryi-5.20.0.linux_arm64 user@centos-server:/tmp/osqueryi"
+            echo "      scp $OSQUERY_BUILD_DIR/osqueryi-linux-arm64 user@centos-server:/tmp/osqueryi"
         fi
         echo "      scp -r config user@centos-server:/tmp/"
         echo "      scp scripts/services/scanx.service user@centos-server:/tmp/"
@@ -735,9 +736,9 @@ EOF
         # Copy bundled osqueryi binary based on architecture
         OSQUERY_SOURCE=""
         if [[ "$arch" == "amd64" ]]; then
-            OSQUERY_SOURCE="dist/builds-osquery/osqueryi-5.20.0.linux_x86_64"
+            OSQUERY_SOURCE="$OSQUERY_BUILD_DIR/osqueryi-linux-amd64"
         elif [[ "$arch" == "arm64" ]]; then
-            OSQUERY_SOURCE="dist/builds-osquery/osqueryi-5.20.0.linux_arm64"
+            OSQUERY_SOURCE="$OSQUERY_BUILD_DIR/osqueryi-linux-arm64"
         fi
         
         if [[ -f "$OSQUERY_SOURCE" ]]; then

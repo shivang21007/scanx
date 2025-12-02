@@ -8,7 +8,7 @@ set -e
 
 # Configuration
 VERSION=$(cat config/agent.conf | grep -o '"version": "[^"]*"' | cut -d'"' -f4)
-
+OSQUERY_BUILD_DIR="dist/builds-osqueryi"
 # Detect architecture or use argument
 if [[ -n "$1" ]]; then
     ARCH="$1"
@@ -67,9 +67,9 @@ cp "scripts/services/com.company.scanx.plist" "$PAYLOAD_DIR/Library/LaunchDaemon
 # Copy bundled osqueryi binary based on architecture
 OSQUERY_SOURCE=""
 if [[ "$ARCH" == "amd64" ]]; then
-    OSQUERY_SOURCE="dist/builds-osquery/osqueryi-5.20.0.darwin_x86_64"
+    OSQUERY_SOURCE="$OSQUERY_BUILD_DIR/osqueryi-darwin-amd64"
 elif [[ "$ARCH" == "arm64" ]]; then
-    OSQUERY_SOURCE="dist/builds-osquery/osqueryi-5.20.0.darwin_arm64"
+    OSQUERY_SOURCE="$OSQUERY_BUILD_DIR/osqueryi-darwin-arm64"
 fi
 
 if [[ -f "$OSQUERY_SOURCE" ]]; then

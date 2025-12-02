@@ -74,11 +74,11 @@ try {
 
 # Set up paths
 $BINARY_NAME = "scanx-windows-$Arch.exe"
-$OSQUERY_NAME = "osqueryi-5.20.0.windows_$osqueryArch.exe"
+$OSQUERY_NAME = "osqueryi-windows-$Arch.exe"
 $BUILD_DIR = Join-Path $ProjectRoot "dist\windows-build\$Arch-build"
 $WINDOWS_SCRIPTS_DIR = Join-Path $ScriptDir "windows"
 $BUILDS_DIR = Join-Path $ProjectRoot "dist\builds"
-$OSQUERY_DIR = Join-Path $ProjectRoot "dist\builds-osquery"
+$OSQUERY_DIR = Join-Path $ProjectRoot "dist\builds-osqueryi"
 
 Write-Host "Architecture: $Arch" -ForegroundColor Cyan
 Write-Host "Build Directory: $BUILD_DIR" -ForegroundColor Cyan
