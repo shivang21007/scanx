@@ -59,38 +59,12 @@ export const register = async (req: Request, res: Response) => {
       name 
     });
 
-    // Generate JWT token
-    const token = jwt.sign(
-      { id: adminId, email }, 
-      env.JWT_SECRET as string, 
-      { expiresIn: '12h' }
-    );
-    
-    // Get dynamic domain from request
-    const requestHost = req.get('host'); // Gets "localhost:5173" or "127.0.0.1:5173"
-    const hostname = requestHost?.split(':')[0]; // Gets "localhost" or "127.0.0.1"
-    
-    console.log('Registration: Request host:', requestHost, 'Hostname:', hostname);
-    
-    // Set secure httpOnly cookie with dynamic domain
-    res.cookie('scanx_token', token, {
-      httpOnly: true,
-      secure: env.NODE_ENV === 'production',
-      sameSite: env.NODE_ENV === 'production' ? 'strict' : 'lax',
-      maxAge: 12 * 60 * 60 * 1000,
-      path: '/',
-      // In development: don't set domain (works with any host)
-      // In production: you might want to set a specific domain
-      domain: hostname ? hostname : undefined
-    });
-    
-    console.log('Registration: Setting cookie with token:', token.substring(0, 20) + '...');
-
     // Return admin data (without password)
+    // Note: No token is generated here - user must login separately to get a token
     const adminData = { id: adminId, email, name };
     
     res.status(201).json({ 
-      message: 'Admin registered successfully',
+      message: 'Admin registered successfully. Please login to continue.',
       admin: adminData
     });
   } catch (err: any) {

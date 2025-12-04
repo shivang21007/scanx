@@ -9,6 +9,9 @@ import { getCurrentIST } from '../utils/timezone';
  */
 export const checkRegisterEnabled = (req: Request, res: Response, next: NextFunction) => {
   if (!env.ENABLE_REGISTER_ENDPOINT) {
+    console.log('ENABLE_REGISTER_ENDPOINT:', env.ENABLE_REGISTER_ENDPOINT);
+    console.log('Registration is not available. Please use the login endpoint.');
+    console.log('redirectTo:', '/login');
     return res.status(405).json({
       message: 'Registration is not available. Please use the login endpoint.',
       error: 'Method Not Allowed',

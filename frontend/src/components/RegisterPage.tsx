@@ -4,6 +4,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 import { isRegisterEnabled } from '../utils/registerEnabled';
+import toast, { Toaster } from 'react-hot-toast';
 
 export function RegisterPage() {
   const [email, setEmail] = useState('');
@@ -56,11 +57,16 @@ export function RegisterPage() {
 
     const success = await register(email, password, name);
     if (success) {
+      // Show success toast
+      toast.success('Account created successfully! Redirecting to login...', {
+        duration: 3000,
+      });
+      
       setRegistrationSuccess(true);
-      // Auto redirect to login after 2 seconds
+      // Auto redirect to login after 3 seconds
       setTimeout(() => {
         navigate('/login');
-      }, 2000);
+      }, 3000);
     }
   };
 
@@ -85,6 +91,7 @@ export function RegisterPage() {
 
   return (
     <div className="min-h-screen bg-white flex items-center justify-center px-4">
+      <Toaster position="top-right" />
       <div className="w-full max-w-md">
         {/* Register Form */}
         <div className="bg-white p-8">

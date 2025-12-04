@@ -50,8 +50,8 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
     case 'REGISTER_SUCCESS':
       return {
         ...state,
-        isAuthenticated: true,
-        admin: action.payload.admin,
+        isAuthenticated: false,
+        admin: null,
         loading: false,
         error: null,
       };
@@ -175,17 +175,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       dispatch({ type: 'REGISTER_START' });
       
-      const response = await apiService.register({ email, password, name });
-      
-      // Store admin data (token is now in httpOnly cookie)
-      apiService.setStoredAdmin(response.admin);
+      await apiService.register({ email, password, name });
       
       dispatch({
         type: 'REGISTER_SUCCESS',
         payload: {
-          admin: response.admin,
+          admin: null as unknown as Admin,
         },
       });
+  
       return true;
     } catch (error: any) {
       dispatch({

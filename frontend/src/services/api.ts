@@ -66,12 +66,6 @@ class ApiService {
       const response: AxiosResponse<RegisterResponse> = await this.api.post('/auth/register', userData);
       return response.data;
     } catch (error: any) {
-      // Handle 405 Method Not Allowed (registration disabled)
-      if (error.response?.status === 405) {
-        // Redirect to login page
-        window.location.href = '/login';
-        throw new Error(error.response?.data?.message || 'Registration is not available. Please use the login page.');
-      }
       throw this.handleError(error);
     }
   }
