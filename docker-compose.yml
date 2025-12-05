@@ -19,13 +19,15 @@ services:
   redis:
     image: redis:latest
     container_name: redis-scanx-1
-    environment:
-      - REDIS_PASSWORD=admin@123
+    command: redis-server --requirepass admin@123
     networks:
       - scanx-network
     volumes:
       - redis-scanx:/data
-    restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "admin@123", "ping"]
+      timeout: 10s
+      retries: 10
 
   backend:
     build:
@@ -36,7 +38,7 @@ services:
        mysql:
         condition: service_healthy
        redis:
-        condition: service_started
+        condition: service_healthy
     networks:
       - scanx-network
     env_file:

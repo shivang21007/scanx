@@ -7,11 +7,11 @@ const redisClient = createClient({
         host: env.REDIS_HOST || 'localhost',
         port: parseInt(env.REDIS_PORT || '6379'),
     },
-    password: env.REDIS_PASSWORD || undefined,
+    password: env.REDIS_PASSWORD && env.REDIS_PASSWORD.trim() !== '' ? env.REDIS_PASSWORD : undefined,
 });
 
 // Error handling
-redisClient.on('error', (err) => {
+redisClient.on('error', (err: Error) => {
     console.error('❌ Redis Client Error:', err);
 });
 
