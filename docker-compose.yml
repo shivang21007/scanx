@@ -16,6 +16,17 @@ services:
       timeout: 10s
       retries: 10
 
+  redis:
+    image: redis:latest
+    container_name: redis-scanx-1
+    environment:
+      - REDIS_PASSWORD=admin@123
+    networks:
+      - scanx-network
+    volumes:
+      - redis-scanx:/data
+    restart: always
+
   backend:
     build:
       context: ./backend
@@ -24,6 +35,8 @@ services:
     depends_on:
        mysql:
         condition: service_healthy
+       redis:
+        condition: service_started
     networks:
       - scanx-network
     env_file:
@@ -47,7 +60,7 @@ services:
 
 volumes:
   mysql-scanx:
-
+  redis-scanx:
 networks:
   scanx-network:
     driver: bridge  

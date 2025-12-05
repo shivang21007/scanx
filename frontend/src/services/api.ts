@@ -94,6 +94,34 @@ class ApiService {
     }
   }
 
+  // Forgot password endpoints
+  async forgotPasswordSendOTP(email: string): Promise<{ message: string; email: string }> {
+    try {
+      const response: AxiosResponse<{ message: string; email: string }> = await this.api.post('/auth/forgot-password/send-otp', { email });
+      return response.data;
+    } catch (error: any) {
+      throw this.handleError(error);
+    }
+  }
+
+  async forgotPasswordVerifyOTP(email: string, otp: string): Promise<{ message: string; email: string }> {
+    try {
+      const response: AxiosResponse<{ message: string; email: string }> = await this.api.post('/auth/forgot-password/verify-otp', { email, otp });
+      return response.data;
+    } catch (error: any) {
+      throw this.handleError(error);
+    }
+  }
+
+  async resetPassword(email: string, otp: string, newPassword: string): Promise<{ message: string }> {
+    try {
+      const response: AxiosResponse<{ message: string }> = await this.api.post('/auth/forgot-password/reset-password', { email, otp, newPassword });
+      return response.data;
+    } catch (error: any) {
+      throw this.handleError(error);
+    }
+  }
+
   // Error handler
   private handleError(error: any): Error {
     if (error.response?.data) {

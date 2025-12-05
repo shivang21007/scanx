@@ -3,7 +3,8 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { env } from '../env/env';
 import { Request, Response } from 'express';
-
+import { sendForgotPasswordOTPMail, sendRegistrationWelcomeMail } from '../services/sendMail';
+import { storeOtp, getOtp, deleteOtp } from '../utils/otpManager';
 // Extend Request interface to include admin info
 interface AuthRequest extends Request {
   admin?: Admin;
@@ -66,6 +67,12 @@ export const register = async (req: Request, res: Response) => {
     res.status(201).json({ 
       message: 'Admin registered successfully. Please login to continue.',
       admin: adminData
+    });
+
+    // Send welcome email (non-blocking, won't crash if it fails)
+    sendRegistrationWelcomeMail(email, name).catch((emailError) => {
+      console.error('Failed to send registration welcome email:', emailError.message);
+      // Email failure doesn't affect registration success
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -182,3 +189,138 @@ export const getAllAdmins = async (req: AuthRequest, res: Response) => {
 };
 
 
+/**
+ * Step 1: Send OTP to user's email
+ */
+export const forgotPasswordSendOTP = async (req: Request, res: Response) => {
+  const { email } = req.body;
+  
+  try {
+    // Validate input
+    if (!email) {
+      return res.status(400).json({ message: 'Email is required' });
+    }
+
+    // Check if admin exists
+    const admin = await AdminModel.findByEmail(email);
+    if (!admin) {
+      return res.status(404).json({ message: 'No account found with this email' });
+    }
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Store OTP in Redis with 10 minutes TTL
+    await storeOtp(email, otp);
+    
+    // Send OTP email (non-blocking, won't crash if it fails)
+    sendForgotPasswordOTPMail(email, otp).catch((emailError) => {
+      console.error('Failed to send OTP email:', emailError.message);
+      // OTP is still stored in Redis, user can retry or contact support
+    });
+    
+    console.log(`📧 OTP sent to ${email}`);
+    return res.status(200).json({ 
+      message: 'OTP sent to your email. Please check your inbox.',
+      email 
+    });
+  } catch (err: any) {
+    console.error('Error sending OTP:', err);
+    res.status(500).json({ 
+      message: 'Failed to send OTP. Please try again.',
+      error: err.message 
+    });
+  }
+};
+
+/**
+ * Step 2: Verify OTP
+ */
+export const forgotPasswordVerifyOTP = async (req: Request, res: Response) => {
+  const { email, otp } = req.body;
+  
+  try {
+    // Validate input
+    if (!email || !otp) {
+      return res.status(400).json({ message: 'Email and OTP are required' });
+    }
+
+    // Get OTP from Redis
+    const storedOtp = await getOtp(email);
+    
+    if (!storedOtp) {
+      return res.status(400).json({ message: 'OTP expired or not found. Please request a new one.' });
+    }
+
+    // Verify OTP
+    if (storedOtp !== otp) {
+      return res.status(400).json({ message: 'Invalid OTP. Please try again.' });
+    }
+
+    console.log(`✅ OTP verified for ${email}`);
+    return res.status(200).json({ 
+      message: 'OTP verified successfully. You can now reset your password.',
+      email 
+    });
+  } catch (err: any) {
+    console.error('Error verifying OTP:', err);
+    res.status(500).json({ 
+      message: 'Failed to verify OTP. Please try again.',
+      error: err.message 
+    });
+  }
+};
+
+/**
+ * Step 3: Reset password
+ */
+export const ResetPassword = async (req: Request, res: Response) => {
+  const { email, otp, newPassword } = req.body;
+  
+  try {
+    // Validate input
+    if (!email || !otp || !newPassword) {
+      return res.status(400).json({ message: 'Email, OTP, and new password are required' });
+    }
+
+    // Verify OTP one more time
+    const storedOtp = await getOtp(email);
+    
+    if (!storedOtp) {
+      return res.status(400).json({ message: 'OTP expired. Please start the process again.' });
+    }
+
+    if (storedOtp !== otp) {
+      return res.status(400).json({ message: 'Invalid OTP.' });
+    }
+
+    // Get admin
+    const admin = await AdminModel.findByEmail(email);
+    if (!admin) {
+      return res.status(404).json({ message: 'Account not found' });
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+    
+    // Update password in database
+    if (!admin.id) {
+      return res.status(500).json({ message: 'Admin ID not found' });
+    }
+    await AdminModel.updatePassword(admin.id, hashedPassword);
+    
+    // Delete OTP from Redis
+    await deleteOtp(email);
+    
+    console.log(`🔐 Password reset successful for ${email}`);
+    return res.status(200).json({ 
+      message: 'Password reset successfully. You can now login with your new password.' 
+    });
+  } catch (err: any) {
+    console.error('Error resetting password:', err);
+    res.status(500).json({ 
+      message: 'Failed to reset password. Please try again.',
+      error: err.message 
+    });
+  }
+};

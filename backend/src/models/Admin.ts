@@ -75,5 +75,15 @@ export class AdminModel {
         );
         return result.affectedRows > 0;
     }
+
+    // Update password only
+    static async updatePassword(id: number, hashedPassword: string): Promise<boolean> {
+        const connection = await getConnection();
+        const [result] = await connection.execute<ResultSetHeader>(
+            'UPDATE admins SET password = ? WHERE id = ?',
+            [hashedPassword, id]
+        );
+        return result.affectedRows > 0;
+    }
 }
 

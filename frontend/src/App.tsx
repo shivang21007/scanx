@@ -5,12 +5,12 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { PublicRoute } from './components/PublicRoute';
 import { LoginPage } from './components/LoginPage';
 import { RegisterPage } from './components/RegisterPage';
+import { ForgotPasswordPage } from './components/ForgotPasswordPage';
 import { DashboardPage } from './components/DashboardPage';
 import { DevicesPage } from './components/DevicesPage';
 import { DeviceDetailPage } from './components/DeviceDetailPage';
 import { UsersPage } from './components/UsersPage';
 import { isRegisterEnabled } from './utils/registerEnabled';
-
 function App() {
   return (
     <AuthProvider>
@@ -42,7 +42,14 @@ function App() {
                 element={<Navigate to="/login" replace state={{ error: 'Registration is not available. Method Not Allowed (405)', statusCode: 405 }} />} 
               />
             )}
-
+            <Route
+              path="/forgot-password"
+              element={
+                <PublicRoute>
+                  <ForgotPasswordPage />
+                </PublicRoute>
+              }
+            />
             {/* Protected routes - require authentication */}
             <Route 
               path="/dashboard" 

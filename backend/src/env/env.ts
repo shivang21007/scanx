@@ -19,5 +19,12 @@ export const env = {
     ENABLE_REGISTER_ENDPOINT: (() => {
       const value = process.env.ENABLE_REGISTER_ENDPOINT;
       return value === 'true' || value === '1';
-    })()
+    })(),
+    SMTP_HOST: process.env.SMTP_HOST ,
+    SMTP_PORT: process.env.SMTP_PORT,
+    SMTP_FROM: process.env.SMTP_FROM,
+    SMTP_SECURE: process.env.SMTP_SECURE,
+    REDIS_HOST: process.env.REDIS_HOST,
+    REDIS_PORT: process.env.REDIS_PORT,
+    REDIS_PASSWORD: process.env.REDIS_PASSWORD,
 }

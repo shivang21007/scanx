@@ -6,6 +6,7 @@ import deviceRoutes from './routes/deviceRoutes';
 import userRoutes from './routes/usersRoutes';
 import { startUsersSyncScheduler, FileDirectoryClient, GoogleApiDirectoryClient } from './services/googleWorkspace';
 import { initializeDatabase } from './db';
+import { connectRedis } from './utils/redisClient';
 import { env } from './env/env';
 import { getCurrentISTString } from './utils/timezone';
 
@@ -60,6 +61,12 @@ app.use(express.urlencoded({ extended: true }));
 // Initialize database (connection + schema + migrations)
 initializeDatabase().catch(err => {
   console.error('Failed to initialize database:', err);
+  process.exit(1);
+});
+
+// Initialize Redis connection
+connectRedis().catch(err => {
+  console.error('Failed to connect to Redis:', err);
   process.exit(1);
 });
 
