@@ -9,7 +9,8 @@ export interface Device {
   os_version: string;
   last_seen: string;
   status: 'online' | 'offline';
-  agent_version?: string;
+  scanx_version?: string;
+  osqueryi_version?: string;
   created_at: string;
   updated_at: string;
 }
@@ -70,7 +71,8 @@ export interface DeviceTableRow {
   os_version: string;
   last_seen: string;
   status: 'online' | 'offline' | 'unknown';
-  agent_version: string;
+  scanx_version?: string;
+  osqueryi_version?: string;
   created_at: string;
   updated_at: string;
   

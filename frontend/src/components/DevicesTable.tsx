@@ -284,7 +284,8 @@ export function DevicesTable({
                 {/* Monitoring Column */}
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-900">
-                    Agent v{device.agent_version}
+                    <div>scanx: {device.scanx_version || 'Unknown'}</div>
+                    <div className="text-gray-500 text-xs mt-0.5">osqueryi: {device.osqueryi_version || 'Unknown'}</div>
                   </div>
                 </td>
 

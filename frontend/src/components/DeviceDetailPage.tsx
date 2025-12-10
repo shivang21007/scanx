@@ -197,7 +197,20 @@ export function DeviceDetailPage() {
                     {passwordData.password_manager === 'true' ? 'Yes' : 'No'}
                   </span>
                 </div>
+                {passwordData.password_manager === 'true' && passwordData.password_manager_names && (
+                  <div><span className="font-medium">Detected Managers:</span> 
+                    <span className="ml-2 text-blue-700 font-semibold">{passwordData.password_manager_names}</span>
+                  </div>
+                )}
               </div>
+              {dataObject.timestamp && (
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <span className="text-sm text-gray-500">Last Updated: </span>
+                  <span className="text-sm text-gray-900 font-medium">
+                    {formatRelative(new Date(dataObject.timestamp).toISOString())}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         );
@@ -231,6 +244,14 @@ export function DeviceDetailPage() {
                 </div>
                 <div><span className="font-medium">Grace Period:</span> {screenData.grace_period ? `${screenData.grace_period} seconds` : 'N/A'}</div>
               </div>
+              {dataObject.timestamp && (
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <span className="text-sm text-gray-500">Last Updated: </span>
+                  <span className="text-sm text-gray-900 font-medium">
+                    {formatRelative(new Date(dataObject.timestamp).toISOString())}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         );
@@ -376,8 +397,12 @@ export function DeviceDetailPage() {
                 <p className="mt-1 text-sm text-gray-900">{deviceInfo.device.os_type} {deviceInfo.device.os_version}</p>
               </div>
               <div>
-                <h3 className="text-sm font-medium text-gray-500">Agent Version</h3>
-                <p className="mt-1 text-sm text-gray-900">v{deviceInfo.device.agent_version || 'Unknown'}</p>
+                <h3 className="text-sm font-medium text-gray-500">ScanX Version</h3>
+                <p className="mt-1 text-sm text-gray-900">{deviceInfo.device.scanx_version || 'Unknown'}</p>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-gray-500">Osqueryi Version</h3>
+                <p className="mt-1 text-sm text-gray-900">{deviceInfo.device.osqueryi_version || 'Unknown'}</p>
               </div>
               <div>
                 <h3 className="text-sm font-medium text-gray-500">Last Seen</h3>
