@@ -12,7 +12,8 @@ import (
 // AgentConfig represents the agent configuration from agent.conf
 type AgentConfig struct {
 	UserEmail  string `json:"user_email"`
-	Version    string `json:"version"`
+	ScanxVersion    string `json:"scanx_version"`
+	OsqueryiVersion string `json:"osqueryi_version"`
 	Interval   string `json:"interval"`
 	LogLevel   string `json:"log_level"`
 	BackendURL string `json:"backend_url"`

@@ -36,7 +36,7 @@
                   Execute="deferred"
                   Impersonate="no"
                   Return="ignore"
-                  ExeCommand="powershell.exe -NoProfile -ExecutionPolicy Bypass -Command &quot;$installPath = 'C:\Program Files (x86)\scanx'; if (Test-Path $installPath) { Write-Host 'Removing old installation...'; Remove-Item -Path $installPath -Recurse -Force -ErrorAction SilentlyContinue; Start-Sleep -Seconds 2; if (Test-Path $installPath) { Get-ChildItem -Path $installPath -Recurse -Force | Remove-Item -Force -Recurse -ErrorAction SilentlyContinue; Remove-Item -Path $installPath -Force -ErrorAction SilentlyContinue } }&quot;" />
+                  ExeCommand="powershell.exe -NoProfile -ExecutionPolicy Bypass -Command &quot;$installPath = 'C:\Program Files (x86)\scanx'; if (Test-Path $installPath) { Write-Host 'Removing old installation...'; Remove-Item -Path $installPath -Recurse -Force -ErrorAction SilentlyContinue; Start-Sleep -Seconds 2; if (Test-Path $installPath) { Get-ChildItem -Path $installPath -Recurse -Force | Remove-Item -Force -Recurse -ErrorAction SilentlyContinue; Remove-Item -Path $installPath -Force -ErrorAction SilentlyContinue }; Remove-Item -Path 'C:\Program Files (x86)\scanx\scanx.exe.old' -Force -ErrorAction SilentlyContinue; Remove-Item -Path 'C:\Program Files (x86)\scanx\osqueryi.exe.old' -Force -ErrorAction SilentlyContinue }&quot;" />
 
     <!-- Create scheduled task after installation -->
     <CustomAction Id="CreateScheduledTask"

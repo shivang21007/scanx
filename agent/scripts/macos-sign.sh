@@ -2,16 +2,34 @@
 
 # macOS Code Signing Script for scanx and osqueryi
 # This script signs both the scanx and osqueryi binaries for seamless installation
+# Usage: ./macos-sign.sh [DEVELOPER_ID] [--yes]
 
 # Don't exit on error - we want to try signing all binaries even if one fails
 set +e
 
-# Configuration
-DEVELOPER_ID="${1:-}"
+# Parse command line arguments
+AUTO_YES=false
+DEVELOPER_ID=""
+for arg in "$@"; do
+    case $arg in
+        -y|--yes)
+            AUTO_YES=true
+            ;;
+        *)
+            if [[ -z "$DEVELOPER_ID" ]]; then
+                DEVELOPER_ID="$arg"
+            fi
+            ;;
+    esac
+done
 ENTITLEMENTS_FILE="scripts/entitlements.plist"
-VERSION=$(cat config/agent.conf | grep -o '"version": "[^"]*"' | cut -d'"' -f4)
-OSQUERY_BUILD_DIR="dist/builds-osqueryi"
-BUILD_DIR="dist/builds"
+VERSION=$(cat config/agent.conf | grep -o '"scanx_version": "[^"]*"' | cut -d'"' -f4)
+DIST_DIR="dist/${VERSION}"
+OSQUERY_BUILD_DIR="$DIST_DIR/builds-osqueryi"
+BUILD_DIR="$DIST_DIR/builds"
+
+# Create version-based directory structure
+mkdir -p "$DIST_DIR"
 # Define binaries to sign
 SCANX_AMD64="$BUILD_DIR/scanx-darwin-amd64"
 SCANX_ARM64="$BUILD_DIR/scanx-darwin-arm64"
@@ -115,7 +133,11 @@ if [ -z "$DEVELOPER_ID" ]; then
     echo "   3. Download and install in Keychain"
     echo ""
     
-    read -p "🤔 Use ad-hoc signing for internal testing? [y/N]: " -n 1 -r
+    if [[ "$AUTO_YES" == true ]]; then
+        echo "⚠️  Using ad-hoc signing (--yes flag, internal use only)"
+        SIGNING_IDENTITY="-"
+    else
+        read -p "🤔 Use ad-hoc signing for internal testing? [y/N]: " -n 1 -r </dev/tty
     echo
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
         echo "❌ Cancelled by user"
@@ -124,6 +146,7 @@ if [ -z "$DEVELOPER_ID" ]; then
     
     echo "⚠️  Using ad-hoc signing (internal use only)"
     SIGNING_IDENTITY="-"
+    fi
 else
     echo "✅ Using Developer ID: $DEVELOPER_ID"
     SIGNING_IDENTITY="$DEVELOPER_ID"

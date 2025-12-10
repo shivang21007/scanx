@@ -65,20 +65,26 @@ if (-not (Test-Path $configPath)) {
 
 try {
     $configJson = Get-Content $configPath -Raw | ConvertFrom-Json
-    $VERSION = $configJson.version
+    $VERSION = $configJson.scanx_version
     Write-Host "Version: $VERSION" -ForegroundColor Cyan
 } catch {
-    Write-Host "Failed to read version from agent.conf, using default: 1.0.0" -ForegroundColor Yellow
+    Write-Host "Failed to read scanx_version from agent.conf, using default: 1.0.0" -ForegroundColor Yellow
     $VERSION = "1.0.0"
 }
 
-# Set up paths
+# Set up paths with version-based directory structure
+$DIST_DIR = Join-Path $ProjectRoot "dist\$VERSION"
 $BINARY_NAME = "scanx-windows-$Arch.exe"
 $OSQUERY_NAME = "osqueryi-windows-$Arch.exe"
-$BUILD_DIR = Join-Path $ProjectRoot "dist\windows-build\$Arch-build"
+$BUILD_DIR = Join-Path $DIST_DIR "windows-build\$Arch-build"
 $WINDOWS_SCRIPTS_DIR = Join-Path $ScriptDir "windows"
-$BUILDS_DIR = Join-Path $ProjectRoot "dist\builds"
-$OSQUERY_DIR = Join-Path $ProjectRoot "dist\builds-osqueryi"
+$BUILDS_DIR = Join-Path $DIST_DIR "builds"
+$OSQUERY_DIR = Join-Path $DIST_DIR "builds-osqueryi"
+
+# Create version-based directory structure
+if (-not (Test-Path $DIST_DIR)) {
+    New-Item -ItemType Directory -Path $DIST_DIR -Force | Out-Null
+}
 
 Write-Host "Architecture: $Arch" -ForegroundColor Cyan
 Write-Host "Build Directory: $BUILD_DIR" -ForegroundColor Cyan

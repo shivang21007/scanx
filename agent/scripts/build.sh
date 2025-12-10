@@ -2,28 +2,60 @@
 
 # Cross-platform build script for scanx
 # This script builds the agent for multiple operating systems
+# Usage: ./build.sh [-y|--yes] (skip signing prompt)
 
 set -e
 
+# Parse command line arguments
+AUTO_YES=false
+for arg in "$@"; do
+    case $arg in
+        -y|--yes)
+            AUTO_YES=true
+            shift
+            ;;
+    esac
+done
+
 # Configuration
 BINARY_NAME="scanx"
-VERSION=$(cat config/agent.conf | grep -o '"version": "[^"]*"' | cut -d'"' -f4)
-DIST_DIR="dist"
+VERSION=$(cat config/agent.conf | grep -o '"scanx_version": "[^"]*"' | cut -d'"' -f4)
+OSQUERYI_VERSION=$(cat config/agent.conf | grep -o '"osqueryi_version": "[^"]*"' | cut -d'"' -f4)
+ROOT_DIST_DIR="dist"
+DIST_DIR="$ROOT_DIST_DIR/${VERSION}"
 BUILD_DIR="$DIST_DIR/builds"
 PACKAGES_DIR="$DIST_DIR/packages"
+OSQUERY_ROOT_DIR="$ROOT_DIST_DIR/builds-osqueryi"
 OSQUERY_BUILD_DIR="$DIST_DIR/builds-osqueryi"
 
-# Smart cleanup - only remove build artifacts, preserve existing packages
-echo "🧹 Cleaning build artifacts..."
+# Create version-based directory structure
+mkdir -p "$DIST_DIR"
+
+# Smart cleanup - only remove build artifacts for this version, preserve existing packages
+echo "🧹 Cleaning build artifacts for v${VERSION}..."
 rm -rf "$BUILD_DIR"
 rm -rf "$PACKAGES_DIR"
+rm -rf "$OSQUERY_BUILD_DIR"
+
+# Copy osquery binaries from root to version directory
+echo "📦 Copying osquery binaries to version directory..."
+if [ -d "$OSQUERY_ROOT_DIR" ]; then
+    mkdir -p "$OSQUERY_BUILD_DIR"
+    cp -r "$OSQUERY_ROOT_DIR"/* "$OSQUERY_BUILD_DIR/" 2>/dev/null || true
+    echo "✅ Copied osquery binaries from $OSQUERY_ROOT_DIR to $OSQUERY_BUILD_DIR"
+else
+    echo "⚠️  Warning: OSQuery directory not found at $OSQUERY_ROOT_DIR"
+    echo "   Packages will be built without bundled osquery"
+    mkdir -p "$OSQUERY_BUILD_DIR"
+fi
+
 
 
 # Create build directories
 mkdir -p "$BUILD_DIR"
 mkdir -p "$PACKAGES_DIR"
 mkdir -p "$DIST_DIR/linux-packages"
-mkdir -p "$DIST_DIR/msi-build"  
+mkdir -p "$DIST_DIR/msi-build"
 
 echo "🚀 Building scanx v$VERSION for multiple platforms..."
 
@@ -37,7 +69,7 @@ build_platform() {
     echo "📦 Building for $GOOS/$GOARCH..."
     
     GOOS=$GOOS GOARCH=$GOARCH go build \
-        -ldflags "-s -w -X main.version=$VERSION" \
+        -ldflags "-s -w -X main.Version=$VERSION" \
         -o "$BUILD_DIR/$output_name" \
         -trimpath \
         ./cmd/agent
@@ -71,15 +103,23 @@ sign_macos_binaries() {
         echo "============================="
         echo "macOS binaries need signing to avoid 'killed' errors."
         echo ""
-        read -p "🔐 Sign macOS binaries? [y/N]: " -n 1 -r
-        echo
         
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
+        if [[ "$AUTO_YES" == true ]]; then
+            echo "🔐 Auto-signing enabled (--yes flag)"
             echo "🔐 Using macos-sign.sh for signing..."
-            ./scripts/macos-sign.sh
+            ./scripts/macos-sign.sh --yes
             echo "✅ macOS binaries signed successfully!"
         else
-            echo "⚠️  Skipping signing - binaries may be blocked by Gatekeeper"
+            read -p "🔐 Sign macOS binaries? [y/N]: " -n 1 -r
+            echo
+            
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                echo "🔐 Using macos-sign.sh for signing..."
+                ./scripts/macos-sign.sh --yes
+                echo "✅ macOS binaries signed successfully!"
+            else
+                echo "⚠️  Skipping signing - binaries may be blocked by Gatekeeper"
+            fi
         fi
     fi
 }
@@ -151,13 +191,15 @@ create_package() {
                 done
             fi
             
-            # Create dist directory structure for binaries
-            mkdir -p "$pkg_dir/$BUILD_DIR" 
-            mkdir -p "$pkg_dir/$OSQUERY_BUILD_DIR"
+            # Create dist directory structure for binaries (relative paths for package structure)
+            PKG_BUILD_DIR="dist/$VERSION/builds"
+            PKG_OSQUERY_DIR="dist/$VERSION/builds-osqueryi"
+            mkdir -p "$pkg_dir/$PKG_BUILD_DIR" 
+            mkdir -p "$pkg_dir/$PKG_OSQUERY_DIR"
             
             # Copy binary with proper naming (build script expects scanx-windows-{arch}.exe)
             BINARY_SOURCE="$BUILD_DIR/${BINARY_NAME}-${platform}-${arch}${ext}"
-            BINARY_DEST="$pkg_dir/$BUILD_DIR/${BINARY_NAME}-${platform}-${arch}${ext}"
+            BINARY_DEST="$pkg_dir/$PKG_BUILD_DIR/${BINARY_NAME}-${platform}-${arch}${ext}"
             if [[ -f "$BINARY_SOURCE" ]]; then
                 cp "$BINARY_SOURCE" "$BINARY_DEST"
                 echo "📦 Copied binary: ${BINARY_NAME}-${platform}-${arch}${ext}"
@@ -177,7 +219,7 @@ create_package() {
             fi
             
             if [[ -f "$OSQUERY_SOURCE" ]]; then
-                OSQUERY_DEST="$pkg_dir/$OSQUERY_BUILD_DIR/osqueryi-windows-${arch}${ext}"
+                OSQUERY_DEST="$pkg_dir/$PKG_OSQUERY_DIR/osqueryi-windows-${arch}${ext}"
                 cp "$OSQUERY_SOURCE" "$OSQUERY_DEST"
                 echo "📦 Copied bundled osqueryi.exe for ${arch}"
             else
@@ -214,7 +256,7 @@ cd scanx-windows-${arch}-v${VERSION}
 .\scripts\build-msi.ps1 arm64
 \`\`\`
 
-The MSI will be created at: \`dist\windows-build\${arch}-build\scanx-v${VERSION}-windows-${arch}.msi\`
+The MSI will be created at: \`dist\${VERSION}\windows-build\${arch}-build\scanx-v${VERSION}-windows-${arch}.msi\`
 
 ### Package Structure:
 \`\`\`
@@ -322,6 +364,7 @@ EOF
 
 create_checksum_json(){
     local dir=$1
+    local version_to_use=$2  # Accept version parameter
     local checksum_file="$dir/checksums.json"
     
     # Check if directory exists
@@ -354,7 +397,7 @@ create_checksum_json(){
     
     # Start building JSON
     local json_content="{\n"
-    json_content+="  \"version\": \"$VERSION\",\n"
+    json_content+="  \"version\": \"$version_to_use\",\n"
     json_content+="  \"algorithm\": \"SHA256\",\n"
     json_content+="  \"checksums\": {\n"
     
@@ -410,19 +453,22 @@ create_package "linux" "arm64" ""
 create_package "windows" "amd64" ".exe"
 create_package "windows" "arm64" ".exe"
 
-create_checksum_json $BUILD_DIR
-create_checksum_json $OSQUERY_BUILD_DIR
+# Generate checksums with appropriate versions
+create_checksum_json $BUILD_DIR "$VERSION"
+create_checksum_json $OSQUERY_BUILD_DIR "$OSQUERYI_VERSION"
 
 
 echo ""
 echo "🎉 Build complete! Distribution structure:"
 echo "📁 $DIST_DIR/"
-echo "├── builds/                    # Raw binaries"
-echo "├── packages/                  # Platform-specific packages"
-echo "├── scanx-${VERSION}.pkg           # macOS installer (if built)"
-echo "├── linux-packages/           # DEB/RPM structures (if built)"
-echo "├── windows-build/            # Windows MSI build output (if built)"
-echo "└── tmp/                       # Temporary build files"
+echo "    |--$VERSION/"
+echo "    |   ├── builds/                    # Raw binaries"
+echo "    |   ├── packages/                  # Platform-specific packages"
+echo "    |   ├── builds-osqueryi/           # OSQuery binaries"
+echo "    |   ├── macos-build-amd64/         # macOS installer AMD64 (if built)"
+echo "    |   ├── macos-build-arm64/         # macOS installer ARM64 (if built)"
+echo "    |   ├── linux-packages/           # DEB/RPM structures (if built)"
+echo "    |   └── windows-build/            # Windows MSI build output (if built)"
 echo ""
 ls -la $DIST_DIR/
 

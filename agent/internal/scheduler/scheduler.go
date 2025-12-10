@@ -7,6 +7,7 @@ import (
 	"scanx/internal/collector"
 	"scanx/internal/config"
 	"scanx/internal/sender"
+	"scanx/internal/updater"
 	"scanx/internal/utils"
 )
 
@@ -15,6 +16,7 @@ type Scheduler struct {
 	config    *config.Config
 	collector *collector.Collector
 	sender    *sender.BackendSender
+	updater   *updater.Updater
 	interval  time.Duration
 	ctx       context.Context
 	cancel    context.CancelFunc
@@ -28,10 +30,18 @@ func NewScheduler(cfg *config.Config, collectorInstance *collector.Collector, in
 	backendURL := cfg.GetBackendURL()
 	backendSender := sender.NewBackendSender(backendURL)
 
+	// Initialize updater
+	updateChecker, err := updater.NewUpdater(cfg)
+	if err != nil {
+		utils.Warning("Failed to initialize updater: %v", err)
+		updateChecker = nil
+	}
+
 	return &Scheduler{
 		config:    cfg,
 		collector: collectorInstance,
 		sender:    backendSender,
+		updater:   updateChecker,
 		interval:  interval,
 		ctx:       ctx,
 		cancel:    cancel,
@@ -74,6 +84,16 @@ func (s *Scheduler) Stop() {
 
 // runCollection performs a single data collection cycle
 func (s *Scheduler) runCollection() {
+	// Check for updates FIRST (before collecting data)
+	// This ensures we collect data with the latest version
+	if s.updater != nil {
+		utils.Info("🔍 Checking for updates...")
+		if err := s.updater.PerformUpdate(); err != nil {
+			utils.Warning("Update check/install failed: %v", err)
+			// Continue with data collection even if update fails
+		}
+	}
+
 	utils.Info("Starting data collection at %v", utils.GetCurrentISTString())
 
 	// Collect data

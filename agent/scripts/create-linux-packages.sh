@@ -13,10 +13,14 @@
 
 set -e
 
-VERSION=$(cat config/agent.conf | grep -o '"version": "[^"]*"' | cut -d'"' -f4)
+VERSION=$(cat config/agent.conf | grep -o '"scanx_version": "[^"]*"' | cut -d'"' -f4)
 PACKAGE_NAME="scanx"
-BUILD_DIR="dist/linux-packages"
-OSQUERY_BUILD_DIR="dist/builds-osqueryi"
+DIST_DIR="dist/${VERSION}"
+BUILD_DIR="$DIST_DIR/linux-packages"
+OSQUERY_BUILD_DIR="$DIST_DIR/builds-osqueryi"
+
+# Create version-based directory structure
+mkdir -p "$DIST_DIR"
 
 echo "🐧 Creating Linux Packages (DEB & RPM)"
 echo "====================================="
@@ -101,11 +105,11 @@ create_deb_package_structure() {
     local pkg_type=$1
     local arch=$2
     local temp_dir="$BUILD_DIR/${pkg_type}-${arch}/temp-${pkg_type}"
-    local binary_name="${PACKAGE_NAME}-linux-${arch}" # to check in dist/builds/
+    local binary_name="${PACKAGE_NAME}-linux-${arch}" # to check in dist/{version}/builds/
     
     # Check if binary exists
-    if [[ ! -f "dist/builds/${binary_name}" ]]; then
-        echo "❌ Binary not found: dist/builds/${binary_name}"
+    if [[ ! -f "$DIST_DIR/builds/${binary_name}" ]]; then
+        echo "❌ Binary not found: $DIST_DIR/builds/${binary_name}"
         echo "Please run ./scripts/build.sh first to build the binaries."
         return 1
     fi
@@ -118,7 +122,7 @@ create_deb_package_structure() {
     mkdir -p "$temp_dir/etc/systemd/system"
     
     # Copy files
-    cp "dist/builds/${binary_name}" "$temp_dir/usr/local/bin/scanx"
+    cp "$DIST_DIR/builds/${binary_name}" "$temp_dir/usr/local/bin/scanx"
     cp "config/"* "$temp_dir/etc/scanx/config/"
     cp "scripts/services/scanx.service" "$temp_dir/etc/systemd/system/"
     
@@ -314,8 +318,10 @@ systemctl disable scanx || true
 # Remove configuration files
 rm -rf /etc/scanx/config/*
 
-# Remove binary
+# Remove binary and backup files
 rm -f /usr/local/bin/scanx
+rm -f /usr/local/bin/scanx.old
+rm -f /usr/local/lib/scanx/osqueryi.old
 
 # Remove service file
 rm -f /etc/systemd/system/scanx.service
@@ -410,8 +416,8 @@ create_rpm_package() {
     local output_dir="$BUILD_DIR/rpm-${arch}"
     
     # Check if binary exists
-    if [[ ! -f "dist/builds/${binary_name}" ]]; then
-        echo "❌ Binary not found: dist/builds/${binary_name}"
+    if [[ ! -f "$DIST_DIR/builds/${binary_name}" ]]; then
+        echo "❌ Binary not found: $DIST_DIR/builds/${binary_name}"
         echo "Please run ./scripts/build.sh first to build the binaries."
         return 1
     fi
@@ -450,6 +456,8 @@ systemctl stop scanx || true
 systemctl disable scanx || true
 rm -rf /etc/scanx/config/*
 rm -f /usr/local/bin/scanx
+rm -f /usr/local/bin/scanx.old
+rm -f /usr/local/lib/scanx/osqueryi.old
 rm -f /etc/systemd/system/scanx.service
 rm -rf /var/log/scanx/*
 rm -rf /var/lib/scanx/*
@@ -665,7 +673,7 @@ if [[ ! -f "scanx" ]] || [[ ! -d "config" ]] || [[ ! -f "scanx.service" ]]; then
     exit 1
 fi
 
-VERSION=$(cat config/agent.conf | grep -o '"version": "[^"]*"' | cut -d'"' -f4)
+VERSION=$(cat config/agent.conf | grep -o '"scanx_version": "[^"]*"' | cut -d'"' -f4)
 PACKAGE_NAME="scanx"
 
 # Setup RPM build environment
@@ -708,7 +716,7 @@ EOF
         echo "📋 To build RPM on CentOS/RHEL:"
         echo "   1. Copy files to CentOS/RHEL system:"
         echo "      scp -r $output_dir/* user@centos-server:/tmp/"
-        echo "      scp dist/builds/scanx-linux-${arch} user@centos-server:/tmp/scanx"
+        echo "      scp $DIST_DIR/builds/scanx-linux-${arch} user@centos-server:/tmp/scanx"
         if [[ "$arch" == "amd64" ]]; then
             echo "      scp $OSQUERY_BUILD_DIR/osqueryi-linux-amd64 user@centos-server:/tmp/osqueryi"
         elif [[ "$arch" == "arm64" ]]; then
@@ -731,7 +739,7 @@ EOF
         rm -rf "$SOURCE_DIR"
         mkdir -p "$SOURCE_DIR"
         
-        cp "dist/builds/${binary_name}" "$SOURCE_DIR/scanx"
+        cp "$DIST_DIR/builds/${binary_name}" "$SOURCE_DIR/scanx"
         
         # Copy bundled osqueryi binary based on architecture
         OSQUERY_SOURCE=""

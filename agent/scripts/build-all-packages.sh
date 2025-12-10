@@ -10,16 +10,20 @@ echo "=============================================="
 echo ""
 
 # Get version from config
-VERSION=$(cat config/agent.conf | grep -o '"version": "[^"]*"' | cut -d'"' -f4)
+VERSION=$(cat config/agent.conf | grep -o '"scanx_version": "[^"]*"' | cut -d'"' -f4)
+DIST_DIR="dist/${VERSION}"
 echo "📦 Version: ${VERSION}"
 echo ""
 
+# Create version-based directory structure
+mkdir -p "$DIST_DIR"
+
 # Check if binaries exist
 echo "🔍 Checking for built binaries..."
-if [[ ! -f "dist/builds/scanx-darwin-amd64" ]] || \
-   [[ ! -f "dist/builds/scanx-darwin-arm64" ]] || \
-   [[ ! -f "dist/builds/scanx-linux-amd64" ]] || \
-   [[ ! -f "dist/builds/scanx-linux-arm64" ]]; then
+if [[ ! -f "$DIST_DIR/builds/scanx-darwin-amd64" ]] || \
+   [[ ! -f "$DIST_DIR/builds/scanx-darwin-arm64" ]] || \
+   [[ ! -f "$DIST_DIR/builds/scanx-linux-amd64" ]] || \
+   [[ ! -f "$DIST_DIR/builds/scanx-linux-arm64" ]]; then
     echo "❌ Some binaries are missing. Please run ./scripts/build.sh first."
     exit 1
 fi
@@ -58,13 +62,13 @@ echo "🎉 All Packages Built Successfully!"
 echo "==================================="
 echo ""
 echo "📦 macOS Packages:"
-find dist/macos-build-* -name "*.pkg" 2>/dev/null | while read pkg; do
+find "$DIST_DIR/macos-build-"* -name "*.pkg" 2>/dev/null | while read pkg; do
     echo "   $(basename "$pkg")"
 done
 echo ""
 
 echo "📦 Linux Packages:"
-find dist/linux-packages -name "*.deb" -o -name "*.rpm" 2>/dev/null | while read pkg; do
+find "$DIST_DIR/linux-packages" -name "*.deb" -o -name "*.rpm" 2>/dev/null | while read pkg; do
     if [[ -f "$pkg" ]]; then
         echo "   $(basename "$pkg")"
     fi
@@ -72,9 +76,9 @@ done
 echo ""
 
 echo "📁 Package Locations:"
-echo "   macOS: dist/macos-build-amd64/ and dist/macos-build-arm64/"
-echo "   Linux DEB: dist/linux-packages/deb-amd64/ and dist/linux-packages/deb-arm64/"
-echo "   Linux RPM: dist/linux-packages/rpm-amd64/ and dist/linux-packages/rpm-arm64/"
+echo "   macOS: $DIST_DIR/macos-build-amd64/ and $DIST_DIR/macos-build-arm64/"
+echo "   Linux DEB: $DIST_DIR/linux-packages/deb-amd64/ and $DIST_DIR/linux-packages/deb-arm64/"
+echo "   Linux RPM: $DIST_DIR/linux-packages/rpm-amd64/ and $DIST_DIR/linux-packages/rpm-arm64/"
 echo ""
 
 echo "✅ Build complete!"

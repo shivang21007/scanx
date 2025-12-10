@@ -7,8 +7,13 @@
 set -e
 
 # Configuration
-VERSION=$(cat config/agent.conf | grep -o '"version": "[^"]*"' | cut -d'"' -f4)
-OSQUERY_BUILD_DIR="dist/builds-osqueryi"
+VERSION=$(cat config/agent.conf | grep -o '"scanx_version": "[^"]*"' | cut -d'"' -f4)
+DIST_DIR="dist/${VERSION}"
+OSQUERY_BUILD_DIR="$DIST_DIR/builds-osqueryi"
+
+# Create version-based directory structure
+mkdir -p "$DIST_DIR"
+
 # Detect architecture or use argument
 if [[ -n "$1" ]]; then
     ARCH="$1"
@@ -28,7 +33,7 @@ fi
 PKG_NAME="scanx-${VERSION}-darwin-${ARCH}"
 BINARY_NAME="scanx-darwin-${ARCH}"
 
-BUILD_DIR="dist/macos-build-${ARCH}"
+BUILD_DIR="$DIST_DIR/macos-build-${ARCH}"
 SCRIPTS_DIR="$BUILD_DIR/scripts"
 PAYLOAD_DIR="$BUILD_DIR/payload"
 
@@ -39,8 +44,8 @@ echo "Architecture: ${ARCH}"
 echo ""
 
 # Check if binary exists
-if [[ ! -f "dist/builds/${BINARY_NAME}" ]]; then
-    echo "❌ Binary not found: dist/builds/${BINARY_NAME}"
+if [[ ! -f "$DIST_DIR/builds/${BINARY_NAME}" ]]; then
+    echo "❌ Binary not found: $DIST_DIR/builds/${BINARY_NAME}"
     echo "Please run ./scripts/build.sh first to build the binaries."
     exit 1
 fi
@@ -59,7 +64,7 @@ mkdir -p "$PAYLOAD_DIR/var/lib/scanx"
 mkdir -p "$PAYLOAD_DIR/Library/LaunchDaemons"
 
 # Copy files to payload (using standard paths)
-cp "dist/builds/${BINARY_NAME}" "$PAYLOAD_DIR/usr/local/bin/scanx"
+cp "$DIST_DIR/builds/${BINARY_NAME}" "$PAYLOAD_DIR/usr/local/bin/scanx"
 mkdir -p "$PAYLOAD_DIR/etc/scanx/config"
 cp "config/agent.conf" "$PAYLOAD_DIR/etc/scanx/config/"
 cp "scripts/services/com.company.scanx.plist" "$PAYLOAD_DIR/Library/LaunchDaemons/"
@@ -107,8 +112,10 @@ launchctl unload /Library/LaunchDaemons/com.company.scanx.plist 2>/dev/null || t
 # Remove old plist file
 rm -f /Library/LaunchDaemons/com.company.scanx.plist 2>/dev/null || true
 
-# Remove old binary
+# Remove old binary and backup files
 rm -f /usr/local/bin/scanx 2>/dev/null || true
+rm -f /usr/local/bin/scanx.old 2>/dev/null || true
+rm -f /usr/local/lib/scanx/osqueryi.old 2>/dev/null || true
 
 # Remove old configuration and data directories
 rm -rf /etc/scanx 2>/dev/null || true
@@ -303,8 +310,10 @@ rm -rf /etc/scanx 2>/dev/null || true
 # Remove the log files
 rm -rf /var/log/scanx 2>/dev/null || true
 
-# Remove the binary
+# Remove the binary and backup files
 rm -f /usr/local/bin/scanx 2>/dev/null || true
+rm -f /usr/local/bin/scanx.old 2>/dev/null || true
+rm -f /usr/local/lib/scanx/osqueryi.old 2>/dev/null || true
 
 # Remove /usr/local/lib/scanx from system PATH if it exists
 if [ -f "/etc/paths" ]; then

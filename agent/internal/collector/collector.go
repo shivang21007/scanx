@@ -19,14 +19,15 @@ type SystemInfo struct {
 
 // CollectedData represents the complete data collection result
 type CollectedData struct {
-	User         string                              `json:"user"`
-	Version      string                              `json:"version"`
-	OSType       string                              `json:"os_type"`
-	OSVersion    string                              `json:"os_version"`
-	SerialNo     string                              `json:"serial_no"`
-	ComputerName string                              `json:"computer_name"`
-	Timestamp    string                              `json:"timestamp"`
-	Data         map[string][]map[string]interface{} `json:"data"`
+	User            string                              `json:"user"`
+	ScanxVersion    string                              `json:"scanx_version"`
+	OsqueryiVersion string                              `json:"osqueryi_version"`
+	OSType          string                              `json:"os_type"`
+	OSVersion       string                              `json:"os_version"`
+	SerialNo        string                              `json:"serial_no"`
+	ComputerName    string                              `json:"computer_name"`
+	Timestamp       string                              `json:"timestamp"`
+	Data            map[string][]map[string]interface{} `json:"data"`
 }
 
 // Collector handles data collection from osquery
@@ -158,7 +159,7 @@ func (c *Collector) CollectData() (*CollectedData, error) {
 			}
 			continue
 		}
-		
+
 		results, err := c.runner.ExecuteQuery(queryName, queryConfig.Query)
 		if err != nil {
 			// Log error but continue with other queries
@@ -194,14 +195,15 @@ func (c *Collector) CollectData() (*CollectedData, error) {
 
 	// Build final payload
 	collectedData := &CollectedData{
-		User:         c.config.Agent.UserEmail,
-		Version:      c.config.Agent.Version,
-		OSType:       c.sysInfo.OSType,
-		OSVersion:    c.sysInfo.OSVersion,
-		SerialNo:     c.sysInfo.SerialNo,
-		ComputerName: c.sysInfo.ComputerName,
-		Timestamp:    utils.GetCurrentISTString(),
-		Data:         data,
+		User:            c.config.Agent.UserEmail,
+		ScanxVersion:    c.config.Agent.ScanxVersion,
+		OsqueryiVersion: c.config.Agent.OsqueryiVersion,
+		OSType:          c.sysInfo.OSType,
+		OSVersion:       c.sysInfo.OSVersion,
+		SerialNo:        c.sysInfo.SerialNo,
+		ComputerName:    c.sysInfo.ComputerName,
+		Timestamp:       utils.GetCurrentISTString(),
+		Data:            data,
 	}
 
 	return collectedData, nil
@@ -211,7 +213,7 @@ func (c *Collector) CollectData() (*CollectedData, error) {
 func (c *Collector) detectPasswordManagerFromApps(appsData []map[string]interface{}) []map[string]interface{} {
 	// Get allowed password manager apps for current platform
 	allowedApps := config.GetPasswordManagerApps(runtime.GOOS)
-	
+
 	if len(appsData) == 0 || len(allowedApps) == 0 {
 		return []map[string]interface{}{
 			{"password_manager": "false"},
@@ -232,7 +234,10 @@ func (c *Collector) detectPasswordManagerFromApps(appsData []map[string]interfac
 	}
 
 	// Check if any installed app matches password manager list
+	// Use a map for O(1) duplicate checking while building the slice
+	foundManagersMap := make(map[string]bool)
 	foundManagers := []string{}
+
 	for _, app := range appsData {
 		appName, ok := app[nameField].(string)
 		if !ok || appName == "" {
@@ -244,7 +249,11 @@ func (c *Collector) detectPasswordManagerFromApps(appsData []map[string]interfac
 		for _, allowedApp := range allowedApps {
 			allowedAppLower := strings.ToLower(allowedApp)
 			if strings.Contains(appNameLower, allowedAppLower) {
-				foundManagers = append(foundManagers, appName)
+				// Only add if we haven't seen this manager name before
+				if !foundManagersMap[appName] {
+					foundManagersMap[appName] = true
+					foundManagers = append(foundManagers, appName)
+				}
 				break // Found a match, no need to check other allowed apps for this installed app
 			}
 		}
@@ -253,13 +262,21 @@ func (c *Collector) detectPasswordManagerFromApps(appsData []map[string]interfac
 	// Return result
 	if len(foundManagers) > 0 {
 		utils.Info("🔐 Password managers detected: %v", foundManagers)
+		// Join the manager names with comma separator
+		managersStr := strings.Join(foundManagers, ", ")
 		return []map[string]interface{}{
-			{"password_manager": "true"},
+			{
+				"password_manager":       "true",
+				"password_manager_names": managersStr,
+			},
 		}
 	}
 
 	return []map[string]interface{}{
-		{"password_manager": "false"},
+		{
+			"password_manager":       "false",
+			"password_manager_names": "",
+		},
 	}
 }
 
@@ -295,7 +312,8 @@ func (c *Collector) LogCollectionSummary(data *CollectedData) {
 	utils.Info("  User: %s", data.User)
 	utils.Info("  OS Type: %s", data.OSType)
 	utils.Info("  OS Version: %s", data.OSVersion)
-	utils.Info("  Agent Version: %s", data.Version)
+	utils.Info("  Scanx Version: %s", data.ScanxVersion)
+	utils.Info("  Osqueryi Version: %s", data.OsqueryiVersion)
 	utils.Info("  Serial No: %s", data.SerialNo)
 	utils.Info("  Timestamp: %s", data.Timestamp)
 	utils.Info("  Queries executed: %d", len(data.Data))

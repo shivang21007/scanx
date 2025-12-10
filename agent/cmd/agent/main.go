@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -14,14 +15,25 @@ import (
 	"scanx/internal/utils"
 )
 
+// Version is set at build time via ldflags
+var Version = "dev"
+
 func main() {
 	// Parse command line flags
 	var (
 		daemon     = flag.Bool("daemon", false, "Run as daemon with periodic data collection")
 		test       = flag.Bool("test", false, "Test mode: run single data collection and exit")
 		configPath = flag.String("config", "", "Custom configuration directory path")
+		version    = flag.Bool("version", false, "Print version and exit")
+		versionV   = flag.Bool("v", false, "Print version and exit (shorthand)")
 	)
 	flag.Parse()
+
+	// Handle version flag
+	if *version || *versionV {
+		fmt.Printf("scanx version %s\n", Version)
+		os.Exit(0)
+	}
 
 	// Load configuration first (needed for log level)
 	var cfg *config.Config
@@ -46,7 +58,8 @@ func main() {
 
 	utils.Info("Agent Configuration Loaded")
 	utils.Info("  User Email: %s", cfg.Agent.UserEmail)
-	utils.Info("  Version: %s", cfg.Agent.Version)
+	utils.Info("  Scanx Version: %s", cfg.Agent.ScanxVersion)
+	utils.Info("  Osqueryi Version: %s", cfg.Agent.OsqueryiVersion)
 	utils.Info("  Interval: %s", cfg.Agent.Interval)
 	utils.Info("  Log Level: %s", cfg.Agent.LogLevel)
 
