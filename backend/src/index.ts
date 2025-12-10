@@ -4,6 +4,7 @@ import cookieParser from 'cookie-parser';
 import authRoutes from './routes/authRoutes';
 import deviceRoutes from './routes/deviceRoutes';
 import userRoutes from './routes/usersRoutes';
+import updateRoutes from './routes/updatesRoutes';
 import { startUsersSyncScheduler, FileDirectoryClient, GoogleApiDirectoryClient } from './services/googleWorkspace';
 import { initializeDatabase } from './db';
 import { connectRedis } from './utils/redisClient';
@@ -91,6 +92,7 @@ app.get(['/', '/api', '/api/health'], (req: express.Request, res: express.Respon
 app.use('/api/auth', authRoutes);
 app.use('/api/devices', deviceRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/updates', updateRoutes);
 
 // 404 handler
 app.use('*', (req: express.Request, res: express.Response) => {
@@ -113,6 +115,7 @@ app.listen(PORT, () => {
   console.log(`Agent endpoint: http://localhost:${PORT}/api/devices/agent/report`);
   console.log(`Admin dashboard API: http://localhost:${PORT}/api/devices`);
   console.log(`Auth endpoint: http://localhost:${PORT}/api/auth`);
+  console.log(`Updates endpoint: http://localhost:${PORT}/api/updates/update-check`);
 
   // Start Google Workspace users sync scheduler (Google API if env set, otherwise file fallback)
   try {

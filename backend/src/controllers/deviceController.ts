@@ -86,7 +86,8 @@ export const receiveAgentData = async (req: Request, res: Response) => {
       os_version: agentData.os_version || 'unknown',
       last_seen: istTimestamp,
       status: 'online',
-      agent_version: agentData.version
+      scanx_version: agentData.scanx_version,
+      osqueryi_version: agentData.osqueryi_version
     });
 
     // Store data in individual tables

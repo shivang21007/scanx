@@ -137,6 +137,109 @@ export const migration_003_add_devices_field = async () => {
     await markMigrationExecuted(migrationName);
 };
 
+// Migration: Rename agent_version to scanx_version and add osqueryi_version
+export const migration_004_split_agent_versions = async () => {
+    const migrationName = '004_split_agent_versions';
+    
+    if (await isMigrationExecuted(migrationName)) {
+        console.log(`⏭️  Migration '${migrationName}' already executed`);
+        return;
+    }
+    
+    console.log(`🔧 Executing migration: ${migrationName}`);
+    
+    const connection = await getConnection();
+    
+    try {
+        // Check if agent_version column exists
+        const [agentVersionCheck] = await connection.execute(
+            `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+             WHERE TABLE_SCHEMA = DATABASE() 
+             AND TABLE_NAME = 'devices' 
+             AND COLUMN_NAME = 'agent_version'`
+        );
+        
+        // Check if scanx_version column already exists
+        const [scanxVersionCheck] = await connection.execute(
+            `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+             WHERE TABLE_SCHEMA = DATABASE() 
+             AND TABLE_NAME = 'devices' 
+             AND COLUMN_NAME = 'scanx_version'`
+        );
+        
+        if ((agentVersionCheck as any[]).length > 0 && (scanxVersionCheck as any[]).length === 0) {
+            // Rename agent_version to scanx_version (preserves data)
+            await connection.execute(`
+                ALTER TABLE devices 
+                CHANGE COLUMN agent_version scanx_version VARCHAR(50)
+            `);
+            
+            console.log('✅ Renamed agent_version to scanx_version (data preserved)');
+        } else if ((scanxVersionCheck as any[]).length > 0) {
+            console.log('ℹ️  scanx_version column already exists');
+        } else {
+            console.log('ℹ️  agent_version column does not exist, nothing to rename');
+        }
+        
+        // Check if osqueryi_version column exists
+        const [osqueryiVersionCheck] = await connection.execute(
+            `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+             WHERE TABLE_SCHEMA = DATABASE() 
+             AND TABLE_NAME = 'devices' 
+             AND COLUMN_NAME = 'osqueryi_version'`
+        );
+        
+        if ((osqueryiVersionCheck as any[]).length === 0) {
+            // Add osqueryi_version column after scanx_version
+            await connection.execute(`
+                ALTER TABLE devices 
+                ADD COLUMN osqueryi_version VARCHAR(50) 
+                AFTER scanx_version
+            `);
+            
+            console.log('✅ Added osqueryi_version column');
+        } else {
+            console.log('ℹ️  osqueryi_version column already exists');
+        }
+        
+    } catch (err: any) {
+        console.error(`❌ Error splitting agent versions: ${err.message}`);
+        throw err;
+    }
+    
+    await markMigrationExecuted(migrationName);
+};
+
+// Migration: Add password_manager_names to password_manager_info table
+export const migration_005_add_password_manager_names = async () => {
+    const migrationName = '005_add_password_manager_names';
+    
+    if (await isMigrationExecuted(migrationName)) {
+        console.log(`⏭️  Migration '${migrationName}' already executed`);
+        return;
+    }
+    
+    console.log(`🔧 Executing migration: ${migrationName}`);
+    
+    const connection = await getConnection();
+    
+    try {
+        // The password_manager_info table stores data in a JSON column
+        // We need to check if the JSON structure needs updating
+        // Since data is stored as JSON, we just need to ensure the column exists
+        // The JSON data structure will be handled by the application code
+        
+        console.log('✅ Password manager names will be stored in the JSON data column');
+        console.log('ℹ️  No schema changes needed - data structure handled by application');
+        
+    } catch (err: any) {
+        console.error(`❌ Error in password_manager_names migration: ${err.message}`);
+        throw err;
+    }
+    
+    await markMigrationExecuted(migrationName);
+};
+
 // Run all migrations
 export const runMigrations = async () => {
     try {
@@ -148,6 +251,9 @@ export const runMigrations = async () => {
         await migration_001_add_backend_config();
         await migration_002_add_users_table();
         await migration_003_add_devices_field();
+        await migration_004_split_agent_versions();
+        await migration_005_add_password_manager_names();
+        
         console.log("🎯 All migrations completed successfully!");
         
     } catch (err: any) {

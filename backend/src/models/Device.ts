@@ -11,7 +11,8 @@ export interface Device {
     os_version?: string;
     last_seen?: Date;
     status?: 'online' | 'offline' | 'unknown';
-    agent_version?: string;
+    scanx_version?: string;
+    osqueryi_version?: string;
     created_at?: Date;
     updated_at?: Date;
 }
@@ -31,7 +32,8 @@ export interface DeviceSummary {
 
 export interface AgentPayload {
     user: string;
-    version: string;
+    scanx_version: string;
+    osqueryi_version: string;
     os_type: string;
     os_version: string;
     serial_no: string;
@@ -59,7 +61,7 @@ export class DeviceModel {
             await connection.execute<ResultSetHeader>(
                 `UPDATE devices SET 
                  user_email = ?, computer_name = ?, os_type = ?, os_version = ?, last_seen = ?, 
-                 status = ?, agent_version = ?, updated_at = CURRENT_TIMESTAMP 
+                 status = ?, scanx_version = ?, osqueryi_version = ?, updated_at = CURRENT_TIMESTAMP 
                  WHERE id = ?`,
                 [
                     deviceData.user_email,
@@ -68,7 +70,8 @@ export class DeviceModel {
                     deviceData.os_version,
                     deviceData.last_seen,
                     getDeviceStatus(deviceData.last_seen || null),
-                    deviceData.agent_version,
+                    deviceData.scanx_version,
+                    deviceData.osqueryi_version,
                     deviceId
                 ]
             );
@@ -76,8 +79,8 @@ export class DeviceModel {
         } else {
             // Create new device
             const [result] = await connection.execute<ResultSetHeader>(
-                `INSERT INTO devices (user_email, serial_no, computer_name, os_type, os_version, last_seen, status, agent_version) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                `INSERT INTO devices (user_email, serial_no, computer_name, os_type, os_version, last_seen, status, scanx_version, osqueryi_version) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                 [
                     deviceData.user_email,
                     deviceData.serial_no,
@@ -86,7 +89,8 @@ export class DeviceModel {
                     deviceData.os_version,
                     deviceData.last_seen,
                     getDeviceStatus(deviceData.last_seen || null),
-                    deviceData.agent_version
+                    deviceData.scanx_version,
+                    deviceData.osqueryi_version
                 ]
             );
             return result.insertId;
