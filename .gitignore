@@ -57,13 +57,21 @@ agent/dist/packages/
 agent/dist/linux-packages/
 agent/dist/macos-build-amd64/
 agent/dist/macos-build-arm64/
-agent/dist/msi-build/*/*.msi
-agent/dist/msi-build/*/*.wixobj
-agent/dist/msi-build/*/*.wixpdb
-agent/dist/msi-build/*/*.wixlib
-agent/dist/msi-build/*/*.wixlib
+agent/windows-build-script/*/*.msi
+agent/windows-build-script/*/*.wixobj
+agent/windows-build-script/*/*.wixpdb
+agent/windows-build-script/*/*.wixlib
+agent/windows-build-script/*/*.wixlib
 agent/dist/windows-build/*
-
+agent/dist/*/builds/
+agent/dist/*/builds/*.json
+agent/dist/*/builds-osqueryi/osqueryi*
+agent/dist/*/builds-osqueryi/*.json
+agent/dist/*/packages/
+agent/dist/*/linux-packages/
+agent/dist/*/macos-build-amd64/
+agent/dist/*/macos-build-arm64/
+agent/dist/*/windows-build/*
 
 # React/Vite specific
 # Vite

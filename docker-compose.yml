@@ -29,6 +29,25 @@ services:
       timeout: 10s
       retries: 10
 
+  # Conditional postfix service (only if host postfix not available)
+  postfix:
+    image: boky/postfix:latest
+    container_name: postfix-scanx-1
+    environment:
+      - ALLOWED_SENDER_DOMAINS=${POSTFIX_ALLOWED_DOMAINS:-octro.com octrotalk.com localhost}
+    networks:
+      - scanx-network
+    profiles:
+      - postfix-container  # Only start if explicitly enabled
+    depends_on:
+       redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "25"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
   backend:
     build:
       context: ./backend
@@ -43,7 +62,31 @@ services:
       - scanx-network
     env_file:
       - ./backend/.env.docker
+    environment:
+      # Pass OSQUERY_BINARY_REQUIRED to backend so it knows if osqueryi updates are mandatory
+      - OSQUERY_BINARY_REQUIRED=${OSQUERY_BINARY_REQUIRED}
+      # Pass versions from agent.conf (read by docker-compose-helper.sh)
+      - SCANX_VERSION=${SCANX_VERSION}
+      - OSQUERYI_VERSION=${OSQUERYI_VERSION}
+      # SMTP configuration
+      - HOST_POSTFIX_AVAILABLE=${HOST_POSTFIX_AVAILABLE}
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-}
+      - SMTP_SECURE=${SMTP_SECURE:-}
     command: ["/bin/sh", "/app/entrypoint.sh"]
+
+  agent:
+    build:
+      context: ./agent
+      dockerfile: Dockerfile
+      args:
+        - VERSION=${SCANX_VERSION}
+        - OSQUERY_BINARY_REQUIRED=${OSQUERY_BINARY_REQUIRED}
+    container_name: agent-scanx-1
+    depends_on:
+      - backend
+    networks:
+      - scanx-network
 
   frontend:
     build:
@@ -51,7 +94,7 @@ services:
       dockerfile: Dockerfile
       args:
         - VITE_API_URL=/api
-        - VITE_ENABLE_REGISTER_ENDPOINT=false
+        - VITE_ENABLE_REGISTER_ENDPOINT=true
     container_name: frontend-scanx-1
     ports:
       - "5173:80"
