@@ -118,9 +118,23 @@ func (u *Updater) downloadFile(url string, destPath string) error {
 	var cmd *exec.Cmd
 
 	if runtime.GOOS == "windows" {
-		// Use PowerShell Invoke-WebRequest on Windows
-		psScript := fmt.Sprintf("Invoke-WebRequest -Uri '%s' -OutFile '%s' -UseBasicParsing", url, destPath)
-		cmd = exec.Command("powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", psScript)
+		// Try multiple methods for Windows compatibility
+		// Method 1: Try PowerShell (Windows 7+)
+		if _, err := exec.LookPath("powershell.exe"); err == nil {
+			// Escape the path properly for PowerShell
+			escapedPath := strings.ReplaceAll(destPath, "'", "''")
+			escapedURL := strings.ReplaceAll(url, "'", "''")
+			psScript := fmt.Sprintf("try { Invoke-WebRequest -Uri '%s' -OutFile '%s' -UseBasicParsing -ErrorAction Stop } catch { exit 1 }", escapedURL, escapedPath)
+			cmd = exec.Command("powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", psScript)
+		} else {
+			// Method 2: Try curl (Windows 10 1803+ or if installed)
+			if curlPath, err := exec.LookPath("curl.exe"); err == nil {
+				cmd = exec.Command(curlPath, "-L", "-o", destPath, url)
+			} else {
+				// Method 3: Fallback to Go's HTTP client
+				return u.downloadFileWithGoHTTPClient(url, destPath)
+			}
+		}
 	} else {
 		// Try curl first, then wget
 		if _, err := exec.LookPath("curl"); err == nil {
@@ -134,6 +148,11 @@ func (u *Updater) downloadFile(url string, destPath string) error {
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
+		// If PowerShell/curl fails on Windows, try HTTP fallback
+		if runtime.GOOS == "windows" {
+			utils.Warning("Download tool failed, trying HTTP fallback: %v", err)
+			return u.downloadFileWithGoHTTPClient(url, destPath)
+		}
 		return fmt.Errorf("download failed: %w\nOutput: %s", err, string(output))
 	}
 
@@ -145,6 +164,45 @@ func (u *Updater) downloadFile(url string, destPath string) error {
 	fileInfo, _ := os.Stat(destPath)
 	utils.Info("Downloaded: %d bytes", fileInfo.Size())
 
+	return nil
+}
+
+// downloadFileHTTP downloads a file using Go's HTTP client (fallback method)
+func (u *Updater) downloadFileWithGoHTTPClient(url string, destPath string) error {
+	utils.Info("Downloading via HTTP client: %s", url)
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("User-Agent", "scanx/"+u.currentScanxVersion)
+
+	resp, err := u.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to download: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("download failed with status: %d", resp.StatusCode)
+	}
+
+	// Create destination file
+	destFile, err := os.Create(destPath)
+	if err != nil {
+		return fmt.Errorf("failed to create destination file: %w", err)
+	}
+	defer destFile.Close()
+
+	// Copy with progress tracking
+	written, err := io.Copy(destFile, resp.Body)
+	if err != nil {
+		os.Remove(destPath) // Clean up on failure
+		return fmt.Errorf("failed to write file: %w", err)
+	}
+
+	utils.Info("Downloaded: %d bytes", written)
 	return nil
 }
 
@@ -175,6 +233,8 @@ func (u *Updater) downloadChecksumFile(checksumURL string) (*ChecksumFile, error
 
 // verifyChecksum calculates and verifies the SHA256 checksum of a file
 func (u *Updater) verifyChecksum(filePath string, expectedChecksum string) error {
+	utils.Info("Calculating SHA256 checksum of downloaded file...")
+
 	file, err := os.Open(filePath)
 	if err != nil {
 		return fmt.Errorf("failed to open file for checksum: %w", err)
@@ -187,12 +247,17 @@ func (u *Updater) verifyChecksum(filePath string, expectedChecksum string) error
 	}
 
 	actualChecksum := hex.EncodeToString(hash.Sum(nil))
+	utils.Info("Calculated checksum: %s", actualChecksum)
+	utils.Info("Expected checksum:  %s", expectedChecksum)
 
 	if actualChecksum != expectedChecksum {
+		utils.Error("❌ Checksum mismatch detected!")
+		utils.Error("   Expected checksum: %s", expectedChecksum)
+		utils.Error("   Calculated checksum: %s", actualChecksum)
 		return fmt.Errorf("checksum mismatch: expected %s, got %s", expectedChecksum, actualChecksum)
 	}
 
-	utils.Info("✅ Checksum verified: %s", actualChecksum)
+	utils.Info("✅ Checksum verified successfully: %s", actualChecksum)
 	return nil
 }
 
@@ -209,20 +274,57 @@ func (u *Updater) getBinaryName(binaryType string) string {
 	return fmt.Sprintf("%s-%s-%s%s", binaryType, platform, arch, ext)
 }
 
+// detectInstallDir detects the ScanX installation directory on Windows
+func detectInstallDir() string {
+	// Try to get executable path first (most reliable)
+	exePath, err := os.Executable()
+	if err == nil {
+		exeDir := filepath.Dir(exePath)
+		// Check if this looks like an installation directory
+		if _, err := os.Stat(filepath.Join(exeDir, "installed_user.txt")); err == nil {
+			return exeDir
+		}
+	}
+
+	// Try standard installation paths (handle different Windows versions and architectures)
+	candidateDirs := []string{
+		`C:\Program Files (x86)\scanx`, // 32-bit on 64-bit Windows
+		`C:\Program Files\scanx`,       // 64-bit on 64-bit Windows
+	}
+
+	for _, dir := range candidateDirs {
+		if _, err := os.Stat(filepath.Join(dir, "installed_user.txt")); err == nil {
+			return dir
+		}
+	}
+
+	return ""
+}
+
 // getCurrentBinaryPath returns the full path to the current binary
 func (u *Updater) getCurrentBinaryPath(binaryType string) (string, error) {
 	switch binaryType {
 	case "scanx":
-		// Get scanx binary path
 		if runtime.GOOS == "windows" {
-			return "C:\\Program Files (x86)\\scanx\\scanx.exe", nil
+			// Dynamically detect installation directory
+			installDir := detectInstallDir()
+			if installDir == "" {
+				// Fallback to default if detection fails
+				installDir = `C:\Program Files (x86)\scanx`
+			}
+			return filepath.Join(installDir, "scanx.exe"), nil
 		} else {
 			return "/usr/local/bin/scanx", nil
 		}
 	case "osqueryi":
-		// Get osqueryi binary path
 		if runtime.GOOS == "windows" {
-			return "C:\\Program Files (x86)\\scanx\\osqueryi.exe", nil
+			// Dynamically detect installation directory
+			installDir := detectInstallDir()
+			if installDir == "" {
+				// Fallback to default if detection fails
+				installDir = `C:\Program Files (x86)\scanx`
+			}
+			return filepath.Join(installDir, "osqueryi.exe"), nil
 		} else {
 			return "/usr/local/lib/scanx/osqueryi", nil
 		}
@@ -412,7 +514,13 @@ func copyFile(src string, dst string) error {
 func (u *Updater) updateConfigVersion(newScanxVersion, newOsqueryiVersion string) error {
 	configPath := ""
 	if runtime.GOOS == "windows" {
-		configPath = "C:\\Program Files (x86)\\scanx\\config\\agent.conf"
+		// Dynamically detect installation directory
+		installDir := detectInstallDir()
+		if installDir == "" {
+			// Fallback to default if detection fails
+			installDir = `C:\Program Files (x86)\scanx`
+		}
+		configPath = filepath.Join(installDir, "config", "agent.conf")
 	} else {
 		configPath = "/etc/scanx/config/agent.conf"
 	}
@@ -536,11 +644,11 @@ func (u *Updater) PerformUpdate() error {
 		// If scanx was updated, restart is required
 		if scanxUpdated {
 			utils.Info("🔄 Restarting agent for scanx changes to take effect...")
-		if err := u.restartService(); err != nil {
-			utils.Error("Failed to restart service: %v", err)
-			utils.Info("Attempting graceful exit for service manager restart...")
-			time.Sleep(2 * time.Second)
-			os.Exit(3) // Exit with non-zero code to trigger KeepAlive restart
+			if err := u.restartService(); err != nil {
+				utils.Error("Failed to restart service: %v", err)
+				utils.Info("Attempting graceful exit for service manager restart...")
+				time.Sleep(2 * time.Second)
+				os.Exit(3) // Exit with non-zero code to trigger KeepAlive restart
 			}
 		} else if osqueryiUpdated {
 			utils.Info("✅ Osqueryi updated - no restart required, changes will take effect on next scan")
@@ -633,29 +741,123 @@ func (u *Updater) restartServiceLinux() error {
 
 // restartServiceWindows restarts the Windows scheduled task
 func (u *Updater) restartServiceWindows() error {
-	taskName := "ScanX Agent"
+	taskName := "ScanX Background Service"
 
 	utils.Info("Restarting Windows scheduled task: %s", taskName)
 
-	// Stop the task
-	stopCmd := exec.Command("schtasks", "/End", "/TN", taskName)
-	if output, err := stopCmd.CombinedOutput(); err != nil {
-		utils.Error("Failed to stop task: %v, output: %s", err, string(output))
-		// Continue anyway
+	// Verify schtasks command is available (should be on all Windows versions)
+	if _, err := exec.LookPath("schtasks.exe"); err != nil {
+		utils.Error("schtasks.exe not found, cannot restart task")
+		utils.Info("Attempting graceful exit for service manager restart...")
+		time.Sleep(2 * time.Second)
+		os.Exit(3) // Exit with non-zero code to trigger KeepAlive restart
+		return fmt.Errorf("schtasks.exe not available")
 	}
 
-	time.Sleep(2 * time.Second)
-
-	// Start the task
-	startCmd := exec.Command("schtasks", "/Run", "/TN", taskName)
-	if output, err := startCmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("failed to start task: %v, output: %s", err, string(output))
+	// Get temp directory with fallback
+	tempDir := os.TempDir()
+	if tempDir == "" {
+		// Fallback to Windows temp if os.TempDir() fails
+		tempDir = `C:\Windows\Temp`
 	}
 
-	utils.Info("✅ Windows scheduled task restarted successfully")
+	// Ensure temp directory exists and is writable
+	if err := os.MkdirAll(tempDir, 0755); err != nil {
+		utils.Warning("Failed to create temp directory: %v, using fallback", err)
+		tempDir = `C:\Windows\Temp`
+	}
 
-	// Exit this process after successful restart
-	time.Sleep(2 * time.Second)
+	// Create batch file with unique name to avoid conflicts
+	restartScript := filepath.Join(tempDir, fmt.Sprintf("scanx-restart-%d.bat", time.Now().Unix()))
+
+	// Escape task name properly for batch file (handle quotes and special chars)
+	escapedTaskName := strings.ReplaceAll(taskName, `"`, `""`)
+
+	// Create batch file content with proper escaping and error handling
+	batchContent := fmt.Sprintf(
+		"@echo off\n"+
+			"setlocal\n"+
+			"set TASK_NAME=%s\n"+
+			"timeout /t 3 /nobreak >nul 2>&1\n"+
+			"schtasks /End /TN \"%%TASK_NAME%%\" >nul 2>&1\n"+
+			"if errorlevel 1 (\n"+
+			"  rem Task might not be running, continue anyway\n"+
+			")\n"+
+			"timeout /t 1 /nobreak >nul 2>&1\n"+
+			"schtasks /Run /TN \"%%TASK_NAME%%\" >nul 2>&1\n"+
+			"if errorlevel 1 (\n"+
+			"  rem Log error but continue\n"+
+			"  echo Failed to start task >nul 2>&1\n"+
+			")\n"+
+			"endlocal\n"+
+			"del \"%%~f0\" >nul 2>&1\n", // Delete this batch file after execution
+		escapedTaskName)
+
+	// Write the batch file with proper permissions
+	if err := os.WriteFile(restartScript, []byte(batchContent), 0644); err != nil {
+		utils.Warning("Failed to create restart script: %v, trying direct method", err)
+		// Fallback: try to start task directly (may not work if process exits)
+		startCmd := exec.Command("schtasks.exe", "/Run", "/TN", taskName)
+		if err := startCmd.Start(); err != nil {
+			utils.Warning("Failed to start task directly: %v", err)
+		}
+		time.Sleep(1 * time.Second)
+		os.Exit(0)
+		return nil
+	}
+
+	// Try PowerShell first (more reliable than batch file)
+	// Use a simple PowerShell one-liner that runs independently
+	psScript := fmt.Sprintf(
+		"Start-Sleep -Seconds 2; "+
+			"$taskName = '%s'; "+
+			"try { "+
+			"  Stop-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue | Out-Null; "+
+			"  Start-Sleep -Seconds 1; "+
+			"  Start-ScheduledTask -TaskName $taskName -ErrorAction Stop | Out-Null; "+
+			"} catch { "+
+			"  schtasks.exe /Run /TN $taskName "+
+			"}",
+		taskName)
+
+	// Try PowerShell first
+	if _, err := exec.LookPath("powershell.exe"); err == nil {
+		// Launch PowerShell in a completely independent process
+		// Using cmd /c start ensures it runs even after this process exits
+		launchCmd := exec.Command("cmd.exe", "/c", "start", "/min", "powershell.exe",
+			"-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-Command", psScript)
+
+		if err := launchCmd.Start(); err == nil {
+			utils.Info("✅ Windows scheduled task restart script launched (PowerShell)")
+			time.Sleep(1 * time.Second)
+			os.Exit(0)
+			return nil
+		}
+		utils.Warning("PowerShell launch failed: %v, trying batch file", err)
+	}
+
+	// Fallback to batch file method
+	quotedScript := fmt.Sprintf(`"%s"`, restartScript)
+	launchCmd := exec.Command("cmd.exe", "/c", "start", "/min", quotedScript)
+
+	if err := launchCmd.Start(); err != nil {
+		utils.Warning("Failed to launch batch file: %v, trying direct restart", err)
+		os.Remove(restartScript) // Clean up on failure
+		// Last resort: try direct restart (may not work if process exits too quickly)
+		startCmd := exec.Command("schtasks.exe", "/Run", "/TN", taskName)
+		if err := startCmd.Start(); err != nil {
+			utils.Warning("Failed to start task directly: %v", err)
+		}
+		time.Sleep(1 * time.Second)
+		os.Exit(0)
+		return nil
+	}
+
+	utils.Info("✅ Windows scheduled task restart script launched (batch file)")
+
+	// Give the script a moment to start, then exit
+	// The PowerShell/batch script will handle the restart independently
+	time.Sleep(1 * time.Second)
 	os.Exit(0)
 
 	return nil

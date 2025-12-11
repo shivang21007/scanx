@@ -1,6 +1,6 @@
 #!/bin/bash
-# Helper script to run docker-compose with versions from agent.conf
-# Usage: ./scripts/docker-compose-helper.sh [docker-compose commands]
+# Helper script to run docker compose with versions from agent.conf
+# Usage: ./scripts/docker-compose-helper.sh [docker compose commands]
 # Example: ./scripts/docker-compose-helper.sh up -d
 
 # Read versions from agent.conf
@@ -43,15 +43,15 @@ else
     export POSTFIX_ALLOWED_DOMAINS
 fi
 
-# Export variables for docker-compose
+# Export variables for docker compose
 export SCANX_VERSION
 export OSQUERYI_VERSION
 export OSQUERY_BINARY_REQUIRED
 
-# Run docker-compose with all arguments
-docker-compose "$@"
+# Run docker compose with all arguments
+docker compose "$@"
 
-# After docker-compose commands, clean up postfix container if using host postfix
+# After docker compose commands, clean up postfix container if using host postfix
 if [ "$HOST_POSTFIX_AVAILABLE" = "true" ] && [[ "$*" =~ (down|stop) ]]; then
     if docker ps -a --format '{{.Names}}' | grep -q "^postfix-scanx-1$"; then
         echo "🛑 Cleaning up postfix container (not needed when using host postfix)..."
