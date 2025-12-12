@@ -1,7 +1,5 @@
 import { getCurrentISTString } from '../utils/timezone';
 import express from 'express';
-import fs from 'fs';
-import path from 'path';
 
 const router: express.Router = express.Router();
 

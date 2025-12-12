@@ -75,7 +75,8 @@ connectRedis().catch(err => {
 app.get(['/', '/api', '/api/health'], (req: express.Request, res: express.Response) => {
   res.status(200).json({ 
     message: 'ScanX Backend API is running 🚀',
-    version: '1.0.0',
+    scanxVersion: process.env.SCANX_VERSION || '1.0.0',
+    osqueryiVersion: process.env.OSQUERYI_VERSION || '5.19.0',
     endpoints: {
       auth: '/api/auth',
       devices: '/api/devices',
