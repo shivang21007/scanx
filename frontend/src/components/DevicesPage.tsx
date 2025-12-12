@@ -36,6 +36,19 @@ export function DevicesPage() {
   // Last Check sort state: 'desc' = latest first (default), 'asc' = oldest first
   const [lastCheckSort, setLastCheckSort] = useState<'asc' | 'desc'>('desc');
 
+  // Latest versions state
+  const [latestVersions, setLatestVersions] = useState<{
+    scanx: string | null;
+    osqueryi: string | null;
+    scanxError: boolean;
+    osqueryiError: boolean;
+  }>({
+    scanx: null,
+    osqueryi: null,
+    scanxError: false,
+    osqueryiError: false,
+  });
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setFilters(prev => ({ ...prev, search: searchInput }));
@@ -56,6 +69,31 @@ export function DevicesPage() {
     // Cleanup interval on unmount or filter change
     return () => clearInterval(refreshInterval);
   }, [filters, osVersionSort, passwordManagerFilter, diskEncryptionFilter, antivirusFilter, screenLockFilter, lastCheckSort]);
+
+  // Fetch latest versions on mount
+  useEffect(() => {
+    const fetchVersions = async () => {
+      try {
+        const versions = await apiService.getLatestVersions();
+        setLatestVersions({
+          scanx: versions.scanx,
+          osqueryi: versions.osqueryi,
+          scanxError: false,
+          osqueryiError: false,
+        });
+      } catch (error) {
+        // Handle errors gracefully - set error flags but don't crash
+        console.warn('Failed to fetch latest versions:', error);
+        setLatestVersions(prev => ({
+          ...prev,
+          scanxError: true,
+          osqueryiError: true,
+        }));
+      }
+    };
+
+    fetchVersions();
+  }, []);
 
   const fetchDevicesData = async () => {
     try {
@@ -169,9 +207,10 @@ export function DevicesPage() {
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+          {/* Desktop Layout */}
+          <div className="hidden sm:flex items-center h-16">
             {/* Left side - Navigation */}
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-4 flex-shrink-0">
               <Link 
                 to="/dashboard"
                 className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
@@ -186,8 +225,35 @@ export function DevicesPage() {
               </div>
             </div>
 
+            {/* Center - Latest Versions */}
+            <div className="flex-1 flex justify-center items-center">
+              <div className="flex items-center space-x-3 text-sm">
+                <div className="flex items-center space-x-1">
+                  <span className="text-gray-500">ScanX:</span>
+                  {latestVersions.scanxError ? (
+                    <span className="text-red-500 text-xs">Error</span>
+                  ) : latestVersions.scanx ? (
+                    <span className="text-gray-900 font-medium">{latestVersions.scanx}</span>
+                  ) : (
+                    <span className="text-gray-400">Loading...</span>
+                  )}
+                </div>
+                <div className="h-4 w-px bg-gray-300"></div>
+                <div className="flex items-center space-x-1">
+                  <span className="text-gray-500">Osqueryi:</span>
+                  {latestVersions.osqueryiError ? (
+                    <span className="text-red-500 text-xs">Error</span>
+                  ) : latestVersions.osqueryi ? (
+                    <span className="text-gray-900 font-medium">{latestVersions.osqueryi}</span>
+                  ) : (
+                    <span className="text-gray-400">Loading...</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
             {/* Right side - User menu */}
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-4 flex-shrink-0">
               <span className="text-sm text-gray-600">
                 Welcome, {admin?.name || admin?.email}
               </span>
@@ -198,6 +264,64 @@ export function DevicesPage() {
                 <LogOut className="h-4 w-4 mr-1" />
                 Logout
               </button>
+            </div>
+          </div>
+
+          {/* Mobile Layout */}
+          <div className="sm:hidden py-3 space-y-2">
+            {/* Row 1: Navigation + Sign out icon */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm">
+                <Link 
+                  to="/dashboard"
+                  className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  <span>Dashboard</span>
+                </Link>
+                <div className="h-4 w-px bg-gray-300"></div>
+                <div className="flex items-center">
+                  <Monitor className="h-4 w-4 text-blue-600 mr-1" />
+                  <h1 className="text-base font-semibold text-gray-900">Devices</h1>
+                </div>
+              </div>
+              <button
+                onClick={logout}
+                className="p-2 text-gray-600 hover:text-gray-900 transition-colors"
+                title="Logout"
+              >
+                <LogOut className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Row 2: Versions (left) + Username (right) */}
+            <div className="flex items-center justify-between text-xs">
+              <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-1">
+                  <span className="text-gray-500">ScanX:</span>
+                  {latestVersions.scanxError ? (
+                    <span className="text-red-500">Error</span>
+                  ) : latestVersions.scanx ? (
+                    <span className="text-gray-900 font-medium">{latestVersions.scanx}</span>
+                  ) : (
+                    <span className="text-gray-400">Loading...</span>
+                  )}
+                </div>
+                <div className="h-3 w-px bg-gray-300"></div>
+                <div className="flex items-center space-x-1">
+                  <span className="text-gray-500">Osqueryi:</span>
+                  {latestVersions.osqueryiError ? (
+                    <span className="text-red-500">Error</span>
+                  ) : latestVersions.osqueryi ? (
+                    <span className="text-gray-900 font-medium">{latestVersions.osqueryi}</span>
+                  ) : (
+                    <span className="text-gray-400">Loading...</span>
+                  )}
+                </div>
+              </div>
+              <span className="text-gray-900 font-medium truncate ml-2">
+                {admin?.name || admin?.email}
+              </span>
             </div>
           </div>
         </div>

@@ -65,16 +65,17 @@ export function DashboardPage() {
       {/* Header */}
       <header className="bg-white shadow-lg border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+          {/* Desktop Layout */}
+          <div className="hidden sm:flex justify-between items-center h-16">
             {/* Logo */}
             <div className="flex items-center gap-2">
-            <div className="flex items-center justify-center mr-0.5">
-              <img 
-                src="/favicon.ico" 
-                alt="ScanX Logo" 
-                className="w-8 h-8"
-              />
-            </div>
+              <div className="flex items-center justify-center mr-0.5">
+                <img 
+                  src="/favicon.ico" 
+                  alt="ScanX Logo" 
+                  className="w-8 h-8"
+                />
+              </div>
               <span className="text-xl font-semibold text-gray-900">ScanX</span>
             </div>
 
@@ -94,6 +95,23 @@ export function DashboardPage() {
                 Sign out
               </button>
             </div>
+          </div>
+
+          {/* Mobile Layout */}
+          <div className="sm:hidden flex justify-between items-center h-14">
+            <div className="text-sm">
+              <span className="text-gray-600">Welcome back, </span>
+              <span className="font-medium text-gray-900">
+                {admin?.name || admin?.email || 'Admin'}
+              </span>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="p-2 text-gray-600 hover:text-gray-900 transition-colors"
+              title="Sign out"
+            >
+              <LogOut className="h-5 w-5" />
+            </button>
           </div>
         </div>
       </header>

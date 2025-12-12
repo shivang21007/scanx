@@ -329,7 +329,8 @@ export function DeviceDetailPage() {
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center">
+          {/* Desktop Layout */}
+          <div className="hidden sm:flex justify-between items-center">
             {/* Breadcrumb and Title */}
             <div className="flex items-center space-x-2">
               <Link to="/dashboard" className="text-gray-600 hover:text-gray-900 transition-colors">
@@ -365,6 +366,43 @@ export function DeviceDetailPage() {
               </button>
             </div>
           </div>
+
+          {/* Mobile Layout */}
+          <div className="sm:hidden space-y-2">
+            {/* Row 1: Navigation + Sign out icon */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1 text-sm overflow-x-auto">
+                <Link to="/dashboard" className="text-gray-600 hover:text-gray-900 transition-colors whitespace-nowrap">
+                  Dashboard
+                </Link>
+                <div className="h-4 w-px bg-gray-300"></div>
+                <Link to="/devices" className="text-gray-600 hover:text-gray-900 transition-colors whitespace-nowrap">
+                  Devices
+                </Link>
+                <div className="h-4 w-px bg-gray-300"></div>
+                <div className="flex items-center min-w-0">
+                  <Monitor className="h-4 w-4 text-blue-600 mr-1 flex-shrink-0" />
+                  <h1 className="text-sm font-semibold text-gray-900 truncate">
+                    {deviceInfo.device.computer_name || 'Unknown Device'}
+                  </h1>
+                </div>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="p-2 text-gray-600 hover:text-gray-900 transition-colors flex-shrink-0"
+                title="Sign out"
+              >
+                <LogOut className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Row 2: Username only */}
+            <div className="text-xs">
+              <span className="text-gray-900 font-medium">
+                {admin?.name || admin?.email || 'Admin'}
+              </span>
+            </div>
+          </div>
         </div>
       </header>
 
@@ -372,14 +410,15 @@ export function DeviceDetailPage() {
       <main className="px-4 sm:px-6 lg:px-12 xl:px-16 py-8">
         {/* Device Overview Card */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-medium text-gray-900">Device Overview</h2>
+          <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-base sm:text-lg font-medium text-gray-900 truncate">Device Overview</h2>
               {getStatusBadge(getDeviceStatus(deviceInfo.device.last_seen || null))}
             </div>
           </div>
-          <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="p-4 sm:p-6">
+            <div className="overflow-x-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 min-w-[600px] md:min-w-0">
               <div>
                 <h3 className="text-sm font-medium text-gray-500">Device Name</h3>
                 <p className="mt-1 text-sm text-gray-900">{deviceInfo.device.computer_name || 'Unknown'}</p>
@@ -410,26 +449,27 @@ export function DeviceDetailPage() {
                   {deviceInfo.device.last_seen ? formatRelative(deviceInfo.device.last_seen.toString()) : 'Never'}
                 </p>
               </div>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Tabs */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8 px-6">
+          <div className="border-b border-gray-200 overflow-x-auto">
+            <nav className="-mb-px flex space-x-4 sm:space-x-8 px-4 sm:px-6 min-w-max">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 return (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center py-4 px-1 border-b-2 font-medium text-sm ${activeTab === tab.id
+                    className={`flex items-center py-4 px-1 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${activeTab === tab.id
                         ? 'border-blue-500 text-blue-600'
                         : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 cursor-pointer'
                       }`}
                   >
-                    <Icon className="h-4 w-4 mr-2" />
+                    <Icon className="h-4 w-4 mr-1 sm:mr-2" />
                     {tab.label}
                   </button>
                 );
@@ -438,10 +478,11 @@ export function DeviceDetailPage() {
           </div>
 
           {/* Tab Content */}
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             {activeTab === 'overview' ? (
               <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="overflow-x-auto">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 min-w-[600px] md:min-w-0">
                   <div className="bg-gray-50 rounded-lg p-4">
                     <button 
                       onClick={() => setActiveTab('system_info')} 
@@ -538,6 +579,7 @@ export function DeviceDetailPage() {
                       </div>
                     </button>
                   </div>
+                </div>
                 </div>
                 
                 {/* Error Summary */}

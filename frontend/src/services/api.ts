@@ -290,6 +290,24 @@ class ApiService {
     }
   }
 
+  // Updates endpoints
+  async getLatestVersions(): Promise<{ scanx: string; osqueryi: string }> {
+    try {
+      const response: AxiosResponse<{
+        details: {
+          scanx: { version: string };
+          osqueryi: { version: string };
+        };
+      }> = await this.api.get('/updates/update-check');
+      return {
+        scanx: response.data.details.scanx.version,
+        osqueryi: response.data.details.osqueryi.version,
+      };
+    } catch (error: any) {
+      throw this.handleError(error);
+    }
+  }
+
 }
 
 export const apiService = new ApiService();
