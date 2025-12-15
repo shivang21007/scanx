@@ -356,7 +356,8 @@ create_checksum_json(){
         checksum_cmd="sha256sum"
     else
         echo "❌ No SHA256 checksum tool found (shasum or sha256sum required)"
-        return 1
+        echo "Proceeding without checksum generation"
+        return 0
     fi
     
     # Start building JSON
