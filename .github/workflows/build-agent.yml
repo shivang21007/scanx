@@ -8,6 +8,8 @@ on:
 jobs:
   build-agent-binaries:
     runs-on: ubuntu-latest
+    env:
+      OSQUERYI_CACHE_VERSION: 5.19.0
     steps:
       - uses: actions/checkout@v2
 
@@ -30,7 +32,15 @@ jobs:
         run: |
           pip3 install gdown
 
+      - name: Cache Osqueryi Binaries
+        id: cache-osqueryi
+        uses: actions/cache@v4
+        with:
+          path: agent/dist/builds-osqueryi
+          key: osqueryi-${{ env.OSQUERYI_CACHE_VERSION }}
+
       - name: Download Osqueryi Binaries
+        if: steps.cache-osqueryi.outputs.cache-hit != 'true'
         run: |
           gdown --folder https://drive.google.com/drive/folders/1QcmbmLGlLxuWz-_fIqkBNyV2NKmH3G1R -O agent/dist/builds-osqueryi
 
