@@ -11,12 +11,12 @@ import (
 
 // AgentConfig represents the agent configuration from agent.conf
 type AgentConfig struct {
-	UserEmail  string `json:"user_email"`
+	UserEmail       string `json:"user_email"`
 	ScanxVersion    string `json:"scanx_version"`
 	OsqueryiVersion string `json:"osqueryi_version"`
-	Interval   string `json:"interval"`
-	LogLevel   string `json:"log_level"`
-	BackendURL string `json:"backend_url"`
+	Interval        string `json:"interval"`
+	LogLevel        string `json:"log_level"`
+	BackendURL      string `json:"backend_url"`
 }
 
 // QueryConfig represents a single query configuration
@@ -44,10 +44,10 @@ func LoadConfig() (*Config, error) {
 	// Try a series of candidate config directories so the binary works without -config
 	// this is a fallback for the case where the binary is not run with -config
 	candidateDirs := []string{
-		"config",                                   // running from source tree / unpacked package
-		"/etc/scanx/config",                        // standardized Unix install path
-		"C:\\Program Files (x86)\\scanx\\config",   // Windows 32-bit install path (MSI default)
-		"C:\\Program Files\\scanx\\config",         // Windows 64-bit install path
+		"config",                                 // running from source tree / unpacked package
+		"/etc/scanx/config",                      // standardized Unix install path
+		"C:\\Program Files (x86)\\scanx\\config", // Windows 32-bit install path (MSI default)
+		"C:\\Program Files\\scanx\\config",       // Windows 64-bit install path
 	}
 
 	var lastErr error

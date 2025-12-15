@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"scanx/internal/collector"
 	"scanx/internal/config"
@@ -17,6 +18,10 @@ import (
 
 // Version is set at build time via ldflags
 var Version = "dev"
+
+// STARTUP_DELAY defines how long to wait after system boot before first data collection
+// This ensures all system services are fully initialized before collecting data
+const STARTUP_DELAY = 3 * time.Minute
 
 func main() {
 	// Parse command line flags
@@ -135,7 +140,7 @@ func main() {
 
 // runDaemon runs the agent in daemon mode with periodic data collection
 func runDaemon(cfg *config.Config, collector *collector.Collector) {
-	// Create scheduler with configured interval
+	// Create scheduler with configured interval and startup delay
 	interval := cfg.GetInterval()
 	sch := scheduler.NewScheduler(cfg, collector, interval)
 
@@ -143,8 +148,8 @@ func runDaemon(cfg *config.Config, collector *collector.Collector) {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
-	// Start scheduler in goroutine
-	go sch.Start()
+	// Start scheduler in goroutine with startup delay
+	go sch.StartWithDelay(STARTUP_DELAY)
 
 	utils.Info("Agent running in daemon mode with %v interval", interval)
 	utils.Info("Press Ctrl+C to stop...")

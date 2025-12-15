@@ -48,9 +48,34 @@ func NewScheduler(cfg *config.Config, collectorInstance *collector.Collector, in
 	}
 }
 
-// Start begins periodic data collection and transmission
+// Start begins periodic data collection and transmission (immediately, no startup delay)
 func (s *Scheduler) Start() {
+	s.start(0)
+}
+
+// StartWithDelay begins periodic data collection and transmission after a startup delay
+func (s *Scheduler) StartWithDelay(startupDelay time.Duration) {
+	s.start(startupDelay)
+}
+
+// start is the internal implementation that supports both immediate and delayed starts
+func (s *Scheduler) start(startupDelay time.Duration) {
 	utils.Info("Starting data collection scheduler with %v interval", s.interval)
+
+	// Apply startup delay if specified (only for daemon mode on system boot)
+	if startupDelay > 0 {
+		utils.Info("⏰ System startup detected - waiting %v before first data collection", startupDelay)
+		utils.Info("   This ensures all system services are fully initialized")
+
+		// Wait for startup delay with cancellation support
+		select {
+		case <-time.After(startupDelay):
+			utils.Info("✅ Startup delay completed - proceeding with data collection")
+		case <-s.ctx.Done():
+			utils.Info("Scheduler stopped during startup delay")
+			return
+		}
+	}
 
 	// Test backend connection first
 	if err := s.sender.TestConnection(); err != nil {
@@ -58,10 +83,10 @@ func (s *Scheduler) Start() {
 		utils.Warning("Will continue and retry with each data collection...")
 	}
 
-	// Run initial collection immediately
+	// Run initial collection after startup delay
 	s.runCollection()
 
-	// Start periodic timer
+	// Start periodic timer for subsequent collections
 	ticker := time.NewTicker(s.interval)
 	defer ticker.Stop()
 
