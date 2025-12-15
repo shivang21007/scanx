@@ -55,7 +55,6 @@ fi
 mkdir -p "$BUILD_DIR"
 mkdir -p "$PACKAGES_DIR"
 mkdir -p "$DIST_DIR/linux-packages"
-mkdir -p "$DIST_DIR/msi-build"
 
 echo "🚀 Building scanx v$VERSION for multiple platforms..."
 
@@ -91,41 +90,6 @@ build_platform "windows" "arm64" ".exe"
 # Linux
 build_platform "linux" "amd64" ""
 build_platform "linux" "arm64" ""
-
-# macOS Code Signing Integration
-sign_macos_binaries() {
-    local darwin_amd64="$BUILD_DIR/${BINARY_NAME}-darwin-amd64"
-    local darwin_arm64="$BUILD_DIR/${BINARY_NAME}-darwin-arm64"
-    
-    if [[ -f "$darwin_amd64" ]] || [[ -f "$darwin_arm64" ]]; then
-        echo ""
-        echo "🍎 macOS Gatekeeper Protection"
-        echo "============================="
-        echo "macOS binaries need signing to avoid 'killed' errors."
-        echo ""
-        
-        if [[ "$AUTO_YES" == true ]]; then
-            echo "🔐 Auto-signing enabled (--yes flag)"
-            echo "🔐 Using macos-sign.sh for signing..."
-            ./scripts/macos-sign.sh --yes
-            echo "✅ macOS binaries signed successfully!"
-        else
-            read -p "🔐 Sign macOS binaries? [y/N]: " -n 1 -r
-            echo
-            
-            if [[ $REPLY =~ ^[Yy]$ ]]; then
-                echo "🔐 Using macos-sign.sh for signing..."
-                ./scripts/macos-sign.sh --yes
-                echo "✅ macOS binaries signed successfully!"
-            else
-                echo "⚠️  Skipping signing - binaries may be blocked by Gatekeeper"
-            fi
-        fi
-    fi
-}
-
-# Sign macOS binaries
-sign_macos_binaries
 
 echo ""
 echo "📋 Build Summary:"
