@@ -62,10 +62,10 @@ func (s *Scheduler) StartWithDelay(startupDelay time.Duration) {
 func (s *Scheduler) start(startupDelay time.Duration) {
 	utils.Info("Starting data collection scheduler with %v interval", s.interval)
 
-	// Apply startup delay if specified (only for daemon mode on system boot)
+	// Apply startup delay if specified (only when system recently booted)
 	if startupDelay > 0 {
-		utils.Info("⏰ System startup detected - waiting %v before first data collection", startupDelay)
-		utils.Info("   This ensures all system services are fully initialized")
+		utils.Info("⏰ Applying startup delay: waiting %v before first data collection", startupDelay)
+		utils.Info("   This allows system services to fully initialize after boot")
 
 		// Wait for startup delay with cancellation support
 		select {

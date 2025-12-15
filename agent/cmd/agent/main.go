@@ -21,7 +21,8 @@ var Version = "dev"
 
 // STARTUP_DELAY defines how long to wait after system boot before first data collection
 // This ensures all system services are fully initialized before collecting data
-const STARTUP_DELAY = 3 * time.Minute
+const STARTUP_DELAY = 5 * time.Minute
+const BOOT_DETECTION_WINDOW = 10 * time.Minute
 
 func main() {
 	// Parse command line flags
@@ -148,8 +149,15 @@ func runDaemon(cfg *config.Config, collector *collector.Collector) {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
-	// Start scheduler in goroutine with startup delay
-	go sch.StartWithDelay(STARTUP_DELAY)
+	var startupDelay time.Duration
+	if utils.IsRecentBoot(BOOT_DETECTION_WINDOW) {
+		startupDelay = STARTUP_DELAY // System just booted
+		utils.Info("🔄 System recently booted - will apply %v startup delay", STARTUP_DELAY)
+	} else {
+		startupDelay = 0 // Manual restart
+		utils.Info("🚀 Manual restart detected - starting immediately without delay")
+	}
+	go sch.StartWithDelay(startupDelay)
 
 	utils.Info("Agent running in daemon mode with %v interval", interval)
 	utils.Info("Press Ctrl+C to stop...")
