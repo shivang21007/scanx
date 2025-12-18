@@ -5,7 +5,7 @@ import { LogOut, Monitor, ChevronLeft, Shield, Settings, Grid3X3, HardDrive, Loc
 import { apiService } from '../services/api';
 
 import { LoadingSpinner } from './LoadingSpinner';
-import { formatRelative, getDeviceStatus } from '../utils/timezone';
+import { formatRelative, formatAbsolute, getDeviceStatus } from '../utils/timezone';
 
 export function DeviceDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -446,7 +446,7 @@ export function DeviceDetailPage() {
               <div>
                 <h3 className="text-sm font-medium text-gray-500">Last Seen</h3>
                 <p className="mt-1 text-sm text-gray-900">
-                  {deviceInfo.device.last_seen ? formatRelative(deviceInfo.device.last_seen.toString()) : 'Never'}
+                  {deviceInfo.device.last_seen ? formatAbsolute(deviceInfo.device.last_seen.toString()) : 'Never'}
                 </p>
               </div>
               </div>

@@ -21,6 +21,33 @@ export function formatRelative(timestampString: string): string {
   return date.toLocaleDateString();
 }
 
+/**
+ * Format absolute time with date and time
+ * Example: "Dec 15, 2025 at 10:30:45 AM"
+ */
+export function formatAbsolute(timestampString: string): string {
+  const date = new Date(timestampString);
+  
+  // Format: "Dec 15, 2025 at 10:30:45 AM"
+  const dateOptions: Intl.DateTimeFormatOptions = {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  };
+  
+  const timeOptions: Intl.DateTimeFormatOptions = {
+    hour: 'numeric',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true,
+  };
+  
+  const datePart = date.toLocaleDateString('en-US', dateOptions);
+  const timePart = date.toLocaleTimeString('en-US', timeOptions);
+  
+  return `${datePart} at ${timePart}`;
+}
+
 export function getDeviceStatus(lastReportTimestamp: string | null): 'online' | 'offline' {
   if (!lastReportTimestamp) {
     return 'offline';
