@@ -44,16 +44,55 @@ export interface AgentPayload {
     };
 }
 
+// List of generic serial numbers that Windows desktops commonly return
+const GENERIC_SERIAL_NUMBERS = [
+    'default string',
+    'system serial number',
+    'none',
+    'n/a',
+    'not available',
+    'not specified',
+    'chassis serial number',
+    '0',
+    '000000',
+    'empty',
+    'invalid',
+    'undefined'
+];
+
+// Helper function to check if a serial number is generic
+function isGenericSerialNumber(serialNo: string): boolean {
+    if (!serialNo) return true;
+    const normalized = serialNo.toLowerCase().trim();
+    return GENERIC_SERIAL_NUMBERS.some(generic => normalized === generic || normalized.includes(generic));
+}
+
 export class DeviceModel {
     // Create or update device
     static async createOrUpdate(deviceData: Omit<Device, 'id' | 'created_at' | 'updated_at'>): Promise<number> {
         const connection = await getConnection();
         
-        // First try to find existing device by serial number
-        const [existing] = await connection.execute<RowDataPacket[]>(
-            'SELECT id FROM devices WHERE serial_no = ?',
-            [deviceData.serial_no]
-        );
+        let existing: RowDataPacket[];
+        
+        // Check if this is a generic serial number (common on Windows desktops)
+        if (isGenericSerialNumber(deviceData.serial_no)) {
+            // For generic serial numbers, use BOTH serial_no AND computer_name to identify device
+            // Use TRIM() and LOWER() for safe comparison (handles whitespace and case differences)
+            const normalizedComputerName = (deviceData.computer_name || '').trim();
+            console.log(`⚠️ Generic serial number detected: "${deviceData.serial_no}" - using computer_name "${normalizedComputerName}" for identification`);
+            const [rows] = await connection.execute<RowDataPacket[]>(
+                'SELECT id FROM devices WHERE LOWER(TRIM(serial_no)) = LOWER(TRIM(?)) AND LOWER(TRIM(computer_name)) = LOWER(TRIM(?))',
+                [deviceData.serial_no, normalizedComputerName]
+            );
+            existing = rows;
+        } else {
+            // For proper serial numbers, use just serial_no
+            const [rows] = await connection.execute<RowDataPacket[]>(
+                'SELECT id FROM devices WHERE serial_no = ?',
+                [deviceData.serial_no]
+            );
+            existing = rows;
+        }
 
         if (existing.length > 0) {
             // Update existing device
@@ -231,14 +270,28 @@ export class DeviceModel {
         });
     }
 
-    // Find device by serial number
-    static async findBySerial(serial_no: string): Promise<Device | null> {
+    // Find device by serial number (and optionally computer_name for generic serial numbers)
+    static async findBySerial(serial_no: string, computer_name?: string): Promise<Device | null> {
         const connection = await getConnection();
-        const [rows] = await connection.execute<RowDataPacket[]>(
-            'SELECT * FROM devices WHERE serial_no = ?',
-            [serial_no]
-        );
-        return rows.length > 0 ? rows[0] as Device : null;
+        
+        // Check if this is a generic serial number
+        if (isGenericSerialNumber(serial_no) && computer_name) {
+            // For generic serial numbers, use BOTH serial_no AND computer_name
+            // Use TRIM() and LOWER() for safe comparison (handles whitespace and case differences)
+            const normalizedComputerName = computer_name.trim();
+            const [rows] = await connection.execute<RowDataPacket[]>(
+                'SELECT * FROM devices WHERE LOWER(TRIM(serial_no)) = LOWER(TRIM(?)) AND LOWER(TRIM(computer_name)) = LOWER(TRIM(?))',
+                [serial_no, normalizedComputerName]
+            );
+            return rows.length > 0 ? rows[0] as Device : null;
+        } else {
+            // For proper serial numbers, use just serial_no
+            const [rows] = await connection.execute<RowDataPacket[]>(
+                'SELECT * FROM devices WHERE serial_no = ?',
+                [serial_no]
+            );
+            return rows.length > 0 ? rows[0] as Device : null;
+        }
     }
 
     // Find device by ID

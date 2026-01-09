@@ -74,7 +74,8 @@ export const receiveAgentData = async (req: Request, res: Response) => {
     }
 
     // Check if device exists BEFORE creating/updating (to know if it's new)
-    const existingDevice = await DeviceModel.findBySerial(agentData.serial_no);
+    // Pass computer_name for proper identification of Windows devices with generic serial numbers
+    const existingDevice = await DeviceModel.findBySerial(agentData.serial_no, agentData.computer_name);
     const isNewDevice = !existingDevice;
 
     // Create or update device record
