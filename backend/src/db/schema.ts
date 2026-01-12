@@ -58,6 +58,8 @@ export const createUsersTable = async () => {
 };
 
 // Create devices table (starting ID from 101)
+// Note: serial_no is NOT unique alone - composite unique (serial_no, computer_name) is used
+// This is because Windows desktops often have generic serial numbers like "Default string"
 export const createDevicesTable = async () => {
     const connection = await getConnection();
     
@@ -65,7 +67,7 @@ export const createDevicesTable = async () => {
         CREATE TABLE IF NOT EXISTS ${TABLES.DEVICES} (
             id INT AUTO_INCREMENT PRIMARY KEY,
             user_email VARCHAR(255) NOT NULL,
-            serial_no VARCHAR(255) UNIQUE NOT NULL,
+            serial_no VARCHAR(255) NOT NULL,
             computer_name VARCHAR(255),
             os_type VARCHAR(50) NOT NULL,
             os_version VARCHAR(100),
@@ -80,7 +82,8 @@ export const createDevicesTable = async () => {
             INDEX idx_computer_name (computer_name),
             INDEX idx_last_seen (last_seen),
             INDEX idx_status (status),
-            INDEX idx_os_type (os_type)
+            INDEX idx_os_type (os_type),
+            UNIQUE KEY idx_serial_computer_unique (serial_no, computer_name)
         ) ENGINE=InnoDB AUTO_INCREMENT=101 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
     

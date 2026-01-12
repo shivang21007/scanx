@@ -240,6 +240,71 @@ export const migration_005_add_password_manager_names = async () => {
     await markMigrationExecuted(migrationName);
 };
 
+// Migration: Change serial_no from UNIQUE to composite unique (serial_no, computer_name)
+// This fixes Windows desktops with generic serial numbers like "Default string"
+export const migration_006_composite_device_unique_key = async () => {
+    const migrationName = '006_composite_device_unique_key';
+    
+    if (await isMigrationExecuted(migrationName)) {
+        console.log(`⏭️  Migration '${migrationName}' already executed`);
+        return;
+    }
+    
+    console.log(`🔧 Executing migration: ${migrationName}`);
+    
+    const connection = await getConnection();
+    
+    try {
+        // Step 1: Check if unique constraint on serial_no exists
+        const [constraints] = await connection.execute(`
+            SELECT CONSTRAINT_NAME 
+            FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS 
+            WHERE TABLE_SCHEMA = DATABASE() 
+            AND TABLE_NAME = 'devices' 
+            AND CONSTRAINT_TYPE = 'UNIQUE'
+            AND CONSTRAINT_NAME = 'serial_no'
+        `);
+        
+        if ((constraints as any[]).length > 0) {
+            // Drop the unique constraint on serial_no
+            await connection.execute(`
+                ALTER TABLE devices 
+                DROP INDEX serial_no
+            `);
+            console.log('✅ Dropped UNIQUE constraint on serial_no');
+        } else {
+            console.log('ℹ️  UNIQUE constraint on serial_no does not exist');
+        }
+        
+        // Step 2: Check if composite unique constraint already exists
+        const [compositeCheck] = await connection.execute(`
+            SELECT CONSTRAINT_NAME 
+            FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS 
+            WHERE TABLE_SCHEMA = DATABASE() 
+            AND TABLE_NAME = 'devices' 
+            AND CONSTRAINT_TYPE = 'UNIQUE'
+            AND CONSTRAINT_NAME = 'idx_serial_computer_unique'
+        `);
+        
+        if ((compositeCheck as any[]).length === 0) {
+            // Add composite unique constraint on (serial_no, computer_name)
+            await connection.execute(`
+                ALTER TABLE devices 
+                ADD UNIQUE KEY idx_serial_computer_unique (serial_no, computer_name)
+            `);
+            console.log('✅ Added composite UNIQUE constraint on (serial_no, computer_name)');
+        } else {
+            console.log('ℹ️  Composite unique constraint already exists');
+        }
+        
+    } catch (err: any) {
+        console.error(`❌ Error in composite unique key migration: ${err.message}`);
+        throw err;
+    }
+    
+    await markMigrationExecuted(migrationName);
+};
+
 // Run all migrations
 export const runMigrations = async () => {
     try {
@@ -253,6 +318,7 @@ export const runMigrations = async () => {
         await migration_003_add_devices_field();
         await migration_004_split_agent_versions();
         await migration_005_add_password_manager_names();
+        await migration_006_composite_device_unique_key();
         
         console.log("🎯 All migrations completed successfully!");
         
