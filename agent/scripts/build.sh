@@ -338,7 +338,7 @@ create_checksum_json(){
     fi
     
     # Check if directory has any files (excluding checksums.json itself)
-    local file_count=$(find "$dir" -type f ! -name "checksums.json" | wc -l | tr -d ' ')
+    local file_count=$(find "$dir" -type f ! -name "checksums.json" 2>/dev/null | wc -l | tr -d ' ')
     if [[ "$file_count" -eq 0 ]]; then
         echo "⚠️  No files found in $dir (skipping checksum generation)"
         return 0
@@ -355,8 +355,8 @@ create_checksum_json(){
         # Linux with sha256sum
         checksum_cmd="sha256sum"
     else
-        echo "❌ No SHA256 checksum tool found (shasum or sha256sum required)"
-        echo "Proceeding without checksum generation"
+        echo "⚠️  No SHA256 checksum tool found (shasum or sha256sum required)"
+        echo "   Proceeding without checksum generation"
         return 0
     fi
     
@@ -375,12 +375,18 @@ create_checksum_json(){
             continue
         fi
         
-        # Calculate checksum
+        # Calculate checksum (with error handling)
         local checksum
         if [[ "$checksum_cmd" == "shasum -a 256" ]]; then
-            checksum=$($checksum_cmd "$file" | awk '{print $1}')
+            checksum=$($checksum_cmd "$file" 2>/dev/null | awk '{print $1}')
         else
-            checksum=$($checksum_cmd "$file" | awk '{print $1}')
+            checksum=$($checksum_cmd "$file" 2>/dev/null | awk '{print $1}')
+        fi
+        
+        # Skip if checksum calculation failed
+        if [[ -z "$checksum" ]]; then
+            echo "⚠️  Failed to calculate checksum for $(basename "$file"), skipping..."
+            continue
         fi
         
         # Get relative filename from directory
@@ -397,7 +403,7 @@ create_checksum_json(){
         json_content+="    \"$filename\": \"$checksum\""
         ((processed_count++))
         
-    done < <(find "$dir" -type f ! -name "checksums.json" -print0 | sort -z)
+    done < <(find "$dir" -type f ! -name "checksums.json" -print0 2>/dev/null | sort -z)
     
     # Close JSON
     json_content+="\n  }\n"
@@ -420,7 +426,13 @@ create_package "windows" "arm64" ".exe"
 
 # Generate checksums with appropriate versions
 create_checksum_json $BUILD_DIR "$VERSION"
-create_checksum_json $OSQUERY_BUILD_DIR "$OSQUERYI_VERSION"
+
+# Only generate osquery checksums if osquery binaries exist
+if [ -d "$OSQUERY_BUILD_DIR" ] && [ "$(find "$OSQUERY_BUILD_DIR" -type f ! -name "checksums.json" | wc -l | tr -d ' ')" -gt 0 ]; then
+    create_checksum_json $OSQUERY_BUILD_DIR "$OSQUERYI_VERSION"
+else
+    echo "⚠️  Skipping osquery checksum generation (no osquery binaries found)"
+fi
 
 
 echo ""
