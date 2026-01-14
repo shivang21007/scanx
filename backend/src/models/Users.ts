@@ -90,12 +90,13 @@ export class UsersModel {
     return upserted;
   }
 
-  static async list(params: { search?: string; limit?: number; offset?: number; enrollment?: 'enrolled' | 'un-enrolled' } = {}): Promise<UserRecord[]> {
+  static async list(params: { search?: string; limit?: number; offset?: number; enrollment?: 'enrolled' | 'un-enrolled'; createdSort?: 'asc' | 'desc' | null } = {}): Promise<UserRecord[]> {
     const conn = await getConnection();
     const limit = Math.max(0, Math.min(params.limit ?? 50, 200));
     const offset = Math.max(0, params.offset ?? 0);
     const search = (params.search || '').trim();
     const enrollment = params.enrollment;
+    const createdSort = params.createdSort;
 
     let whereConditions: string[] = [];
     let queryParams: any[] = [];
@@ -119,7 +120,13 @@ export class UsersModel {
       ? `WHERE ${whereConditions.join(' AND ')}` 
       : '';
 
-    const sql = `SELECT * FROM users ${whereClause} ORDER BY email ASC LIMIT ${limit} OFFSET ${offset}`;
+    // Sorting: created_at if createdSort is provided (asc/desc), otherwise email (default/alphabetical)
+    let orderByClause = 'ORDER BY email ASC';
+    if (createdSort === 'asc' || createdSort === 'desc') {
+      orderByClause = `ORDER BY created_at ${createdSort.toUpperCase()}`;
+    }
+
+    const sql = `SELECT * FROM users ${whereClause} ${orderByClause} LIMIT ${limit} OFFSET ${offset}`;
     const [rows] = await conn.execute<RowDataPacket[]>(sql, queryParams);
     
     // Parse device_id JSON for each row

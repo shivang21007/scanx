@@ -16,9 +16,11 @@ export function UsersPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [enrollmentFilter, setEnrollmentFilter] = useState<'enrolled' | 'un-enrolled' | ''>('');
+  const [createdSort, setCreatedSort] = useState<'asc' | 'desc' | null>(null);
   const [filters, setFilters] = useState<UsersTableFilters>({
     page: 1,
-    pageSize: 10
+    pageSize: 10,
+    createdSort: null
   });
   const [totalUsers, setTotalUsers] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
@@ -87,10 +89,25 @@ export function UsersPage() {
     setFilters(prev => ({ ...prev, pageSize: newPageSize, page: 1 }));
   };
 
+  const handleCreatedSort = () => {
+    // 3-state cycle: null -> desc -> asc -> null
+    let newSort: 'asc' | 'desc' | null;
+    if (createdSort === null) {
+      newSort = 'desc'; // First click: newest first
+    } else if (createdSort === 'desc') {
+      newSort = 'asc'; // Second click: oldest first
+    } else {
+      newSort = null; // Third click: back to default (alphabetical)
+    }
+    setCreatedSort(newSort);
+    setFilters(prev => ({ ...prev, createdSort: newSort }));
+  };
+
   const handleClearFilters = () => {
     setSearchTerm('');
     setEnrollmentFilter('');
-    setFilters({ page: 1, pageSize: 10 });
+    setCreatedSort(null);
+    setFilters({ page: 1, pageSize: 10, createdSort: null });
   };
 
   const handleLogout = async () => {
@@ -265,7 +282,7 @@ export function UsersPage() {
               </button>
 
               {/* Clear All Filters */}
-              {(searchTerm || enrollmentFilter) && (
+              {(searchTerm || enrollmentFilter || createdSort) && (
                 <button
                   onClick={handleClearFilters}
                   className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
@@ -276,23 +293,74 @@ export function UsersPage() {
             </div>
           </div>
 
-          {/* Results Summary */}
+          {/* Results Summary with Filter Badges */}
           <div className="mt-4 pt-4 border-t border-gray-200">
             <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-600">
-                {users.length > 0 ? (
-                  <>
-                    Showing <span className="font-medium">{users.length}</span> of{' '}
-                    <span className="font-medium">{totalUsers}</span> users
-                    {searchTerm && (
-                      <span> matching "{searchTerm}"</span>
-                    )}
-                    {enrollmentFilter && (
-                      <span> - {enrollmentFilter === 'enrolled' ? 'Enrolled' : 'Un-enrolled'}</span>
-                    )}
-                  </>
-                ) : (
-                  'No users found'
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                <span className="text-gray-600">
+                  Showing <span className="font-medium">{users.length}</span> of{' '}
+                  <span className="font-medium">{totalUsers}</span> users
+                </span>
+                
+                {/* Search Filter Badge */}
+                {searchTerm && (
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-md">
+                    <span className="text-blue-700 text-sm">
+                      Search: "{searchTerm}"
+                    </span>
+                    <button
+                      onClick={() => setSearchTerm('')}
+                      className="text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded p-0.5 transition-colors"
+                      title="Clear search"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
+                
+                {/* Enrollment Filter Badge */}
+                {enrollmentFilter && (
+                  <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 border rounded-md ${
+                    enrollmentFilter === 'enrolled'
+                      ? 'bg-green-50 border-green-200'
+                      : 'bg-orange-50 border-orange-200'
+                  }`}>
+                    <span className={`text-sm ${
+                      enrollmentFilter === 'enrolled' ? 'text-green-700' : 'text-orange-700'
+                    }`}>
+                      {enrollmentFilter === 'enrolled' ? 'Enrolled' : 'Un-enrolled'}
+                    </span>
+                    <button
+                      onClick={() => handleEnrollmentFilter('')}
+                      className={`rounded p-0.5 transition-colors ${
+                        enrollmentFilter === 'enrolled'
+                          ? 'text-green-600 hover:text-green-800 hover:bg-green-100'
+                          : 'text-orange-600 hover:text-orange-800 hover:bg-orange-100'
+                      }`}
+                      title="Clear enrollment filter"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
+                
+                {/* Created Sort Badge */}
+                {createdSort && (
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 border border-purple-200 rounded-md">
+                    <span className="text-purple-700 text-sm">
+                      Sort: Created ({createdSort === 'asc' ? 'Oldest First' : 'Newest First'})
+                    </span>
+                    <button
+                      onClick={() => {
+                        setCreatedSort(null);
+                        setFilters(prev => ({ ...prev, createdSort: null }));
+                      }}
+                      className="text-purple-600 hover:text-purple-800 hover:bg-purple-100 rounded p-0.5 transition-colors"
+                      title="Clear created sort"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 )}
               </div>
               {loading && (
@@ -406,6 +474,8 @@ export function UsersPage() {
         <UsersTable 
           users={users} 
           loading={loading}
+          createdSort={createdSort}
+          onCreatedSort={handleCreatedSort}
           onUpdateAccountType={async (gid, accountType) => {
             try {
               await apiService.updateUserAccountType(gid, accountType);

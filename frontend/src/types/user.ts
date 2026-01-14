@@ -24,4 +24,5 @@ export interface UsersTableFilters {
   page?: number;
   pageSize?: number;
   enrollment?: 'enrolled' | 'un-enrolled';
+  createdSort?: 'asc' | 'desc' | null;
 }

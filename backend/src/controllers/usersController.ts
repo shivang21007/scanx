@@ -6,10 +6,12 @@ export async function getUsers(req: Request, res: Response) {
   const pageSize = Math.max(1, Math.min(200, parseInt(String(req.query.pageSize || '50'), 10)));
   const search = String(req.query.search || '').trim();
   const enrollment = req.query.enrollment as 'enrolled' | 'un-enrolled' | undefined;
+  const createdSortParam = req.query.createdSort;
+  const createdSort = (createdSortParam === 'asc' || createdSortParam === 'desc') ? createdSortParam : null;
   const offset = (page - 1) * pageSize;
 
   const [items, total] = await Promise.all([
-    UsersModel.list({ search, limit: pageSize, offset, enrollment }),
+    UsersModel.list({ search, limit: pageSize, offset, enrollment, createdSort }),
     UsersModel.count({ search, enrollment }),
   ]);
 

@@ -296,6 +296,9 @@ class ApiService {
       if (filters?.enrollment) {
         params.append('enrollment', filters.enrollment);
       }
+      if (filters?.createdSort) {
+        params.append('createdSort', filters.createdSort);
+      }
       
       const url = `/users${params.toString() ? `?${params.toString()}` : ''}`;
       const response: AxiosResponse<UsersResponse> = await this.api.get(url);

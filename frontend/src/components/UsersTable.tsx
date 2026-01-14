@@ -1,16 +1,18 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User } from '../types/user';
-import { Trash2, ChevronDown, User as UserIcon, Settings, CheckCircle2 } from 'lucide-react';
+import { Trash2, ChevronDown, ChevronUp, User as UserIcon, Settings, CheckCircle2 } from 'lucide-react';
 
 interface UsersTableProps {
     users: User[];
     loading?: boolean;
+    createdSort?: 'asc' | 'desc' | null;
+    onCreatedSort?: () => void;
     onUpdateAccountType: (gid: number, accountType: 'user' | 'service') => Promise<void>;
     onDeleteUser: (gid: number) => Promise<void>;
 }
 
-export function UsersTable({ users, loading, onUpdateAccountType, onDeleteUser }: UsersTableProps) {
+export function UsersTable({ users, loading, createdSort, onCreatedSort, onUpdateAccountType, onDeleteUser }: UsersTableProps) {
     const navigate = useNavigate();
     const [updatingUser, setUpdatingUser] = useState<number | null>(null);
     const [deletingUser, setDeletingUser] = useState<number | null>(null);
@@ -132,7 +134,43 @@ export function UsersTable({ users, loading, onUpdateAccountType, onDeleteUser }
                                 Account Type
                             </th>
                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Created
+                                <div className="flex items-center space-x-1">
+                                    <span>Created</span>
+                                    {onCreatedSort && (
+                                        <button
+                                            onClick={onCreatedSort}
+                                            className="flex flex-col items-center justify-center ml-1 hover:bg-gray-100 rounded p-0.5 transition-colors"
+                                            title={
+                                                createdSort === null 
+                                                    ? 'Sort by Created (Newest First)' 
+                                                    : createdSort === 'desc' 
+                                                    ? 'Sort by Created (Oldest First)' 
+                                                    : 'Clear Created Sort'
+                                            }
+                                        >
+                                            <ChevronUp
+                                                strokeWidth={createdSort === 'asc' ? 3 : 2}
+                                                className={`h-3 w-3 transition-opacity ${
+                                                    createdSort === 'asc'
+                                                        ? 'text-blue-600 opacity-100'
+                                                        : createdSort === 'desc'
+                                                        ? 'text-gray-400 opacity-10'
+                                                        : 'text-gray-400 opacity-50'
+                                                }`}
+                                            />
+                                            <ChevronDown
+                                                strokeWidth={createdSort === 'desc' ? 3 : 2}
+                                                className={`h-3 w-3 transition-opacity -mt-0.5 ${
+                                                    createdSort === 'desc'
+                                                        ? 'text-blue-600 opacity-100'
+                                                        : createdSort === 'asc'
+                                                        ? 'text-gray-400 opacity-10'
+                                                        : 'text-gray-400 opacity-50'
+                                                }`}
+                                            />
+                                        </button>
+                                    )}
+                                </div>
                             </th>
                             <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Actions
