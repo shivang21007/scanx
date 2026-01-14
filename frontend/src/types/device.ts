@@ -25,6 +25,7 @@ export interface DeviceSummary {
   antivirus_info: boolean;
   screen_lock_info: boolean;
   apps_info: boolean;
+  interval_info?: number;  // Interval in seconds
   created_at: string;
   updated_at: string;
 }
@@ -92,6 +93,7 @@ export interface DeviceTableRow {
   has_antivirus: boolean;
   has_disk_encryption: boolean;
   has_apps_info: boolean;
+  interval_info?: number;  // Interval in seconds
   last_report?: string;
 }
 

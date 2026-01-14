@@ -169,11 +169,12 @@ export const receiveAgentData = async (req: Request, res: Response) => {
       }
     }
 
-    // Update device summary with received data types
+    // Update device summary with received data types and interval
     await DeviceSummaryModel.createOrUpdate({
       device_id: deviceId,
       last_report: lastReportTimestamp,
-      ...receivedDataTypes
+      ...receivedDataTypes,
+      interval_info: agentData.interval_seconds || undefined
     });
     
     // Add device_id to user's device_id array

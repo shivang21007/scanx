@@ -305,6 +305,49 @@ export const migration_006_composite_device_unique_key = async () => {
     await markMigrationExecuted(migrationName);
 };
 
+// Migration: Add interval_info column to device_summary table
+export const migration_007_add_interval_info = async () => {
+    const migrationName = '007_add_interval_info';
+    
+    if (await isMigrationExecuted(migrationName)) {
+        console.log(`⏭️  Migration '${migrationName}' already executed`);
+        return;
+    }
+    
+    console.log(`🔧 Executing migration: ${migrationName}`);
+    
+    const connection = await getConnection();
+    
+    try {
+        // Check if interval_info column already exists
+        const [columns] = await connection.execute(
+            `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+             WHERE TABLE_SCHEMA = DATABASE() 
+             AND TABLE_NAME = 'device_summary' 
+             AND COLUMN_NAME = 'interval_info'`
+        );
+        
+        if ((columns as any[]).length === 0) {
+            // Add interval_info column (stores interval in seconds)
+            await connection.execute(`
+                ALTER TABLE device_summary 
+                ADD COLUMN interval_info INT DEFAULT NULL 
+                AFTER apps_info
+            `);
+            
+            console.log('✅ Added interval_info column to device_summary table');
+        } else {
+            console.log('ℹ️  interval_info column already exists');
+        }
+        
+    } catch (err: any) {
+        console.error(`❌ Error adding interval_info field: ${err.message}`);
+        throw err;
+    }
+    
+    await markMigrationExecuted(migrationName);
+};
+
 // Run all migrations
 export const runMigrations = async () => {
     try {
@@ -319,6 +362,7 @@ export const runMigrations = async () => {
         await migration_004_split_agent_versions();
         await migration_005_add_password_manager_names();
         await migration_006_composite_device_unique_key();
+        await migration_007_add_interval_info();
         
         console.log("🎯 All migrations completed successfully!");
         

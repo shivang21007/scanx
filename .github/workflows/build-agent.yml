@@ -13,42 +13,42 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Set up Go
-        uses: actions/setup-go@v2
-        with:
-          go-version: 1.23.5
-
-      - name: Setup python3
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.12
-
       - name: Install system dependencies for build scripts
         run: |
           sudo apt-get update
-          sudo apt-get install -y zip coreutils
+          sudo apt-get install -y zip coreutils wget
 
-      - name: Install python3-gdown for downloading the osqueryi binaries
+      - name: Set up Go
         run: |
-          pip3 install gdown
+          wget https://go.dev/dl/go1.25.5.linux-amd64.tar.gz
+          sudo tar -C /usr/local -xzf go1.25.5.linux-amd64.tar.gz
+          echo "export PATH=$PATH:/usr/local/go/bin" >> ~/.bashrc
+          source ~/.bashrc
 
-      - name: Cache Osqueryi Binaries
-        id: cache-osqueryi
-        uses: actions/cache@v4
-        with:
-          path: agent/dist/builds-osqueryi
-          key: osqueryi-${{ env.OSQUERYI_CACHE_VERSION }}
+      # - name: Setup python3
+      #   uses: actions/setup-python@v2
+      #   with:
+      #     python-version: 3.12
 
-      - name: Download Osqueryi Binaries
-        if: steps.cache-osqueryi.outputs.cache-hit != 'true'
-        run: |
-          gdown --folder https://drive.google.com/drive/folders/1QcmbmLGlLxuWz-_fIqkBNyV2NKmH3G1R -O agent/dist/builds-osqueryi
+      # - name: Install python3-gdown for downloading the osqueryi binaries
+      #   run: |
+      #     pip3 install gdown
+
+      # - name: Cache Osqueryi Binaries
+      #   id: cache-osqueryi
+      #   uses: actions/cache@v4
+      #   with:
+      #     path: agent/dist/builds-osqueryi
+      #     key: osqueryi-${{ env.OSQUERYI_CACHE_VERSION }}
+
+      # - name: Download Osqueryi Binaries
+      #   if: steps.cache-osqueryi.outputs.cache-hit != 'true'
+      #   run: |
+      #     gdown --folder https://drive.google.com/drive/folders/1QcmbmLGlLxuWz-_fIqkBNyV2NKmH3G1R -O agent/dist/builds-osqueryi
 
       - name: Build Agent Binaries
         run: |
-          cd agent && ./scripts/build.sh --yes && \
-          ./scripts/create-linux-packages.sh 1 amd64 && \
-          ./scripts/create-linux-packages.sh 1 arm64
+          cd agent && ./scripts/build.sh --yes
 
       - name: Extract version
         run: |

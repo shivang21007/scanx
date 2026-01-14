@@ -182,6 +182,24 @@ export function DeviceDetailPage() {
     }
   };
 
+  // Format interval seconds to human-readable format (e.g., "4h", "30m", "1h 30m")
+  const formatInterval = (seconds: number | undefined | null): string => {
+    if (!seconds || seconds <= 0) return 'N/A';
+    
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    
+    if (hours > 0 && minutes > 0) {
+      return `${hours}h ${minutes}m`;
+    } else if (hours > 0) {
+      return `${hours}h`;
+    } else if (minutes > 0) {
+      return `${minutes}m`;
+    } else {
+      return `${seconds}s`;
+    }
+  };
+
   // Format system_info data (from initial load)
   const formatSystemInfo = (dataObject: any) => {
     const dataArray = dataObject?.data;
@@ -734,6 +752,10 @@ export function DeviceDetailPage() {
               <div>
                 <h3 className="text-sm font-medium text-gray-500">Osqueryi Version</h3>
                 <p className="mt-1 text-sm text-gray-900">{deviceInfo.device.osqueryi_version || 'Unknown'}</p>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-gray-500">Report Interval</h3>
+                <p className="mt-1 text-sm text-gray-900">{formatInterval(deviceInfo.summary?.interval_info)}</p>
               </div>
               <div>
                 <h3 className="text-sm font-medium text-gray-500">Last Seen</h3>

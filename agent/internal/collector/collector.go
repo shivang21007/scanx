@@ -22,6 +22,7 @@ type CollectedData struct {
 	User            string                              `json:"user"`
 	ScanxVersion    string                              `json:"scanx_version"`
 	OsqueryiVersion string                              `json:"osqueryi_version"`
+	IntervalSeconds int                                 `json:"interval_seconds"`
 	OSType          string                              `json:"os_type"`
 	OSVersion       string                              `json:"os_version"`
 	SerialNo        string                              `json:"serial_no"`
@@ -194,10 +195,14 @@ func (c *Collector) CollectData() (*CollectedData, error) {
 	data["password_manager_info"] = passwordManagerData
 
 	// Build final payload
+	// Convert interval duration to seconds
+	intervalSeconds := int(c.config.GetInterval().Seconds())
+
 	collectedData := &CollectedData{
 		User:            c.config.Agent.UserEmail,
 		ScanxVersion:    c.config.Agent.ScanxVersion,
 		OsqueryiVersion: c.config.Agent.OsqueryiVersion,
+		IntervalSeconds: intervalSeconds,
 		OSType:          c.sysInfo.OSType,
 		OSVersion:       c.sysInfo.OSVersion,
 		SerialNo:        c.sysInfo.SerialNo,

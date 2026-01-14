@@ -75,6 +75,24 @@ export function DevicesTable({
     }
   };
 
+  // Format interval seconds to human-readable format (e.g., "4h", "30m", "1h 30m")
+  const formatInterval = (seconds: number | undefined | null): string => {
+    if (!seconds || seconds <= 0) return 'N/A';
+    
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    
+    if (hours > 0 && minutes > 0) {
+      return `${hours}h ${minutes}m`;
+    } else if (hours > 0) {
+      return `${hours}h`;
+    } else if (minutes > 0) {
+      return `${minutes}m`;
+    } else {
+      return `${seconds}s`;
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status.toLowerCase()) {
       case 'online':
@@ -286,6 +304,7 @@ export function DevicesTable({
                   <div className="text-sm text-gray-900">
                     <div>scanx: {device.scanx_version || 'Unknown'}</div>
                     <div className="text-gray-500 text-xs mt-0.5">osqueryi: {device.osqueryi_version || 'Unknown'}</div>
+                    <div className="text-gray-500 text-xs mt-0.5">interval: {formatInterval(device.interval_info)}</div>
                   </div>
                 </td>
 

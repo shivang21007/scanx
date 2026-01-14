@@ -225,6 +225,7 @@ export const createDeviceSummaryTable = async () => {
             antivirus_info BOOLEAN DEFAULT FALSE,
             disk_encryption_info BOOLEAN DEFAULT FALSE,
             apps_info BOOLEAN DEFAULT FALSE,
+            interval_info INT DEFAULT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             FOREIGN KEY (device_id) REFERENCES ${TABLES.DEVICES}(id) ON DELETE CASCADE,

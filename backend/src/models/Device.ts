@@ -26,6 +26,7 @@ export interface DeviceSummary {
     antivirus_info?: boolean;
     disk_encryption_info?: boolean;
     apps_info?: boolean;
+    interval_info?: number;  // Interval in seconds
     created_at?: Date;
     updated_at?: Date;
 }
@@ -34,6 +35,7 @@ export interface AgentPayload {
     user: string;
     scanx_version: string;
     osqueryi_version: string;
+    interval_seconds?: number;  // Interval in seconds (optional for backward compatibility)
     os_type: string;
     os_version: string;
     serial_no: string;
@@ -169,6 +171,7 @@ export class DeviceModel {
                 ds.antivirus_info as has_antivirus,
                 ds.disk_encryption_info as has_disk_encryption,
                 ds.apps_info as has_apps_info,
+                ds.interval_info,
                 ds.last_report
             FROM devices d
             LEFT JOIN device_summary ds ON d.id = ds.device_id
@@ -561,7 +564,7 @@ export class DeviceSummaryModel {
                 `UPDATE device_summary SET 
                  last_report = ?, system_info = ?, password_manager_info = ?, 
                  screen_lock_info = ?, antivirus_info = ?, disk_encryption_info = ?, 
-                 apps_info = ?, updated_at = CURRENT_TIMESTAMP 
+                 apps_info = ?, interval_info = ?, updated_at = CURRENT_TIMESTAMP 
                  WHERE device_id = ?`,
                 [
                     summary.last_report,
@@ -571,6 +574,7 @@ export class DeviceSummaryModel {
                     summary.antivirus_info || false,
                     summary.disk_encryption_info || false,
                     summary.apps_info || false,
+                    summary.interval_info || null,
                     summary.device_id
                 ]
             );
@@ -579,9 +583,9 @@ export class DeviceSummaryModel {
             await connection.execute<ResultSetHeader>(
                 `INSERT INTO device_summary (
                     device_id, last_report, system_info, password_manager_info, 
-                    screen_lock_info, antivirus_info, disk_encryption_info, apps_info
+                    screen_lock_info, antivirus_info, disk_encryption_info, apps_info, interval_info
                  ) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                 [
                     summary.device_id,
                     summary.last_report,
@@ -590,7 +594,8 @@ export class DeviceSummaryModel {
                     summary.screen_lock_info || false,
                     summary.antivirus_info || false,
                     summary.disk_encryption_info || false,
-                    summary.apps_info || false
+                    summary.apps_info || false,
+                    summary.interval_info || null
                 ]
             );
         }
