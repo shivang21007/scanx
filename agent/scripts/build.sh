@@ -376,11 +376,11 @@ create_checksum_json(){
         fi
         
         # Calculate checksum (with error handling)
-        local checksum
+        local checksum=""
         if [[ "$checksum_cmd" == "shasum -a 256" ]]; then
-            checksum=$($checksum_cmd "$file" 2>/dev/null | awk '{print $1}')
+            checksum=$($checksum_cmd "$file" 2>/dev/null | awk '{print $1}') || true
         else
-            checksum=$($checksum_cmd "$file" 2>/dev/null | awk '{print $1}')
+            checksum=$($checksum_cmd "$file" 2>/dev/null | awk '{print $1}') || true
         fi
         
         # Skip if checksum calculation failed
@@ -401,7 +401,7 @@ create_checksum_json(){
         
         # Add checksum entry
         json_content+="    \"$filename\": \"$checksum\""
-        ((processed_count++))
+        processed_count=$((processed_count + 1))
         
     done < <(find "$dir" -type f ! -name "checksums.json" -print0 2>/dev/null | sort -z)
     
@@ -409,11 +409,15 @@ create_checksum_json(){
     json_content+="\n  }\n"
     json_content+="}\n"
     
-    # Write JSON to file
-    echo -e "$json_content" > "$checksum_file"
-    
-    echo "✅ Checksum file created: $checksum_file"
-    echo "   Generated checksums for $processed_count file(s)"
+    # Write JSON to file (using printf for better portability)
+    if printf "%b" "$json_content" > "$checksum_file" 2>/dev/null; then
+        echo "✅ Checksum file created: $checksum_file"
+        echo "   Generated checksums for $processed_count file(s)"
+        return 0
+    else
+        echo "❌ Failed to write checksum file: $checksum_file"
+        return 1
+    fi
 }
 
 # Create packages for all platforms
@@ -425,13 +429,21 @@ create_package "windows" "amd64" ".exe"
 create_package "windows" "arm64" ".exe"
 
 # Generate checksums with appropriate versions
-create_checksum_json $BUILD_DIR "$VERSION"
+create_checksum_json $BUILD_DIR "$VERSION" || {
+    echo "❌ Failed to generate checksums for builds"
+    exit 1
+}
 
 # Only generate osquery checksums if osquery binaries exist
-if [ -d "$OSQUERY_BUILD_DIR" ] && [ "$(find "$OSQUERY_BUILD_DIR" -type f ! -name "checksums.json" | wc -l | tr -d ' ')" -gt 0 ]; then
-    create_checksum_json $OSQUERY_BUILD_DIR "$OSQUERYI_VERSION"
+if [ -d "$OSQUERY_BUILD_DIR" ]; then
+    OSQUERY_FILE_COUNT=$(find "$OSQUERY_BUILD_DIR" -type f ! -name "checksums.json" 2>/dev/null | wc -l | tr -d ' ')
+    if [ "$OSQUERY_FILE_COUNT" -gt 0 ]; then
+        create_checksum_json $OSQUERY_BUILD_DIR "$OSQUERYI_VERSION" || echo "⚠️  Warning: Failed to generate osquery checksums"
+    else
+        echo "⚠️  Skipping osquery checksum generation (no osquery binaries found)"
+    fi
 else
-    echo "⚠️  Skipping osquery checksum generation (no osquery binaries found)"
+    echo "⚠️  Skipping osquery checksum generation (directory not found)"
 fi
 
 
