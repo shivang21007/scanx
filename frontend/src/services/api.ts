@@ -222,6 +222,45 @@ class ApiService {
     }
   }
 
+  // Get device data by type (latest only - used for apps_info)
+  async getDeviceDataByType(deviceId: number, dataType: string): Promise<any> {
+    try {
+      const response: AxiosResponse<any> = await this.api.get(`/devices/${deviceId}/data/${dataType}`);
+      return response.data;
+    } catch (error: any) {
+      throw this.handleError(error);
+    }
+  }
+
+  // Get device data history (paginated - used for security tabs)
+  async getDeviceDataHistory(
+    deviceId: number, 
+    dataType: string, 
+    page: number = 1, 
+    limit: number = 10
+  ): Promise<{
+    data: any[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
+    try {
+      const response: AxiosResponse<{
+        data: any[];
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+      }> = await this.api.get(`/devices/${deviceId}/data/${dataType}/history`, {
+        params: { page, limit }
+      });
+      return response.data;
+    } catch (error: any) {
+      throw this.handleError(error);
+    }
+  }
+
   // Remove device by ID
   async deleteDeviceById(id: number): Promise<string> {
     try {

@@ -263,7 +263,7 @@ export const getDevicesTable = async (req: Request, res: Response) => {
   }
 };
 
-// Get device details by ID
+// Get device details by ID (lightweight - only device, summary, and system_info)
 export const getDeviceById = async (req: Request, res: Response) => {
   try {
     const deviceId = parseInt(req.params.id);
@@ -274,12 +274,14 @@ export const getDeviceById = async (req: Request, res: Response) => {
     }
 
     const summary = await DeviceSummaryModel.findByDevice(deviceId);
-    const allData = await IndividualDataModel.getAllDeviceData(deviceId);
+    
+    // Only fetch system_info for the initial load (used in System Info tab)
+    const system_info = await IndividualDataModel.getDeviceDataByType(deviceId, 'system_info');
 
     res.json({
       device,
       summary,
-      data: allData
+      system_info // Only system_info, other data fetched on-demand
     });
   } catch (err: any) {
     console.error('Error getting device by ID:', err);

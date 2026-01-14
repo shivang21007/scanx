@@ -449,6 +449,13 @@ export class IndividualDataModel {
         const connection = await getConnection();
         console.log('Getting HISTORICAL data for device:', device_id, 'type:', dataType, 'page:', page, 'limit:', limit);
         
+        // Validate dataType to prevent SQL injection (whitelist approach)
+        const validDataTypes = ['disk_encryption_info', 'password_manager_info', 'antivirus_info', 'screen_lock_info', 'apps_info', 'system_info'];
+        if (!validDataTypes.includes(dataType)) {
+            console.error(`Invalid dataType: ${dataType}`);
+            return { data: [], total: 0, page, limit, totalPages: 0 };
+        }
+        
         try {
             // Get total count
             const [countRows] = await connection.execute<RowDataPacket[]>(
@@ -457,14 +464,19 @@ export class IndividualDataModel {
             );
             const total = countRows[0].total;
             
-            // Calculate offset
-            const offset = (page - 1) * limit;
+            // Calculate offset - ensure integers
+            const limitInt = Math.floor(Number(limit));
+            const offsetInt = Math.floor((Number(page) - 1) * limitInt);
             
             // Get paginated data
+            // Note: LIMIT and OFFSET don't work well as prepared statement params in MySQL
+            // Using string interpolation is safe here since we validate/convert to integers
             const [rows] = await connection.execute<RowDataPacket[]>(
-                `SELECT * FROM ${dataType} WHERE device_id = ? ORDER BY timestamp DESC LIMIT ? OFFSET ?`,
-                [device_id, limit, offset]
+                `SELECT * FROM ${dataType} WHERE device_id = ? ORDER BY timestamp DESC LIMIT ${limitInt} OFFSET ${offsetInt}`,
+                [device_id]
             );
+            
+            console.log(`Found ${rows.length} rows for ${dataType}, total: ${total}`);
             
             // Process each row
             const processedData = rows.map(row => {
@@ -488,13 +500,13 @@ export class IndividualDataModel {
                 };
             });
             
-            const totalPages = Math.ceil(total / limit);
+            const totalPages = Math.ceil(total / limitInt);
             
             return {
                 data: processedData,
                 total,
                 page,
-                limit,
+                limit: limitInt,
                 totalPages
             };
         } catch (error) {

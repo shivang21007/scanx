@@ -60,11 +60,11 @@ export function DevicesPage() {
   useEffect(() => {
     fetchDevicesData();
 
-    // Auto-refresh every 1 minutes (60000ms)
+    // Auto-refresh every 5 minutes (300000ms)
     const refreshInterval = setInterval(() => {
       //console.log('Auto-refreshing devices data...');
       fetchDevicesData();
-    }, 60000);
+    }, 300000);
 
     // Cleanup interval on unmount or filter change
     return () => clearInterval(refreshInterval);
