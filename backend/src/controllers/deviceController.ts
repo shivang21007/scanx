@@ -507,6 +507,35 @@ export const confirmIntervalUpdate = async (req: Request, res: Response) => {
     if (success) {
       await DeviceIntervalRequestModel.markAsApplied(request_id, confirmation);
       console.log(`✅ Interval update confirmed for device ${device_id}, request ${request_id}`);
+      
+      // Update device_summary.interval_info immediately when confirmation is received
+      if (current_interval) {
+        try {
+          // Parse interval string (e.g., "2h", "30m") to seconds
+          const intervalSeconds = parseIntervalToSeconds(current_interval);
+          
+          // Get existing summary or create new one
+          const existingSummary = await DeviceSummaryModel.findByDevice(device_id);
+          
+          // Update device_summary with new interval
+          await DeviceSummaryModel.createOrUpdate({
+            device_id: device_id,
+            last_report: existingSummary?.last_report || new Date(),
+            system_info: existingSummary?.system_info || false,
+            password_manager_info: existingSummary?.password_manager_info || false,
+            screen_lock_info: existingSummary?.screen_lock_info || false,
+            antivirus_info: existingSummary?.antivirus_info || false,
+            disk_encryption_info: existingSummary?.disk_encryption_info || false,
+            apps_info: existingSummary?.apps_info || false,
+            interval_info: intervalSeconds
+          });
+          
+          console.log(`✅ Updated device_summary.interval_info for device ${device_id}: ${current_interval} (${intervalSeconds}s)`);
+        } catch (intervalErr: any) {
+          // Log error but don't fail the confirmation
+          console.error(`⚠️  Failed to update device_summary.interval_info: ${intervalErr.message}`);
+        }
+      }
     } else {
       await DeviceIntervalRequestModel.markAsFailed(request_id);
       console.log(`❌ Interval update failed for device ${device_id}, request ${request_id}: ${error_message}`);
