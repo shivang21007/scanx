@@ -1,5 +1,7 @@
 import { DeviceModel, DeviceSummaryModel, IndividualDataModel, AgentPayload } from '../models/Device';
 import { UsersModel } from '../models/Users';
+import { DeviceIntervalRequestModel, parseIntervalToSeconds } from '../models/IntervalRequest';
+import { AdminModel } from '../models/Admin';
 import { Request, Response } from 'express';
 import { parseToIST, getCurrentISTString } from '../utils/timezone';
 import { getConnection } from '../db/connection';
@@ -189,11 +191,27 @@ export const receiveAgentData = async (req: Request, res: Response) => {
 
     console.log(`✅ Processed agent data: ${Object.keys(agentData.data).length} data types stored`);
 
-    res.status(200).json({ 
+    // Check for pending interval request
+    const pendingIntervalRequest = await DeviceIntervalRequestModel.getPendingByDeviceId(deviceId);
+
+    // Build response
+    const response: any = {
       message: 'Agent data received successfully',
       device_id: deviceId,
       timestamp: getCurrentISTString()
-    });
+    };
+
+    // Include interval update if pending
+    if (pendingIntervalRequest) {
+      response.interval_update = {
+        request_id: pendingIntervalRequest.id,
+        new_interval: pendingIntervalRequest.requested_interval,
+        new_interval_seconds: pendingIntervalRequest.requested_interval_seconds
+      };
+      console.log(`📤 Sending interval update to device ${deviceId}: ${pendingIntervalRequest.requested_interval}`);
+    }
+
+    res.status(200).json(response);
 
   } catch (err: any) {
     console.error('❌ Error processing agent data:', err);
@@ -363,3 +381,143 @@ export const getDashboardStats = async (req: Request, res: Response) => {
   }
 };
 
+// Request interval change for a device
+export const requestIntervalChange = async (req: Request, res: Response) => {
+  try {
+    const deviceId = parseInt(req.params.id);
+    const { interval, requested_by } = req.body;
+    
+    if (!interval) {
+      return res.status(400).json({ error: 'Interval is required' });
+    }
+    
+    // Validate interval format (e.g., "2h", "30m", "1h30m")
+    let intervalSeconds: number;
+    try {
+      intervalSeconds = parseIntervalToSeconds(interval);
+    } catch (error: any) {
+      return res.status(400).json({ error: `Invalid interval format: ${error.message}` });
+    }
+    
+    // Verify device exists
+    const device = await DeviceModel.findById(deviceId);
+    if (!device) {
+      return res.status(404).json({ error: 'Device not found' });
+    }
+    
+    // Get admin name from database
+    let adminName = 'admin';
+    const adminId = (req as any).admin?.id;
+    if (adminId) {
+      const admin = await AdminModel.findById(adminId);
+      adminName = admin?.name || admin?.email || 'admin';
+    } else {
+      const adminEmail = (req as any).admin?.email || (req as any).user?.email;
+      if (adminEmail) {
+        const admin = await AdminModel.findByEmail(adminEmail);
+        adminName = admin?.name || admin?.email || 'admin';
+      }
+    }
+    
+    // Create interval request
+    const requestId = await DeviceIntervalRequestModel.create({
+      device_id: deviceId,
+      requested_interval: interval,
+      requested_interval_seconds: intervalSeconds,
+      status: 'pending',
+      requested_by: requested_by || adminName
+    });
+    
+    console.log(`✅ Interval change requested for device ${deviceId}: ${interval} (${intervalSeconds}s)`);
+    
+    res.status(200).json({
+      message: 'Interval change request queued successfully',
+      request_id: requestId,
+      device_id: deviceId,
+      requested_interval: interval,
+      status: 'pending'
+    });
+  } catch (err: any) {
+    console.error('Error requesting interval change:', err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Get interval request history for a device (paginated)
+export const getIntervalRequestHistory = async (req: Request, res: Response) => {
+  try {
+    const deviceId = parseInt(req.params.id);
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    
+    // Validate pagination parameters
+    if (page < 1 || limit < 1 || limit > 100) {
+      return res.status(400).json({ 
+        error: 'Invalid pagination parameters. Page must be >= 1, limit must be 1-100' 
+      });
+    }
+    
+    const result = await DeviceIntervalRequestModel.getByDeviceId(deviceId, page, limit);
+    res.json(result);
+  } catch (err: any) {
+    console.error('Error getting interval request history:', err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Delete interval request
+export const deleteIntervalRequest = async (req: Request, res: Response) => {
+  try {
+    const requestId = parseInt(req.params.requestId);
+    
+    if (!requestId || isNaN(requestId)) {
+      return res.status(400).json({ error: 'Invalid request ID' });
+    }
+    
+    const deleted = await DeviceIntervalRequestModel.deleteById(requestId);
+    
+    if (!deleted) {
+      return res.status(404).json({ error: 'Interval request not found' });
+    }
+    
+    console.log(`✅ Interval request ${requestId} deleted`);
+    res.status(200).json({ message: 'Interval request deleted successfully' });
+  } catch (err: any) {
+    console.error('Error deleting interval request:', err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Agent confirmation endpoint
+export const confirmIntervalUpdate = async (req: Request, res: Response) => {
+  try {
+    const { device_id, request_id, success, error_message, current_interval } = req.body;
+    
+    if (!device_id || !request_id) {
+      return res.status(400).json({ error: 'device_id and request_id are required' });
+    }
+    
+    const confirmation = {
+      success,
+      error_message: error_message || null,
+      current_interval: current_interval || null,
+      confirmed_at: getCurrentISTString()
+    };
+    
+    if (success) {
+      await DeviceIntervalRequestModel.markAsApplied(request_id, confirmation);
+      console.log(`✅ Interval update confirmed for device ${device_id}, request ${request_id}`);
+    } else {
+      await DeviceIntervalRequestModel.markAsFailed(request_id);
+      console.log(`❌ Interval update failed for device ${device_id}, request ${request_id}: ${error_message}`);
+    }
+    
+    res.status(200).json({
+      message: 'Confirmation received',
+      request_id: request_id
+    });
+  } catch (err: any) {
+    console.error('Error confirming interval update:', err);
+    res.status(500).json({ error: err.message });
+  }
+};

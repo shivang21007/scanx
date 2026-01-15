@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { LogOut, Monitor, ChevronLeft, Shield, Settings, Grid3X3, HardDrive, Lock, Eye, AlertTriangle, ChevronDown } from 'lucide-react';
+import { LogOut, Monitor, ChevronLeft, Shield, Settings, Grid3X3, HardDrive, Lock, Eye, AlertTriangle, ChevronDown, Clock, Send, Trash2, ChevronUp } from 'lucide-react';
 import { apiService } from '../services/api';
+import toast, { Toaster } from 'react-hot-toast';
 
 import { LoadingSpinner } from './LoadingSpinner';
 import { formatAbsolute, getDeviceStatus } from '../utils/timezone';
@@ -40,6 +41,15 @@ export function DeviceDetailPage() {
   const tabDataRef = useRef<Record<string, TabDataState>>({});
   // Pagination limit selector
   const [historyLimit, setHistoryLimit] = useState(10);
+  
+  // Interval update state
+  const [newInterval, setNewInterval] = useState('');
+  const [submittingInterval, setSubmittingInterval] = useState(false);
+  const [intervalCardExpanded, setIntervalCardExpanded] = useState(false);
+  const [intervalCardData, setIntervalCardData] = useState<any>(null);
+  const [intervalCardLoading, setIntervalCardLoading] = useState(false);
+  const [intervalCardPage, setIntervalCardPage] = useState(1);
+  const [intervalCardLimit, setIntervalCardLimit] = useState(10);
 
   const deviceId = parseInt(id || '0');
   
@@ -155,6 +165,96 @@ export function DeviceDetailPage() {
     // Cleanup interval on unmount or device ID change
     return () => clearInterval(refreshInterval);
   }, [deviceId]);
+
+  // Handle interval change submission
+  const handleIntervalSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newInterval.trim() || !deviceId) return;
+
+    try {
+      setSubmittingInterval(true);
+      await apiService.requestIntervalChange(deviceId, newInterval.trim());
+      setNewInterval('');
+      // Refresh interval requests tab data
+      const currentTabData = tabDataRef.current['interval_update'];
+      const currentPage = currentTabData?.page || 1;
+      const currentLimit = currentTabData?.limit || 10;
+      await fetchTabData('interval_update', currentPage, currentLimit, true);
+      
+      // Refresh accordion card data if expanded
+      if (intervalCardExpanded) {
+        await fetchIntervalCardData();
+      }
+      
+      // Show success toast
+      toast.success('Interval change request queued successfully!');
+    } catch (err: any) {
+      console.error('Failed to request interval change:', err);
+      toast.error(`Failed to request interval change: ${err.message || 'Unknown error'}`);
+    } finally {
+      setSubmittingInterval(false);
+    }
+  };
+
+  // Handle delete interval request
+  const handleDeleteIntervalRequest = async (requestId: number) => {
+    try {
+      await apiService.deleteIntervalRequest(requestId);
+      
+      // Refresh accordion card data if expanded
+      if (intervalCardExpanded) {
+        await fetchIntervalCardData(intervalCardPage, intervalCardLimit);
+      }
+      
+      toast.success('Interval request deleted successfully!');
+    } catch (err: any) {
+      console.error('Failed to delete interval request:', err);
+      toast.error(`Failed to delete interval request: ${err.message || 'Unknown error'}`);
+    }
+  };
+
+  // Fetch interval card data (lazy load when expanded)
+  const fetchIntervalCardData = useCallback(async (page: number = 1, limit: number = 10) => {
+    if (!deviceId) return;
+    
+    try {
+      setIntervalCardLoading(true);
+      const result = await apiService.getIntervalRequestHistory(deviceId, page, limit);
+      setIntervalCardData(result);
+      setIntervalCardPage(page);
+      setIntervalCardLimit(limit);
+    } catch (err: any) {
+      console.error('Failed to fetch interval card data:', err);
+      toast.error('Failed to load interval requests');
+    } finally {
+      setIntervalCardLoading(false);
+    }
+  }, [deviceId]);
+
+  // Handle accordion toggle
+  const handleIntervalCardToggle = async () => {
+    if (!intervalCardExpanded && !intervalCardData) {
+      // First time expanding - fetch data with default pagination
+      await fetchIntervalCardData(1, 10);
+    }
+    setIntervalCardExpanded(!intervalCardExpanded);
+  };
+
+  // Format interval request status
+  const getStatusBadgeForRequest = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'pending':
+        return <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Pending</span>;
+      case 'applied':
+        return <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Applied</span>;
+      case 'failed':
+        return <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Failed</span>;
+      case 'cancelled':
+        return <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">Cancelled</span>;
+      default:
+        return <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">{status}</span>;
+    }
+  };
 
   // Fetch tab data when active tab changes (lazy loading)
   useEffect(() => {
@@ -636,6 +736,7 @@ export function DeviceDetailPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Toaster position="top-right" />
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -769,7 +870,7 @@ export function DeviceDetailPage() {
         </div>
 
         {/* Tabs */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
           <div className="border-b border-gray-200 overflow-x-auto">
             <nav className="-mb-px flex space-x-4 sm:space-x-8 px-4 sm:px-6 min-w-max">
               {tabs.map((tab) => {
@@ -795,6 +896,186 @@ export function DeviceDetailPage() {
           <div className="p-4 sm:p-6">
             {renderTabContent()}
           </div>
+        </div>
+
+        {/* Interval Update Accordion Card - Last Card */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+          {/* Accordion Header - Always Visible */}
+          <button
+            onClick={handleIntervalCardToggle}
+            className="w-full px-4 sm:px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-blue-600" />
+              <div className="text-left">
+                <h2 className="text-base sm:text-lg font-medium text-gray-900">Interval Update</h2>
+                {!intervalCardExpanded && (
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Current: {formatInterval(deviceInfo?.summary?.interval_info)} • Click to manage
+                  </p>
+                )}
+              </div>
+            </div>
+            {intervalCardExpanded ? (
+              <ChevronUp className="h-5 w-5 text-gray-500" />
+            ) : (
+              <ChevronDown className="h-5 w-5 text-gray-500" />
+            )}
+          </button>
+
+          {/* Accordion Content - Only visible when expanded */}
+          {intervalCardExpanded && (
+            <div className="px-4 sm:px-6 pb-4 sm:pb-6 border-t border-gray-200">
+              {/* Input Form */}
+              <div className="mb-6 pt-4">
+                <label htmlFor="interval-input-accordion" className="block text-sm font-medium text-gray-700 mb-1">
+                  New Interval
+                </label>
+                <form onSubmit={handleIntervalSubmit} className="flex flex-col sm:flex-row gap-3 items-end">
+                  <div className="flex-1 w-full sm:w-auto">
+                    <input
+                      id="interval-input-accordion"
+                      type="text"
+                      value={newInterval}
+                      onChange={(e) => setNewInterval(e.target.value)}
+                      placeholder="e.g., 2h, 30m, 1h30m"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      disabled={submittingInterval}
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={!newInterval.trim() || submittingInterval}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap"
+                  >
+                    {submittingInterval ? (
+                      <>
+                        <LoadingSpinner size="sm" />
+                        <span>Submitting...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-4 w-4" />
+                        <span>Submit</span>
+                      </>
+                    )}
+                  </button>
+                </form>
+                <p className="mt-1 text-xs text-gray-500">
+                  Format: hours (h) and/or minutes (m), e.g., "2h", "30m", "1h30m"
+                </p>
+              </div>
+
+              {/* Queue Table with Pagination */}
+              <div>
+                <h3 className="text-sm font-medium text-gray-900 mb-3">Request History</h3>
+                {intervalCardLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <LoadingSpinner size="md" />
+                    <span className="ml-3 text-gray-600">Loading requests...</span>
+                  </div>
+                ) : intervalCardData?.data?.length === 0 ? (
+                  <p className="text-gray-500 text-sm py-4">No interval change requests yet.</p>
+                ) : intervalCardData?.data ? (
+                  <div className="space-y-4">
+                    {/* Pagination Controls */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-600">Show:</span>
+                        <div className="relative">
+                          <select
+                            value={intervalCardLimit}
+                            onChange={(e) => {
+                              const newLimit = Number(e.target.value);
+                              fetchIntervalCardData(1, newLimit);
+                            }}
+                            className="appearance-none bg-white border border-gray-300 rounded-md px-3 py-1.5 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            <option value={10}>10</option>
+                            <option value={20}>20</option>
+                            <option value={50}>50</option>
+                          </select>
+                          <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                        </div>
+                        <span className="text-sm text-gray-600">records</span>
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-500">
+                          Showing {intervalCardData.data.length} of {intervalCardData.total} records
+                        </span>
+                        {intervalCardData.totalPages > 1 && (
+                          <div className="flex gap-1">
+                            <button
+                              onClick={() => fetchIntervalCardData(intervalCardPage - 1, intervalCardLimit)}
+                              disabled={intervalCardPage <= 1}
+                              className="px-2 py-1 text-sm border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              Prev
+                            </button>
+                            <span className="px-2 py-1 text-sm">
+                              {intervalCardPage} / {intervalCardData.totalPages}
+                            </span>
+                            <button
+                              onClick={() => fetchIntervalCardData(intervalCardPage + 1, intervalCardLimit)}
+                              disabled={intervalCardPage >= intervalCardData.totalPages}
+                              className="px-2 py-1 text-sm border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              Next
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Table */}
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Request ID</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Requested Interval</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Requested By</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Requested At</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Applied At</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {intervalCardData.data.map((request: any) => (
+                            <tr key={request.id} className="hover:bg-gray-50">
+                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">#{request.id}</td>
+                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{request.requested_interval}</td>
+                              <td className="px-4 py-3 whitespace-nowrap">
+                                {getStatusBadgeForRequest(request.status)}
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{request.requested_by || 'N/A'}</td>
+                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                {request.requested_at ? formatAbsolute(request.requested_at) : 'N/A'}
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                {request.applied_at ? formatAbsolute(request.applied_at) : '-'}
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap text-sm">
+                                <button
+                                  onClick={() => handleDeleteIntervalRequest(request.id)}
+                                  className="text-red-600 hover:text-red-800 flex items-center gap-1"
+                                  title="Delete request"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          )}
         </div>
       </main>
     </div>

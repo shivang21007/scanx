@@ -350,6 +350,63 @@ class ApiService {
     }
   }
 
+  // Interval update endpoints
+  async requestIntervalChange(deviceId: number, interval: string): Promise<{
+    message: string;
+    request_id: number;
+    device_id: number;
+    requested_interval: string;
+    status: string;
+  }> {
+    try {
+      const response: AxiosResponse<{
+        message: string;
+        request_id: number;
+        device_id: number;
+        requested_interval: string;
+        status: string;
+      }> = await this.api.put(`/devices/${deviceId}/interval-request`, { interval });
+      return response.data;
+    } catch (error: any) {
+      throw this.handleError(error);
+    }
+  }
+
+  async getIntervalRequestHistory(
+    deviceId: number, 
+    page: number = 1, 
+    limit: number = 10
+  ): Promise<{
+    data: any[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
+    try {
+      const response: AxiosResponse<{
+        data: any[];
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+      }> = await this.api.get(`/devices/${deviceId}/interval-request/history`, {
+        params: { page, limit }
+      });
+      return response.data;
+    } catch (error: any) {
+      throw this.handleError(error);
+    }
+  }
+
+  async deleteIntervalRequest(requestId: number): Promise<void> {
+    try {
+      await this.api.delete(`/devices/interval-request/${requestId}`);
+    } catch (error: any) {
+      throw this.handleError(error);
+    }
+  }
+
 }
 
 export const apiService = new ApiService();

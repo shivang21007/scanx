@@ -11,7 +11,8 @@ export const TABLES = {
     ANTIVIRUS_INFO: 'antivirus_info',
     SCREEN_LOCK_INFO: 'screen_lock_info',
     APPS_INFO: 'apps_info',
-    DEVICE_SUMMARY: 'device_summary'
+    DEVICE_SUMMARY: 'device_summary',
+    DEVICE_INTERVAL_REQUESTS: 'device_interval_requests'
 } as const;
 
 // Create admins table
@@ -236,6 +237,32 @@ export const createDeviceSummaryTable = async () => {
     console.log(`✅ Table ${TABLES.DEVICE_SUMMARY} created/verified`);
 };
 
+// Create device_interval_requests table for interval push updates
+export const createDeviceIntervalRequestsTable = async () => {
+    const connection = await getConnection();
+    
+    await connection.execute(`
+        CREATE TABLE IF NOT EXISTS ${TABLES.DEVICE_INTERVAL_REQUESTS} (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            device_id INT NOT NULL,
+            requested_interval VARCHAR(50) NOT NULL,
+            requested_interval_seconds INT NOT NULL,
+            status ENUM('pending', 'applied', 'failed', 'cancelled') DEFAULT 'pending',
+            requested_by VARCHAR(255),
+            requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            applied_at TIMESTAMP NULL,
+            agent_confirmation JSON NULL,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            FOREIGN KEY (device_id) REFERENCES ${TABLES.DEVICES}(id) ON DELETE CASCADE,
+            INDEX idx_device_status (device_id, status),
+            INDEX idx_status (status),
+            INDEX idx_requested_at (requested_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+    
+    console.log(`✅ Table ${TABLES.DEVICE_INTERVAL_REQUESTS} created/verified`);
+};
+
 // Initialize all tables
 export const initializeSchema = async () => {
     try {
@@ -250,6 +277,7 @@ export const initializeSchema = async () => {
         await createScreenLockInfoTable();
         await createAppsInfoTable();
         await createDeviceSummaryTable();
+        await createDeviceIntervalRequestsTable();
         
         console.log("🎯 Database schema initialized successfully!");
         
@@ -267,6 +295,7 @@ export const dropAllTables = async () => {
         console.log("⚠️  Dropping all tables...");
         
         // Drop in reverse order due to foreign key constraints
+        await connection.execute(`DROP TABLE IF EXISTS ${TABLES.DEVICE_INTERVAL_REQUESTS}`);
         await connection.execute(`DROP TABLE IF EXISTS ${TABLES.DEVICE_SUMMARY}`);
         await connection.execute(`DROP TABLE IF EXISTS ${TABLES.APPS_INFO}`);
         await connection.execute(`DROP TABLE IF EXISTS ${TABLES.SCREEN_LOCK_INFO}`);

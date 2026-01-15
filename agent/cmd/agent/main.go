@@ -110,10 +110,13 @@ func main() {
 		}
 
 		// Send data
-		if err := backendSender.SendAgentData(data); err != nil {
+		response, err := backendSender.SendAgentData(data)
+		if err != nil {
 			utils.Error("❌ Failed to send data to backend: %v", err)
 		} else {
 			utils.Info("✅ Successfully sent data to backend!")
+			utils.Info("   Device ID: %d", response.DeviceID)
+			utils.Info("   Interval update: %+v", response.IntervalUpdate)
 		}
 
 		utils.Info("🎯 Test completed successfully!")

@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"time"
 	"scanx/internal/collector"
 	"scanx/internal/utils"
+	"time"
 )
 
 // BackendSender handles sending data to the MDM backend
@@ -22,6 +22,16 @@ type SendResponse struct {
 	Message   string `json:"message"`
 	DeviceID  int    `json:"device_id"`
 	Timestamp string `json:"timestamp"`
+
+	// Interval update (optional)
+	IntervalUpdate *IntervalUpdateResponse `json:"interval_update,omitempty"`
+}
+
+// IntervalUpdateResponse represents an interval update from backend
+type IntervalUpdateResponse struct {
+	RequestID          int    `json:"request_id"`
+	NewInterval        string `json:"new_interval"`
+	NewIntervalSeconds int    `json:"new_interval_seconds"`
 }
 
 // NewBackendSender creates a new backend sender
@@ -35,19 +45,19 @@ func NewBackendSender(baseURL string) *BackendSender {
 	}
 }
 
-// SendAgentData sends collected data to the backend
-func (s *BackendSender) SendAgentData(data *collector.CollectedData) error {
+// SendAgentData sends collected data to the backend and returns the response
+func (s *BackendSender) SendAgentData(data *collector.CollectedData) (*SendResponse, error) {
 	// Prepare the payload
 	jsonData, err := json.Marshal(data)
 	if err != nil {
-		return fmt.Errorf("failed to marshal agent data: %w", err)
+		return nil, fmt.Errorf("failed to marshal agent data: %w", err)
 	}
 
 	// Create the request
 	url := fmt.Sprintf("%s/api/devices/agent/report", s.baseURL)
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
-		return fmt.Errorf("failed to create request: %w", err)
+		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
 	// Set headers
@@ -60,13 +70,13 @@ func (s *BackendSender) SendAgentData(data *collector.CollectedData) error {
 	// Send the request
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("failed to send request: %w", err)
+		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	// Check response status
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("backend returned error status: %d", resp.StatusCode)
+		return nil, fmt.Errorf("backend returned error status: %d", resp.StatusCode)
 	}
 
 	// Parse response
@@ -74,14 +84,14 @@ func (s *BackendSender) SendAgentData(data *collector.CollectedData) error {
 	if err := json.NewDecoder(resp.Body).Decode(&sendResponse); err != nil {
 		utils.Warning("Failed to parse backend response: %v", err)
 		// Don't fail on parse error, the data was still sent successfully
-		return nil
+		return nil, nil
 	}
 
 	utils.Info("✅ Successfully sent agent data to backend_url: %s", s.baseURL)
 	utils.Info("   Device ID: %d", sendResponse.DeviceID)
 	utils.Info("   Backend timestamp: %s", sendResponse.Timestamp)
 
-	return nil
+	return &sendResponse, nil
 }
 
 // TestConnection tests connectivity to the backend
@@ -108,4 +118,3 @@ func (s *BackendSender) TestConnection() error {
 	utils.Info("✅ Backend connection test successful")
 	return nil
 }
-
