@@ -55,8 +55,6 @@ const GENERIC_SERIAL_NUMBERS = [
     'not available',
     'not specified',
     'chassis serial number',
-    '0',
-    '000000',
     'empty',
     'invalid',
     'undefined'
@@ -66,7 +64,8 @@ const GENERIC_SERIAL_NUMBERS = [
 function isGenericSerialNumber(serialNo: string): boolean {
     if (!serialNo) return true;
     const normalized = serialNo.toLowerCase().trim();
-    return GENERIC_SERIAL_NUMBERS.some(generic => normalized === generic || normalized.includes(generic));
+    // Only check for exact matches, not substrings
+    return GENERIC_SERIAL_NUMBERS.some(generic => normalized === generic);
 }
 
 export class DeviceModel {
