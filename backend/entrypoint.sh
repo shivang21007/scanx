@@ -22,7 +22,7 @@ if [ "$HOST_POSTFIX_AVAILABLE" = "true" ]; then
 fi
 
 echo "🔧 Running database migrations..."
-npm run db:migrate
+bun run db:migrate
 
 echo "🚀 Starting server..."
-npm run start
+bun run start

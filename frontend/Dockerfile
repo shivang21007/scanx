@@ -1,12 +1,12 @@
 #--------------------------------------------
 # Builder stage
-FROM node:lts-alpine AS builder
+FROM oven/bun:1.3.6-alpine AS builder
 # Set working directory
 WORKDIR /app
 # Copy package files
-COPY package*.json ./
+COPY package*.json bun.lock ./
 # Install dependencies
-RUN npm install
+RUN bun ci
 
 # Copy app source
 COPY . .
@@ -17,7 +17,7 @@ ARG VITE_ENABLE_REGISTER_ENDPOINT
 ENV VITE_ENABLE_REGISTER_ENDPOINT=${VITE_ENABLE_REGISTER_ENDPOINT}
 
 # Run build script
-RUN npm run build
+RUN bun run build
 
 #--------------------------------------------
 # Runner stage

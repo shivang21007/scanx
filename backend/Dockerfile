@@ -1,33 +1,33 @@
 # Builder stage
-FROM node:18-alpine AS builder
+FROM oven/bun:1.3.6-alpine AS builder
 
 # Set working directory
 WORKDIR /app
 
 # Copy package files
-COPY package*.json ./
+COPY package*.json bun.lock ./
 
-# Install dependencies
-RUN npm install
+# Install dependencies using bun
+RUN bun ci
 
 # Copy app source
 COPY . .
 
 # Build the app
-RUN npm run build 
+RUN bun run build 
 
 #--------------------------------------------
 # Runner stage
-FROM node:18-alpine AS runner
+FROM oven/bun:1.3.6-alpine AS runner
 
 # Set working directory
 WORKDIR /app
 
 # Copy package files    
-COPY package*.json ./
+COPY package*.json bun.lock ./
 
-# Install dependencies
-RUN npm install --only=production
+# Install dependencies using bun
+RUN bun ci --only=production
 
 # Copy dist files
 COPY --from=builder /app/dist ./dist
@@ -45,4 +45,4 @@ RUN chmod +x /app/entrypoint.sh
 EXPOSE 5000
 
 # Run app
-CMD ["npm", "run", "start"]
+CMD ["bun", "run", "start"]
