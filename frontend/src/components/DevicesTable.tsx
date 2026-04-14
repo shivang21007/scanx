@@ -1,6 +1,6 @@
 import { DeviceTableRow } from '../types/device';
 import { CheckCircle, XCircle, Monitor, Trash2, Apple, Square, Cpu, ChevronUp, ChevronDown } from 'lucide-react';
-import { formatRelative, getDeviceStatus } from '../utils/timezone';
+import { formatDashboardTimestamp, getDeviceStatus } from '../utils/timezone';
 import { useNavigate } from 'react-router-dom';
 import { apiService } from '@/services/api';
 import toast, { Toaster } from 'react-hot-toast';
@@ -337,7 +337,7 @@ export function DevicesTable({
                 {/* Last Check Column */}
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-900">
-                    {device.last_report ? formatRelative(device.last_report) : 'Never'}
+                    {device.last_report ? formatDashboardTimestamp(device.last_report) : 'Never'}
                   </div>
                 </td>
 

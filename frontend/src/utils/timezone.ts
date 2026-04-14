@@ -48,6 +48,20 @@ export function formatAbsolute(timestampString: string): string {
   return `${datePart} at ${timePart}`;
 }
 
+/**
+ * Format timestamp as DD/MM/YY HH:MM in 24-hour format
+ * Used on the dashboard table for "Last Check" column
+ */
+export function formatDashboardTimestamp(timestampString: string): string {
+  const date = new Date(timestampString);
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = String(date.getFullYear()).slice(-2);
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${day}/${month}/${year} ${hours}:${minutes}`;
+}
+
 export function getDeviceStatus(lastReportTimestamp: string | null): 'online' | 'offline' {
   if (!lastReportTimestamp) {
     return 'offline';
