@@ -1,6 +1,6 @@
 import { DeviceTableRow } from '../types/device';
 import { CheckCircle, XCircle, Monitor, Trash2, Apple, Square, Cpu, ChevronUp, ChevronDown } from 'lucide-react';
-import { formatDashboardTimestamp, getDeviceStatus } from '../utils/timezone';
+import { formatDashboardTimestamp, formatRelative, getDeviceStatus } from '../utils/timezone';
 import { useNavigate } from 'react-router-dom';
 import { apiService } from '@/services/api';
 import toast, { Toaster } from 'react-hot-toast';
@@ -17,6 +17,8 @@ interface DevicesTableProps {
   onSecurityFilter?: (filterType: 'password_manager' | 'disk_encryption' | 'antivirus' | 'screen_lock') => void;
   lastCheckSort?: 'asc' | 'desc';
   onLastCheckSort?: () => void;
+  /** When true, Last check column shows DD/MM/YY HH:mm; when false, relative text */
+  lastCheckAbsolute?: boolean;
   onDeviceDeleted?: () => Promise<any>;
 }
 
@@ -32,6 +34,7 @@ export function DevicesTable({
   onSecurityFilter,
   lastCheckSort,
   onLastCheckSort,
+  lastCheckAbsolute = false,
   onDeviceDeleted 
 }: DevicesTableProps) {
   const navigate = useNavigate();
@@ -216,6 +219,7 @@ export function DevicesTable({
                   <span>Last Check</span>
                   {onLastCheckSort && (
                     <button
+                      type="button"
                       onClick={onLastCheckSort}
                       className="flex flex-col items-center justify-center ml-1 hover:bg-gray-100 rounded p-0.5 transition-colors"
                       title={
@@ -337,7 +341,11 @@ export function DevicesTable({
                 {/* Last Check Column */}
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-900">
-                    {device.last_report ? formatDashboardTimestamp(device.last_report) : 'Never'}
+                    {device.last_report
+                      ? lastCheckAbsolute
+                        ? formatDashboardTimestamp(device.last_report)
+                        : formatRelative(device.last_report)
+                      : 'Never'}
                   </div>
                 </td>
 

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Link, useSearchParams } from 'react-router-dom';
-import { LogOut, Search, Filter, Monitor, ChevronLeft, X } from 'lucide-react';
+import { LogOut, Search, Filter, Monitor, ChevronLeft, X, Clock } from 'lucide-react';
 import { apiService } from '../services/api';
 import { DevicesTableResponse, DevicesTableFilters } from '../types/device';
 import { LoadingSpinner } from './LoadingSpinner';
@@ -35,6 +35,9 @@ export function DevicesPage() {
 
   // Last Check sort state: 'desc' = latest first (default), 'asc' = oldest first
   const [lastCheckSort, setLastCheckSort] = useState<'asc' | 'desc'>('desc');
+
+  // Last check column: relative vs absolute datetime (dashboard table only)
+  const [lastCheckAbsolute, setLastCheckAbsolute] = useState(false);
 
   // Latest versions state
   const [latestVersions, setLatestVersions] = useState<{
@@ -331,7 +334,7 @@ export function DevicesPage() {
       <main className="px-4 sm:px-6 lg:px-12 xl:px-16 py-8">
         {/* Filters Section */}
         <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
+          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
             {/* Search Bar */}
             <div className="flex-1 max-w-md">
               <div className="relative">
@@ -346,32 +349,74 @@ export function DevicesPage() {
               </div>
             </div>
 
-            {/* OS Type Filters */}
-            <div className="flex items-center space-x-2">
-              <Filter className="h-4 w-4 text-gray-400" />
-              <span className="text-sm text-gray-600 mr-2">OS Type:</span>
-              <div className="flex space-x-2">
-                {['darwin', 'windows', 'linux'].map((osType) => (
+            {/* OS Type + Last check display (stacked on wide screens, below OS Type) */}
+            <div className="flex flex-col gap-3 lg:items-end">
+              {/* OS Type Filters */}
+              <div className="flex items-center space-x-2 flex-wrap">
+                <Filter className="h-4 w-4 text-gray-400 shrink-0" />
+                <span className="text-sm text-gray-600 mr-2">OS Type:</span>
+                <div className="flex flex-wrap gap-2">
+                  {['darwin', 'windows', 'linux'].map((osType) => (
+                    <button
+                      key={osType}
+                      onClick={() => handleOsTypeFilter(osType)}
+                      className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                        filters.os_type === osType
+                          ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      {osType === 'darwin' ? 'macOS' : osType.charAt(0).toUpperCase() + osType.slice(1)}
+                    </button>
+                  ))}
+                  {filters.os_type && (
+                    <button
+                      onClick={() => setFilters(prev => ({ ...prev, os_type: '' }))}
+                      className="px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Last check column display (table only) */}
+              <div className="flex items-center space-x-2 flex-wrap">
+                <Clock className="h-4 w-4 text-gray-400 shrink-0" />
+                <span className="text-sm text-gray-600 mr-2">Last check:</span>
+                <div className="flex flex-wrap gap-2">
                   <button
-                    key={osType}
-                    onClick={() => handleOsTypeFilter(osType)}
+                    type="button"
+                    onClick={() => setLastCheckAbsolute(false)}
                     className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-                      filters.os_type === osType
+                      !lastCheckAbsolute
                         ? 'bg-blue-100 text-blue-700 border border-blue-200'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}
                   >
-                    {osType === 'darwin' ? 'macOS' : osType.charAt(0).toUpperCase() + osType.slice(1)}
+                    Relative
                   </button>
-                ))}
-                {filters.os_type && (
                   <button
-                    onClick={() => setFilters(prev => ({ ...prev, os_type: '' }))}
-                    className="px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    type="button"
+                    onClick={() => setLastCheckAbsolute(true)}
+                    className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                      lastCheckAbsolute
+                        ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
                   >
-                    Clear
+                    Date & time
                   </button>
-                )}
+                  {lastCheckAbsolute && (
+                    <button
+                      type="button"
+                      onClick={() => setLastCheckAbsolute(false)}
+                      className="px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -413,6 +458,22 @@ export function DevicesPage() {
                           onClick={() => setFilters(prev => ({ ...prev, os_type: '' }))}
                           className="text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded p-0.5 transition-colors"
                           title="Clear OS type filter"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    )}
+
+                    {lastCheckAbsolute && (
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-md">
+                        <span className="text-blue-700 text-sm">
+                          {'Last check: Date & time'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setLastCheckAbsolute(false)}
+                          className="text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded p-0.5 transition-colors"
+                          title="Show relative last check again"
                         >
                           <X className="h-3.5 w-3.5" />
                         </button>
@@ -580,6 +641,7 @@ export function DevicesPage() {
             onSecurityFilter={handleSecurityFilter}
             lastCheckSort={lastCheckSort}
             onLastCheckSort={handleLastCheckSort}
+            lastCheckAbsolute={lastCheckAbsolute}
             onDeviceDeleted={async () => {
               await fetchDevicesData();
               return true;
