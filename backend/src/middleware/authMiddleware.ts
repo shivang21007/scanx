@@ -2,16 +2,16 @@ import jwt from 'jsonwebtoken';
 import { env } from '../env/env';
 import { Request, Response, NextFunction } from 'express';
 import { getCurrentIST } from '../utils/timezone';
+import { getRequestLogger } from '../logger/logger';
 
 /**
  * Middleware to check if registration endpoint is enabled
  * Returns 405 Method Not Allowed if registration is disabled
  */
 export const checkRegisterEnabled = (req: Request, res: Response, next: NextFunction) => {
+  const log = getRequestLogger(req);
   if (!env.ENABLE_REGISTER_ENDPOINT) {
-    console.log('ENABLE_REGISTER_ENDPOINT:', env.ENABLE_REGISTER_ENDPOINT);
-    console.log('Registration is not available. Please use the login endpoint.');
-    console.log('redirectTo:', '/login');
+    log.info('registration_disabled', { enableRegisterEndpoint: env.ENABLE_REGISTER_ENDPOINT, redirectTo: '/login' });
     return res.status(405).json({
       message: 'Registration is not available. Please use the login endpoint.',
       error: 'Method Not Allowed',
@@ -30,6 +30,7 @@ interface AuthRequest extends Request {
 }
 
 export const auth = (req: AuthRequest, res: Response, next: NextFunction) => {
+  const log = getRequestLogger(req);
   // Try to get token from cookie first, then fall back to Authorization header for backwards compatibility
   const token = req.cookies?.scanx_token || 
     (req.header('Authorization')?.startsWith('Bearer ') ? req.header('Authorization')!.split(' ')[1] : null);
@@ -38,7 +39,7 @@ export const auth = (req: AuthRequest, res: Response, next: NextFunction) => {
   // console.log('Cookies received:', Object.keys(req.cookies || {}));
   
   if (!token) {
-    console.log('No token provided, returning 401');
+    log.warn('auth_missing_token');
     return res.status(401).json({ 
       message: 'Access denied. No token provided.',
       logout: true 
@@ -51,7 +52,7 @@ export const auth = (req: AuthRequest, res: Response, next: NextFunction) => {
     // Check if token is expired (using IST time)
     const currentTime = Math.floor(getCurrentIST().getTime() / 1000);
     if (decoded.exp && decoded.exp < currentTime) {
-      console.log('Token expired for user:', decoded.email);
+      log.warn('auth_token_expired_claim', { email: decoded.email });
       return res.status(401).json({ 
         message: 'Token expired. Please sign in again.',
         logout: true,

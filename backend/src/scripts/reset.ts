@@ -5,13 +5,14 @@ import 'dotenv/config';
 import mysql from 'mysql2/promise';
 import { env } from '../env/env';
 import { initializeDatabaseWithMigrations } from '../db';
+import { systemLog } from '../logger/logger';
 
 async function resetDatabase() {
     let connection: mysql.Connection | null = null;
     
     try {
-        console.log("⚠️  RESETTING DATABASE - This will delete ALL data!");
-        console.log("🔌 Connecting to MySQL server...");
+        systemLog.warn('database_reset_started');
+        systemLog.info('database_reset_connecting_server');
         
         // Connect to MySQL server without specifying database
         connection = await mysql.createConnection({
@@ -22,32 +23,32 @@ async function resetDatabase() {
             // No database specified - we'll recreate it
         });
         
-        console.log("✅ Connected to MySQL server");
+        systemLog.info('database_reset_server_connected');
         
         // Drop the entire database
         const dbName = env.MYSQL_DATABASE || 'scanx';
-        console.log(`🗑️  Dropping database: ${dbName}`);
+        systemLog.warn('database_reset_dropping', { dbName });
         await connection.execute(`DROP DATABASE IF EXISTS ${dbName}`);
         
         // Recreate the database
-        console.log(`🔧 Creating database: ${dbName}`);
+        systemLog.info('database_reset_creating', { dbName });
         await connection.execute(`CREATE DATABASE ${dbName}`);
         
         // Close the server connection
         await connection.end();
         connection = null;
         
-        console.log("🚀 Database recreated successfully!");
-        console.log("🔧 Running full initialization with migrations...");
+        systemLog.info('database_reset_recreated');
+        systemLog.info('database_reset_running_migrations');
         
         // Now run the full initialization with the new database
         await initializeDatabaseWithMigrations();
         
-        console.log("🎯 Database reset completed successfully!");
+        systemLog.info('database_reset_complete');
         process.exit(0);
         
     } catch (error: any) {
-        console.error("❌ Database reset failed:", error.message);
+        systemLog.error('database_reset_failed', { error: error.message });
         process.exit(1);
     } finally {
         if (connection) {

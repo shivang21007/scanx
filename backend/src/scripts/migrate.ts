@@ -3,18 +3,19 @@
 // Migration script - run separately from server startup
 import 'dotenv/config';
 import { initializeDatabaseWithMigrations, disconnectDB } from '../db';
+import { systemLog } from '../logger/logger';
 
 async function runMigrations() {
     try {
-        console.log("🔧 Running database migrations...");
+        systemLog.info('migration_script_start');
         
         await initializeDatabaseWithMigrations();
         
-        console.log("🎯 Migration script completed successfully!");
+        systemLog.info('migration_script_complete');
         process.exit(0);
         
     } catch (error: any) {
-        console.error("❌ Migration failed:", error.message);
+        systemLog.error('migration_script_failed', { error: error.message });
         process.exit(1);
     } finally {
         await disconnectDB();

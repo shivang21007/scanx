@@ -1,5 +1,6 @@
 import { createClient } from 'redis';
 import { env } from '../env/env';
+import { systemLog } from '../logger/logger';
 
 // Create Redis client
 const redisClient = createClient({
@@ -12,12 +13,12 @@ const redisClient = createClient({
 
 // Error handling
 redisClient.on('error', (err: Error) => {
-    console.error('❌ Redis Client Error:', err);
+    systemLog.error('redis_client_error', { error: err.message, stack: err.stack });
 });
 
 // Connect to Redis
 redisClient.on('connect', () => {
-    console.log('✅ Redis connected successfully');
+    systemLog.info('redis_connected');
 });
 
 // Initialize connection
@@ -27,7 +28,7 @@ export const connectRedis = async () => {
             await redisClient.connect();
         }
     } catch (err: any) {
-        console.error('❌ Failed to connect to Redis:', err.message);
+        systemLog.error('redis_connect_failed', { error: err.message });
         throw err;
     }
 };
@@ -37,10 +38,10 @@ export const disconnectRedis = async () => {
     try {
         if (redisClient.isOpen) {
             await redisClient.quit();
-            console.log('🔌 Redis disconnected');
+            systemLog.info('redis_disconnected');
         }
     } catch (err: any) {
-        console.error('❌ Redis Disconnect Error:', err.message);
+        systemLog.error('redis_disconnect_error', { error: err.message });
     }
 };
 

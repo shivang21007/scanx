@@ -5,6 +5,7 @@ import { AdminModel } from '../models/Admin';
 import { Request, Response } from 'express';
 import { parseToIST, getCurrentISTString } from '../utils/timezone';
 import { getConnection } from '../db/connection';
+import { getRequestLogger } from '../logger/logger';
 
 // Function to check if data indicates compliance based on data type
 function checkDataCompliance(dataType: string, data: any[]): boolean {
@@ -45,8 +46,21 @@ function checkDataCompliance(dataType: string, data: any[]): boolean {
   }
 }
 
+/** Log agent payload: full `data` except apps_info (only size + row count). */
+function buildAgentDataLogMeta(dataType: string, data: any[]): Record<string, unknown> {
+  if (dataType === 'apps_info') {
+    const json = JSON.stringify(data);
+    return {
+      apps_row_count: data.length,
+      payload_bytes: Buffer.byteLength(json, 'utf8'),
+    };
+  }
+  return { data };
+}
+
 // Agent data ingestion endpoint
 export const receiveAgentData = async (req: Request, res: Response) => {
+  const log = getRequestLogger(req);
   try {
     const agentData: AgentPayload = req.body;
     // Validate required fields
@@ -56,13 +70,23 @@ export const receiveAgentData = async (req: Request, res: Response) => {
       });
     }
 
-    console.log(`Received agent data from device: ${agentData.serial_no} (${agentData.user} ${agentData.timestamp})`);
-    console.log( "screen_lock_info of", agentData.serial_no, "is", agentData.data.screen_lock_info);
-    console.log( "antivirus_info of", agentData.serial_no, "is", agentData.data.antivirus_info);
-    console.log( "disk_encryption_info of", agentData.serial_no, "is", agentData.data.disk_encryption_info);
-    console.log( "password_manager_info of", agentData.serial_no, "is", agentData.data.password_manager_info);
-    
+    const payloadStats: Record<string, { rows: number; bytes: number }> = {};
+    for (const [dt, arr] of Object.entries(agentData.data || {})) {
+      if (Array.isArray(arr) && arr.length > 0) {
+        payloadStats[dt] = {
+          rows: arr.length,
+          bytes: Buffer.byteLength(JSON.stringify(arr), 'utf8'),
+        };
+      }
+    }
 
+    log.info('agent_report_received', {
+      serial_no: agentData.serial_no,
+      user: agentData.user,
+      timestamp: agentData.timestamp,
+      dataTypes: Object.keys(agentData.data || {}),
+      payload_stats: payloadStats,
+    });
     // Parse agent timestamp to IST
     const istTimestamp = parseToIST(agentData.timestamp);
     
@@ -141,15 +165,15 @@ export const receiveAgentData = async (req: Request, res: Response) => {
           // Mark as true only if no error status AND data is compliant
           if (!hasErrorStatus && isCompliant) {
             receivedDataTypes[dataType as keyof typeof receivedDataTypes] = true;
-            console.log(`✅ Stored ${dataType} data for device ${deviceId} - COMPLIANT`);
+            log.info('agent_data_stored_compliant', { dataType, deviceId, ...buildAgentDataLogMeta(dataType, data) });
           } else if (hasErrorStatus) {
-            console.log(`⚠️  ${dataType} has error status - marking as false in summary`);
+            log.warn('agent_data_error_status', { dataType, deviceId, ...buildAgentDataLogMeta(dataType, data) });
           } else {
-            console.log(`⚠️  ${dataType} is non-compliant - marking as false in summary`);
+            log.warn('agent_data_non_compliant', { dataType, deviceId, ...buildAgentDataLogMeta(dataType, data) });
           }
           
         } catch (error: any) {
-          console.error(`❌ Failed to store ${dataType}:`, error.message);
+          log.error('agent_data_store_failed', { dataType, deviceId, error: error.message });
         }
       }
     }
@@ -163,10 +187,10 @@ export const receiveAgentData = async (req: Request, res: Response) => {
         // If grace period is more than 1 hour (3600 seconds), mark as false
         if (gracePeriod > 3600) {
           receivedDataTypes.screen_lock_info = false;
-          console.log(`⚠️  Screen lock grace period (${gracePeriod}s) exceeds 1 hour - marking as non-compliant`);
+          log.warn('agent_screen_lock_grace_period_exceeds_limit', { gracePeriod, deviceId });
         }
       } catch (error: any) {
-        console.error(`❌ Failed to validate screen_lock grace_period:`, error.message);
+        log.error('agent_screen_lock_grace_validation_failed', { error: error.message, deviceId });
         // Keep the original receivedDataTypes value on error
       }
     }
@@ -183,13 +207,12 @@ export const receiveAgentData = async (req: Request, res: Response) => {
     // Always try to add it - addDevice will check if it already exists
     const added = await UsersModel.addDevice(agentData.user, deviceId);
     if (added) {
-      console.log(`✅ Added device ${deviceId} to user ${agentData.user}'s device_id array`);
+      log.info('user_device_array_updated', { deviceId, user: agentData.user });
     } else if (isNewDevice) {
-      // If it's a new device but addDevice returned false, log a warning
-      console.log(`⚠️  Device ${deviceId} already exists in user ${agentData.user}'s device_id array (unexpected for new device)`);
+      log.warn('user_device_array_unexpected_duplicate', { deviceId, user: agentData.user });
     }
 
-    console.log(`✅ Processed agent data: ${Object.keys(agentData.data).length} data types stored`);
+    log.info('agent_report_processed', { deviceId, dataTypeCount: Object.keys(agentData.data).length });
 
     // Check for pending interval request
     const pendingIntervalRequest = await DeviceIntervalRequestModel.getPendingByDeviceId(deviceId);
@@ -208,30 +231,32 @@ export const receiveAgentData = async (req: Request, res: Response) => {
         new_interval: pendingIntervalRequest.requested_interval,
         new_interval_seconds: pendingIntervalRequest.requested_interval_seconds
       };
-      console.log(`📤 Sending interval update to device ${deviceId}: ${pendingIntervalRequest.requested_interval}`);
+      log.info('agent_interval_update_in_response', { deviceId, interval: pendingIntervalRequest.requested_interval });
     }
 
     res.status(200).json(response);
 
   } catch (err: any) {
-    console.error('❌ Error processing agent data:', err);
+    log.error('agent_report_failed', { error: err?.message, stack: err?.stack });
     res.status(500).json({ error: err.message });
   }
 };
 
 // Get all devices (admin dashboard)
 export const getDevices = async (req: Request, res: Response) => {
+  const log = getRequestLogger(req);
   try {
     const devices = await DeviceModel.findAll();
     res.json(devices);
   } catch (err: any) {
-    console.error('Error getting devices:', err);
+    log.error('get_devices_failed', { error: err?.message });
     res.status(500).json({ error: err.message });
   }
 };
 
 // Get enriched devices data for devices table page
 export const getDevicesTable = async (req: Request, res: Response) => {
+  const log = getRequestLogger(req);
   try {
     const { 
       search, 
@@ -244,7 +269,7 @@ export const getDevicesTable = async (req: Request, res: Response) => {
       screen_lock
     } = req.query;
     
-    console.log('Fetching enriched devices data with filters:', { 
+    log.info('devices_table_query', { 
       search, 
       os_type, 
       sort_by, 
@@ -266,7 +291,7 @@ export const getDevicesTable = async (req: Request, res: Response) => {
       screen_lock as 'true' | 'false' | undefined
     );
     
-    console.log(`Found ${devices.length} devices with enriched data`);
+    log.info('devices_table_result', { count: devices.length });
     
     res.json({
       devices,
@@ -277,13 +302,14 @@ export const getDevicesTable = async (req: Request, res: Response) => {
       }
     });
   } catch (err: any) {
-    console.error('Error getting enriched devices:', err);
+    log.error('devices_table_failed', { error: err?.message });
     res.status(500).json({ error: err.message });
   }
 };
 
 // Get device details by ID (lightweight - only device, summary, and system_info)
 export const getDeviceById = async (req: Request, res: Response) => {
+  const log = getRequestLogger(req);
   try {
     const deviceId = parseInt(req.params.id);
     
@@ -303,16 +329,17 @@ export const getDeviceById = async (req: Request, res: Response) => {
       system_info // Only system_info, other data fetched on-demand
     });
   } catch (err: any) {
-    console.error('Error getting device by ID:', err);
+    log.error('get_device_by_id_failed', { error: err?.message });
     res.status(500).json({ error: err.message });
   }
 };
 
 // Remove device by ID
 export const removeDeviceById = async (req: Request, res: Response) => {
+  const log = getRequestLogger(req);
   try {
     const deviceId = parseInt(req.params.id);
-    console.log('Removing device by ID:', deviceId);
+    log.info('device_remove_requested', { deviceId });
     
     // Get device info before deletion to get user_email
     const device = await DeviceModel.findById(deviceId);
@@ -323,7 +350,7 @@ export const removeDeviceById = async (req: Request, res: Response) => {
     // Remove device_id from user's devices array
     if (device.user_email) {
       await UsersModel.removeDevice(device.user_email, deviceId);
-      console.log(`✅ Removed device ${deviceId} from user ${device.user_email}'s devices array`);
+      log.info('device_removed_from_user_array', { deviceId, user_email: device.user_email });
     }
     
     // Delete device (CASCADE will handle related tables: device_summary, system_info, etc.)
@@ -331,7 +358,7 @@ export const removeDeviceById = async (req: Request, res: Response) => {
     
     res.status(200).json({ message: 'DeviceID: ' + deviceId + ' removed successfully' });
   } catch (err: any) {
-    console.error('Error removing device by ID:', err);
+    log.error('remove_device_failed', { error: err?.message });
     res.status(500).json({ error: 'Error removing device by ID: ' + err.message });
   }
 };
@@ -383,6 +410,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
 
 // Request interval change for a device
 export const requestIntervalChange = async (req: Request, res: Response) => {
+  const log = getRequestLogger(req);
   try {
     const deviceId = parseInt(req.params.id);
     const { interval, requested_by } = req.body;
@@ -428,7 +456,7 @@ export const requestIntervalChange = async (req: Request, res: Response) => {
       requested_by: requested_by || adminName
     });
     
-    console.log(`✅ Interval change requested for device ${deviceId}: ${interval} (${intervalSeconds}s)`);
+    log.info('interval_change_requested', { deviceId, interval, intervalSeconds });
     
     res.status(200).json({
       message: 'Interval change request queued successfully',
@@ -438,13 +466,14 @@ export const requestIntervalChange = async (req: Request, res: Response) => {
       status: 'pending'
     });
   } catch (err: any) {
-    console.error('Error requesting interval change:', err);
+    log.error('interval_change_request_failed', { error: err?.message });
     res.status(500).json({ error: err.message });
   }
 };
 
 // Get interval request history for a device (paginated)
 export const getIntervalRequestHistory = async (req: Request, res: Response) => {
+  const log = getRequestLogger(req);
   try {
     const deviceId = parseInt(req.params.id);
     const page = parseInt(req.query.page as string) || 1;
@@ -460,13 +489,14 @@ export const getIntervalRequestHistory = async (req: Request, res: Response) => 
     const result = await DeviceIntervalRequestModel.getByDeviceId(deviceId, page, limit);
     res.json(result);
   } catch (err: any) {
-    console.error('Error getting interval request history:', err);
+    log.error('interval_request_history_failed', { error: err?.message });
     res.status(500).json({ error: err.message });
   }
 };
 
 // Delete interval request
 export const deleteIntervalRequest = async (req: Request, res: Response) => {
+  const log = getRequestLogger(req);
   try {
     const requestId = parseInt(req.params.requestId);
     
@@ -480,16 +510,17 @@ export const deleteIntervalRequest = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Interval request not found' });
     }
     
-    console.log(`✅ Interval request ${requestId} deleted`);
+    log.info('interval_request_deleted', { requestId });
     res.status(200).json({ message: 'Interval request deleted successfully' });
   } catch (err: any) {
-    console.error('Error deleting interval request:', err);
+    log.error('interval_request_delete_failed', { error: err?.message });
     res.status(500).json({ error: err.message });
   }
 };
 
 // Agent confirmation endpoint
 export const confirmIntervalUpdate = async (req: Request, res: Response) => {
+  const log = getRequestLogger(req);
   try {
     const { device_id, request_id, success, error_message, current_interval } = req.body;
     
@@ -506,7 +537,7 @@ export const confirmIntervalUpdate = async (req: Request, res: Response) => {
     
     if (success) {
       await DeviceIntervalRequestModel.markAsApplied(request_id, confirmation);
-      console.log(`✅ Interval update confirmed for device ${device_id}, request ${request_id}`);
+      log.info('interval_update_confirmed', { device_id, request_id });
       
       // Update device_summary.interval_info immediately when confirmation is received
       if (current_interval) {
@@ -530,15 +561,14 @@ export const confirmIntervalUpdate = async (req: Request, res: Response) => {
             interval_info: intervalSeconds
           });
           
-          console.log(`✅ Updated device_summary.interval_info for device ${device_id}: ${current_interval} (${intervalSeconds}s)`);
+          log.info('device_summary_interval_updated', { device_id, current_interval, intervalSeconds });
         } catch (intervalErr: any) {
-          // Log error but don't fail the confirmation
-          console.error(`⚠️  Failed to update device_summary.interval_info: ${intervalErr.message}`);
+          log.error('device_summary_interval_update_failed', { device_id, error: intervalErr.message });
         }
       }
     } else {
       await DeviceIntervalRequestModel.markAsFailed(request_id);
-      console.log(`❌ Interval update failed for device ${device_id}, request ${request_id}: ${error_message}`);
+      log.warn('interval_update_agent_reported_failure', { device_id, request_id, error_message });
     }
     
     res.status(200).json({
@@ -546,7 +576,7 @@ export const confirmIntervalUpdate = async (req: Request, res: Response) => {
       request_id: request_id
     });
   } catch (err: any) {
-    console.error('Error confirming interval update:', err);
+    log.error('interval_confirm_failed', { error: err?.message });
     res.status(500).json({ error: err.message });
   }
 };

@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { UsersModel } from '../models/Users';
+import { getRequestLogger } from '../logger/logger';
 
 export async function getUsers(req: Request, res: Response) {
   const page = Math.max(1, parseInt(String(req.query.page || '1'), 10));
@@ -19,6 +20,7 @@ export async function getUsers(req: Request, res: Response) {
 }
 
 export async function createUser(req: Request, res: Response) {
+  const log = getRequestLogger(req);
   try {
     const { name, email, account_type } = req.body;
     
@@ -44,7 +46,7 @@ export async function createUser(req: Request, res: Response) {
     
     res.status(201).json({ message: 'User created successfully', user });
   } catch (error: any) {
-    console.error('Error creating user:', error);
+    log.error('users_create_failed', { error: error?.message, code: error?.code });
     
     // Fallback: Check for duplicate email error (in case of race condition)
     if (error.code === 'ER_DUP_ENTRY' && error.sqlMessage?.includes('email')) {
@@ -59,16 +61,18 @@ export async function createUser(req: Request, res: Response) {
 }
 
 export async function getTotalUsers(req: Request, res: Response) {
+  const log = getRequestLogger(req);
   try {
     const total = await UsersModel.count();
     res.json({ total });
   } catch (error) {
-    console.error('Error getting total users:', error);
+    log.error('users_total_count_failed', { error: String(error) });
     res.status(500).json({ message: 'Failed to get total users count' });
   }
 }
 
 export async function updateUserAccountType(req: Request, res: Response) {
+  const log = getRequestLogger(req);
   try {
     const { gid } = req.params;
     const { account_type } = req.body;
@@ -84,12 +88,13 @@ export async function updateUserAccountType(req: Request, res: Response) {
 
     res.json({ message: 'User account type updated successfully' });
   } catch (error) {
-    console.error('Error updating user account type:', error);
+    log.error('users_update_account_type_failed', { error: String(error) });
     res.status(500).json({ message: 'Failed to update user account type' });
   }
 }
 
 export async function deleteUser(req: Request, res: Response) {
+  const log = getRequestLogger(req);
   try {
     const { gid } = req.params;
     const success = await UsersModel.delete(parseInt(gid));
@@ -100,7 +105,7 @@ export async function deleteUser(req: Request, res: Response) {
 
     res.json({ message: 'User deleted successfully' });
   } catch (error) {
-    console.error('Error deleting user:', error);
+    log.error('users_delete_failed', { error: String(error) });
     res.status(500).json({ message: 'Failed to delete user' });
   }
 }

@@ -1,4 +1,5 @@
 import redisClient from './redisClient';
+import { systemLog } from '../logger/logger';
 
 // 10 minutes = 600 seconds
 const OTP_TTL = 600;
@@ -12,7 +13,7 @@ const OTP_TTL = 600;
 export async function storeOtp(email: string, otp: string): Promise<string> {
     const key = `auth:forgot:otp:email:${email}`;
     await redisClient.setEx(key, OTP_TTL, otp);
-    console.log(`🔐 OTP stored for ${email}, expires in ${OTP_TTL}s`);
+    systemLog.info('otp_stored', { email, ttlSeconds: OTP_TTL });
     return key;
 }
 
@@ -35,7 +36,7 @@ export async function getOtp(email: string): Promise<string | null> {
 export async function deleteOtp(email: string): Promise<number> {
     const key = `auth:forgot:otp:email:${email}`;
     const result = await redisClient.del(key);
-    console.log(`🗑️  OTP deleted for ${email}`);
+    systemLog.info('otp_deleted', { email });
     return result;
 }
 

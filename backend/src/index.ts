@@ -10,8 +10,12 @@ import { initializeDatabase } from './db';
 import { connectRedis } from './utils/redisClient';
 import { env } from './env/env';
 import { getCurrentISTString } from './utils/timezone';
+import { systemLog, getRequestLogger } from './logger/logger';
+import { requestContextMiddleware } from './middleware/requestLogging';
 
 const app = express();
+
+app.use(requestContextMiddleware);
 
 // CORS configuration
 const cors_allowed_origins = env.FRONTEND_URL_CORS_ALLOWED?.split(',').map((url: string) => url.trim()) || []; 
@@ -27,7 +31,7 @@ const defaultOrigins = [
 ];
 
 const allowedOrigins = cors_allowed_origins.length > 0 ? cors_allowed_origins : defaultOrigins;
-console.log('Final CORS allowed origins:', allowedOrigins);
+systemLog.info('CORS allowed origins configured', { origins: allowedOrigins });
 
 // Middleware
 app.use(cors({
@@ -38,7 +42,7 @@ app.use(cors({
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
-      console.warn(`CORS blocked origin: ${origin}`);
+      systemLog.warn('CORS blocked origin', { origin });
       callback(new Error('Not allowed by CORS'));
     }
   },
@@ -61,13 +65,13 @@ app.use(express.urlencoded({ extended: true }));
 
 // Initialize database (connection + schema + migrations)
 initializeDatabase().catch(err => {
-  console.error('Failed to initialize database:', err);
+  systemLog.error('Failed to initialize database', { error: (err as Error)?.message, stack: (err as Error)?.stack });
   process.exit(1);
 });
 
 // Initialize Redis connection
 connectRedis().catch(err => {
-  console.error('Failed to connect to Redis:', err);
+  systemLog.error('Failed to connect to Redis', { error: (err as Error)?.message, stack: (err as Error)?.stack });
   process.exit(1);
 });
 
@@ -102,7 +106,11 @@ app.use('*', (req: express.Request, res: express.Response) => {
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('Error:', err);
+  getRequestLogger(req).error('express_unhandled_error', {
+    error: err?.message,
+    stack: err?.stack,
+    path: req.originalUrl,
+  });
   res.status(500).json({ 
     message: 'Internal server error',
     error: env.NODE_ENV === 'development' ? err.message : err.message
@@ -112,11 +120,13 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 const PORT = env.PORT || 5000;
 
 app.listen(PORT, () => {
-  console.log(`🚀 ScanX Backend Server running on port ${PORT}`);
-  console.log(`Agent endpoint: http://localhost:${PORT}/api/devices/agent/report`);
-  console.log(`Admin dashboard API: http://localhost:${PORT}/api/devices`);
-  console.log(`Auth endpoint: http://localhost:${PORT}/api/auth`);
-  console.log(`Updates endpoint: http://localhost:${PORT}/api/updates/update-check`);
+  systemLog.info('ScanX backend listening', {
+    port: PORT,
+    agentReport: `http://localhost:${PORT}/api/devices/agent/report`,
+    devicesApi: `http://localhost:${PORT}/api/devices`,
+    auth: `http://localhost:${PORT}/api/auth`,
+    updates: `http://localhost:${PORT}/api/updates/update-check`,
+  });
 
   // Start Google Workspace users sync scheduler (Google API if env set, otherwise file fallback)
   try {
@@ -126,16 +136,16 @@ app.listen(PORT, () => {
     if (keyFile && adminEmail) {
       const client = new GoogleApiDirectoryClient({ keyFile, adminEmail, customer });
       startUsersSyncScheduler(client);
-      console.log('⏱️  Users sync scheduler (Google API) started - runs daily at 12:00 PM IST');
+      systemLog.info('Users sync scheduler started (Google API)', { schedule: 'daily 12:00 IST' });
     } else {
       const path = require('path');
       const filePath = path.join(process.cwd(), 'test_dir', 'users.json');
       const client = new FileDirectoryClient(filePath);
       startUsersSyncScheduler(client);
-      console.log('⏱️  Users sync scheduler (file) started - runs daily at 12:00 PM IST');
+      systemLog.info('Users sync scheduler started (file fallback)', { schedule: 'daily 12:00 IST' });
     }
   } catch (e) {
-    console.error('Failed to start users sync scheduler:', (e as any)?.message || e);
+    systemLog.error('Failed to start users sync scheduler', { error: (e as any)?.message || String(e) });
   }
 });
 

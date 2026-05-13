@@ -1,6 +1,7 @@
 import { getConnection } from '../db/connection';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
 import { getDeviceStatus } from '../utils/timezone';
+import { systemLog } from '../logger/logger';
 
 export interface Device {
     id?: number;
@@ -80,7 +81,7 @@ export class DeviceModel {
             // For generic serial numbers, use BOTH serial_no AND computer_name to identify device
             // Use TRIM() and LOWER() for safe comparison (handles whitespace and case differences)
             const normalizedComputerName = (deviceData.computer_name || '').trim();
-            console.log(`⚠️ Generic serial number detected: "${deviceData.serial_no}" - using computer_name "${normalizedComputerName}" for identification`);
+            systemLog.info(`⚠️ Generic serial number detected: "${deviceData.serial_no}" - using computer_name "${normalizedComputerName}" for identification`);
             const [rows] = await connection.execute<RowDataPacket[]>(
                 'SELECT id FROM devices WHERE LOWER(TRIM(serial_no)) = LOWER(TRIM(?)) AND LOWER(TRIM(computer_name)) = LOWER(TRIM(?))',
                 [deviceData.serial_no, normalizedComputerName]
@@ -387,7 +388,7 @@ export class IndividualDataModel {
     // Get LATEST data from specific table
     static async getDeviceDataByType(device_id: number, dataType: string): Promise<any> {
         const connection = await getConnection();
-        console.log('Getting LATEST data for device:', device_id, 'and type:', dataType);
+        systemLog.info('device_latest_query', { device_id, dataType });
         
         try {
             const [rows] = await connection.execute<RowDataPacket[]>(
@@ -406,7 +407,7 @@ export class IndividualDataModel {
                         try {
                             parsedData = JSON.parse(row.data);
                         } catch (error) {
-                            console.warn(`Failed to parse data as JSON for ${dataType}:`, row.data);
+                            systemLog.warn('device_data_json_parse_failed', { dataType });
                             parsedData = row.data; // Use as-is if can't parse
                         }
                     } else {
@@ -441,7 +442,7 @@ export class IndividualDataModel {
             }
             return null;
         } catch (error) {
-            console.error(`Error fetching latest ${dataType} for device ${device_id}:`, error);
+            systemLog.error('device_latest_fetch_failed', { dataType, device_id, error: String(error) });
             return null;
         }
     }
@@ -449,12 +450,12 @@ export class IndividualDataModel {
     // Get HISTORICAL data from specific table with pagination
     static async getDeviceDataHistory(device_id: number, dataType: string, page: number = 1, limit: number = 10): Promise<{data: any[], total: number, page: number, limit: number, totalPages: number}> {
         const connection = await getConnection();
-        console.log('Getting HISTORICAL data for device:', device_id, 'type:', dataType, 'page:', page, 'limit:', limit);
+        systemLog.info('device_history_query', { device_id, dataType, page, limit });
         
         // Validate dataType to prevent SQL injection (whitelist approach)
         const validDataTypes = ['disk_encryption_info', 'password_manager_info', 'antivirus_info', 'screen_lock_info', 'apps_info', 'system_info'];
         if (!validDataTypes.includes(dataType)) {
-            console.error(`Invalid dataType: ${dataType}`);
+            systemLog.error('device_history_invalid_type', { dataType });
             return { data: [], total: 0, page, limit, totalPages: 0 };
         }
         
@@ -478,7 +479,7 @@ export class IndividualDataModel {
                 [device_id]
             );
             
-            console.log(`Found ${rows.length} rows for ${dataType}, total: ${total}`);
+            systemLog.info(`Found ${rows.length} rows for ${dataType}, total: ${total}`);
             
             // Process each row
             const processedData = rows.map(row => {
@@ -488,7 +489,7 @@ export class IndividualDataModel {
                         try {
                             parsedData = JSON.parse(row.data);
                         } catch (error) {
-                            console.warn(`Failed to parse data as JSON for ${dataType}:`, row.data);
+                            systemLog.warn('device_data_json_parse_failed', { dataType });
                             parsedData = row.data; // Use as-is if can't parse
                         }
                     } else {
@@ -512,7 +513,7 @@ export class IndividualDataModel {
                 totalPages
             };
         } catch (error) {
-            console.error(`Error fetching historical ${dataType} for device ${device_id}:`, error);
+            systemLog.error('device_history_fetch_failed', { dataType, device_id, error: String(error) });
             return {
                 data: [],
                 total: 0,

@@ -1,5 +1,6 @@
 import { getCurrentISTString } from '../utils/timezone';
 import express from 'express';
+import { getRequestLogger } from '../logger/logger';
 
 const router: express.Router = express.Router();
 
@@ -8,8 +9,6 @@ const router: express.Router = express.Router();
 function getVersions() {
     const scanxVersion = process.env.SCANX_VERSION || '1.0.0';
     const osqueryiVersion = process.env.OSQUERYI_VERSION || '5.19.0';
-    
-    console.log(`📦 Using versions - Scanx: ${scanxVersion}, Osqueryi: ${osqueryiVersion}`);
     
     return {
         scanxVersion,
@@ -25,6 +24,7 @@ function isOsqueryiBinaryRequired(): boolean {
 }
 
 router.get('/update-check', (req: express.Request, res: express.Response) => {
+    const log = getRequestLogger(req);
     // Get the original host and port from the request
     // When behind nginx proxy, we need to check X-Forwarded headers
     const forwardedHost = req.headers['x-forwarded-host'] as string;
@@ -47,6 +47,7 @@ router.get('/update-check', (req: express.Request, res: express.Response) => {
     
     // Get versions from environment variables (single source of truth: agent.conf via docker-compose)
     const config = getVersions();
+    log.info('update_check_versions', { scanx: config.scanxVersion, osqueryi: config.osqueryiVersion });
     const scanxLatestVersion = config.scanxVersion;
     const osqueryiLatestVersion = config.osqueryiVersion;
     

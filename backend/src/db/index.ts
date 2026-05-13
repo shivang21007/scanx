@@ -7,19 +7,20 @@ export { runMigrations, getExecutedMigrations } from './migrations';
 import { connectDB as _connectDB } from './connection';
 import { initializeSchema as _initializeSchema } from './schema';
 import { runMigrations as _runMigrations } from './migrations';
+import { systemLog } from '../logger/logger';
 
 // Simple database connection for server startup (assume schema exists)
 export const initializeDatabase = async () => {
     try {
-        console.log("🔌 Connecting to database...");
+        systemLog.info('db_connect_startup');
         
         // Just connect to database - schema should already exist from migrations
         await _connectDB();
         
-        console.log("Database connected successfully!");
+        systemLog.info('db_connected');
         
     } catch (err: any) {
-        console.error("❌ Database connection failed:", err.message);
+        systemLog.error('db_connect_failed', { error: err.message });
         throw err;
     }
 };
@@ -27,7 +28,7 @@ export const initializeDatabase = async () => {
 // Complete database setup with migrations (for migration script)
 export const initializeDatabaseWithMigrations = async () => {
     try {
-        console.log("🚀 Starting complete database setup...");
+        systemLog.info('db_setup_migrations_start');
         
         // Step 1: Connect to database
         await _connectDB();
@@ -38,10 +39,10 @@ export const initializeDatabaseWithMigrations = async () => {
         // Step 3: Run migrations
         await _runMigrations();
         
-        console.log("✅ Database setup with migrations completed successfully!");
+        systemLog.info('db_setup_migrations_complete');
         
     } catch (err: any) {
-        console.error("❌ Database setup failed:", err.message);
+        systemLog.error('db_setup_migrations_failed', { error: err.message });
         throw err;
     }
 };

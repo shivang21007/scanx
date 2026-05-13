@@ -1,4 +1,5 @@
 import { getConnection } from './connection';
+import { systemLog } from '../logger/logger';
 
 // Database schema definitions
 export const TABLES = {
@@ -20,7 +21,7 @@ export const createAdminsTable = async () => {
     const connection = await getConnection();
     // set time zone to IST in database
     await connection.execute(`SET time_zone = '+05:30';`);
-    console.log("✅ Time zone set to IST");
+    systemLog.info("✅ Time zone set to IST");
 
     await connection.execute(`
         CREATE TABLE IF NOT EXISTS ${TABLES.ADMINS} (
@@ -34,7 +35,7 @@ export const createAdminsTable = async () => {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
     
-    console.log(`✅ Table ${TABLES.ADMINS} created/verified`);
+    systemLog.info(`✅ Table ${TABLES.ADMINS} created/verified`);
 };
 
 // Create users table for Google Workspace employees
@@ -55,7 +56,7 @@ export const createUsersTable = async () => {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
     
-    console.log(`✅ Table ${TABLES.USERS} created/verified`);
+    systemLog.info(`✅ Table ${TABLES.USERS} created/verified`);
 };
 
 // Create devices table (starting ID from 101)
@@ -88,7 +89,7 @@ export const createDevicesTable = async () => {
         ) ENGINE=InnoDB AUTO_INCREMENT=101 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
     
-    console.log(`✅ Table ${TABLES.DEVICES} created/verified`);
+    systemLog.info(`✅ Table ${TABLES.DEVICES} created/verified`);
 };
 
 // Create individual data tables for each query type
@@ -109,7 +110,7 @@ export const createSystemInfoTable = async () => {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
     
-    console.log(`✅ Table ${TABLES.SYSTEM_INFO} created/verified`);
+    systemLog.info(`✅ Table ${TABLES.SYSTEM_INFO} created/verified`);
 };
 
 export const createDiskEncryptionInfoTable = async () => {
@@ -129,7 +130,7 @@ export const createDiskEncryptionInfoTable = async () => {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
     
-    console.log(`✅ Table ${TABLES.DISK_ENCRYPTION_INFO} created/verified`);
+    systemLog.info(`✅ Table ${TABLES.DISK_ENCRYPTION_INFO} created/verified`);
 };
 
 export const createPasswordManagerInfoTable = async () => {
@@ -149,7 +150,7 @@ export const createPasswordManagerInfoTable = async () => {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
     
-    console.log(`✅ Table ${TABLES.PASSWORD_MANAGER_INFO} created/verified`);
+    systemLog.info(`✅ Table ${TABLES.PASSWORD_MANAGER_INFO} created/verified`);
 };
 
 export const createAntivirusInfoTable = async () => {
@@ -169,7 +170,7 @@ export const createAntivirusInfoTable = async () => {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
     
-    console.log(`✅ Table ${TABLES.ANTIVIRUS_INFO} created/verified`);
+    systemLog.info(`✅ Table ${TABLES.ANTIVIRUS_INFO} created/verified`);
 };
 
 export const createScreenLockInfoTable = async () => {
@@ -189,7 +190,7 @@ export const createScreenLockInfoTable = async () => {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
     
-    console.log(`✅ Table ${TABLES.SCREEN_LOCK_INFO} created/verified`);
+    systemLog.info(`✅ Table ${TABLES.SCREEN_LOCK_INFO} created/verified`);
 };
 
 export const createAppsInfoTable = async () => {
@@ -209,7 +210,7 @@ export const createAppsInfoTable = async () => {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
     
-    console.log(`✅ Table ${TABLES.APPS_INFO} created/verified (this table may become heavy)`);
+    systemLog.info(`✅ Table ${TABLES.APPS_INFO} created/verified (this table may become heavy)`);
 };
 
 // Create device_summary table for overview (which data types received)
@@ -234,7 +235,7 @@ export const createDeviceSummaryTable = async () => {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
     
-    console.log(`✅ Table ${TABLES.DEVICE_SUMMARY} created/verified`);
+    systemLog.info(`✅ Table ${TABLES.DEVICE_SUMMARY} created/verified`);
 };
 
 // Create device_interval_requests table for interval push updates
@@ -260,13 +261,13 @@ export const createDeviceIntervalRequestsTable = async () => {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
     
-    console.log(`✅ Table ${TABLES.DEVICE_INTERVAL_REQUESTS} created/verified`);
+    systemLog.info(`✅ Table ${TABLES.DEVICE_INTERVAL_REQUESTS} created/verified`);
 };
 
 // Initialize all tables
 export const initializeSchema = async () => {
     try {
-        console.log("🔧 Initializing database schema...");
+        systemLog.info("🔧 Initializing database schema...");
         await createAdminsTable();
         await createUsersTable();
         await createDevicesTable();
@@ -279,10 +280,10 @@ export const initializeSchema = async () => {
         await createDeviceSummaryTable();
         await createDeviceIntervalRequestsTable();
         
-        console.log("🎯 Database schema initialized successfully!");
+        systemLog.info("🎯 Database schema initialized successfully!");
         
     } catch (err: any) {
-        console.error("❌ Schema initialization error:", err.message);
+        systemLog.error('schema_init_failed', { error: err.message });
         throw new Error(`Failed to initialize database schema: ${err.message}`);
     }
 };
@@ -292,7 +293,7 @@ export const dropAllTables = async () => {
     const connection = await getConnection();
     
     try {
-        console.log("⚠️  Dropping all tables...");
+        systemLog.info("⚠️  Dropping all tables...");
         
         // Drop in reverse order due to foreign key constraints
         await connection.execute(`DROP TABLE IF EXISTS ${TABLES.DEVICE_INTERVAL_REQUESTS}`);
@@ -307,10 +308,10 @@ export const dropAllTables = async () => {
         await connection.execute(`DROP TABLE IF EXISTS ${TABLES.USERS}`);
         await connection.execute(`DROP TABLE IF EXISTS ${TABLES.ADMINS}`);
         
-        console.log("🗑️  All tables dropped successfully");
+        systemLog.info("🗑️  All tables dropped successfully");
         
     } catch (err: any) {
-        console.error("❌ Error dropping tables:", err.message);
+        systemLog.error('drop_tables_failed', { error: err.message });
         throw err;
     }
 };

@@ -3,6 +3,7 @@ import path from 'path';
 import { UsersModel, AccountType } from '../models/Users';
 import { google } from 'googleapis';
 import { getCurrentIST, istToUTC, formatForDisplay } from '../utils/timezone';
+import { systemLog } from '../logger/logger';
 
 // Target sync time: 12:00 PM IST (noon) every day
 const SYNC_HOUR_IST = 12; // 12 PM
@@ -128,17 +129,17 @@ function scheduleNextSync(client: GoogleDirectoryClient): void {
     nextIST.setDate(nextIST.getDate() + 1);
   }
   
-  console.log(`⏰ Next users sync scheduled for: ${formatForDisplay(nextIST)}`);
+  systemLog.info(`⏰ Next users sync scheduled for: ${formatForDisplay(nextIST)}`);
   
   setTimeout(() => {
     syncUsersFromGoogle(client)
       .then(count => {
-        console.log(`👥 Users sync completed at 12 PM IST. Upserted ${count} records`);
+        systemLog.info(`👥 Users sync completed at 12 PM IST. Upserted ${count} records`);
         // Schedule next sync for tomorrow at 12 PM IST
         scheduleNextSync(client);
       })
       .catch(err => {
-        console.error('Users sync failed:', err?.message || err);
+        systemLog.error('users_sync_failed', { error: String(err?.message || err) });
         // Still schedule next sync even if this one failed
         scheduleNextSync(client);
       });
@@ -148,12 +149,12 @@ function scheduleNextSync(client: GoogleDirectoryClient): void {
 export function startUsersSyncScheduler(client: GoogleDirectoryClient) {
   // Initial kick - sync immediately on startup
   syncUsersFromGoogle(client)
-    .then(count => console.log(`👥 Initial users sync completed. Upserted ${count} records`))
-    .catch(err => console.error('Initial users sync failed:', err?.message || err));
+    .then(count => systemLog.info(`Initial users sync completed. Upserted ${count} records`))
+    .catch(err => systemLog.error('initial_users_sync_failed', { error: String(err?.message || err) }));
 
   // Schedule recurring syncs at 12 PM IST every day
   scheduleNextSync(client);
-  console.log('⏱️  Users sync scheduler configured to run daily at 12:00 PM IST');
+  systemLog.info('⏱️  Users sync scheduler configured to run daily at 12:00 PM IST');
 }
 
  

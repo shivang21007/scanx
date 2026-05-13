@@ -1,6 +1,7 @@
 import 'dotenv/config';
 
 export const env = {
+    LOG_LEVEL: process.env.LOG_LEVEL,
     PORT: process.env.PORT,
     MONGO_URI: process.env.MONGO_URI,
     MYSQL_HOST: process.env.MYSQL_HOST,

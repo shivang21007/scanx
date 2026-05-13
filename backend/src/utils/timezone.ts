@@ -3,6 +3,8 @@
  * UTC+5:30 timezone handling
  */
 
+import { systemLog } from '../logger/logger';
+
 // IST offset: +5 hours 30 minutes from UTC
 export const IST_OFFSET_HOURS = 5;
 export const IST_OFFSET_MINUTES = 30;
@@ -97,7 +99,7 @@ export function formatForDisplay(istDate: Date): string {
  */
 export function logWithIST(message: string, ...args: any[]): void {
     const istTime = formatForDisplay(getCurrentIST());
-    console.log(`[${istTime}] ${message}`, ...args);
+    systemLog.info(`[${istTime}] ${message}`, { extra: args.length ? args : undefined });
 }
 
 /**

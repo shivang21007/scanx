@@ -1,4 +1,5 @@
 import { getConnection } from './connection';
+import { systemLog } from '../logger/logger';
 
 // Migration tracking table
 const MIGRATIONS_TABLE = 'migrations';
@@ -37,7 +38,7 @@ export const markMigrationExecuted = async (migrationName: string) => {
         [migrationName]
     );
     
-    console.log(`✅ Migration '${migrationName}' marked as executed`);
+    systemLog.info(`✅ Migration '${migrationName}' marked as executed`);
 };
 
 // Migration: Add backend_url to agent.conf support
@@ -45,11 +46,11 @@ export const migration_001_add_backend_config = async () => {
     const migrationName = '001_add_backend_config';
     
     if (await isMigrationExecuted(migrationName)) {
-        console.log(`⏭️  Migration '${migrationName}' already executed`);
+        systemLog.info(`⏭️  Migration '${migrationName}' already executed`);
         return;
     }
     
-    console.log(`🔧 Executing migration: ${migrationName}`);
+    systemLog.info(`🔧 Executing migration: ${migrationName}`);
     
     // This migration is for documentation purposes
     // The actual backend_url will be added to agent.conf in the agent codebase
@@ -62,11 +63,11 @@ export const migration_002_add_users_table = async () => {
     const migrationName = '002_add_users_table';
     
     if (await isMigrationExecuted(migrationName)) {
-        console.log(`⏭️  Migration '${migrationName}' already executed`);
+        systemLog.info(`⏭️  Migration '${migrationName}' already executed`);
         return;
     }
     
-    console.log(`🔧 Executing migration: ${migrationName}`);
+    systemLog.info(`🔧 Executing migration: ${migrationName}`);
     
     const connection = await getConnection();
     
@@ -85,10 +86,10 @@ export const migration_002_add_users_table = async () => {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         `);
         
-        console.log('✅ Added users table for Google Workspace integration');
+        systemLog.info('✅ Added users table for Google Workspace integration');
         
     } catch (err: any) {
-        console.log("ℹ️  Users table might already exist, continuing...");
+        systemLog.info("ℹ️  Users table might already exist, continuing...");
     }
     
     await markMigrationExecuted(migrationName);
@@ -99,11 +100,11 @@ export const migration_003_add_devices_field = async () => {
     const migrationName = '003_add_devices_field';
     
     if (await isMigrationExecuted(migrationName)) {
-        console.log(`⏭️  Migration '${migrationName}' already executed`);
+        systemLog.info(`⏭️  Migration '${migrationName}' already executed`);
         return;
     }
     
-    console.log(`🔧 Executing migration: ${migrationName}`);
+    systemLog.info(`🔧 Executing migration: ${migrationName}`);
     
     const connection = await getConnection();
     
@@ -124,13 +125,13 @@ export const migration_003_add_devices_field = async () => {
                 AFTER account_type
             `);
             
-            console.log('✅ Added devices JSON field to users table');
+            systemLog.info('✅ Added devices JSON field to users table');
         } else {
-            console.log('ℹ️  Devices column already exists');
+            systemLog.info('ℹ️  Devices column already exists');
         }
         
     } catch (err: any) {
-        console.error(`❌ Error adding devices field: ${err.message}`);
+        systemLog.error(`❌ Error adding devices field: ${err.message}`);
         throw err;
     }
     
@@ -142,11 +143,11 @@ export const migration_004_split_agent_versions = async () => {
     const migrationName = '004_split_agent_versions';
     
     if (await isMigrationExecuted(migrationName)) {
-        console.log(`⏭️  Migration '${migrationName}' already executed`);
+        systemLog.info(`⏭️  Migration '${migrationName}' already executed`);
         return;
     }
     
-    console.log(`🔧 Executing migration: ${migrationName}`);
+    systemLog.info(`🔧 Executing migration: ${migrationName}`);
     
     const connection = await getConnection();
     
@@ -174,11 +175,11 @@ export const migration_004_split_agent_versions = async () => {
                 CHANGE COLUMN agent_version scanx_version VARCHAR(50)
             `);
             
-            console.log('✅ Renamed agent_version to scanx_version (data preserved)');
+            systemLog.info('✅ Renamed agent_version to scanx_version (data preserved)');
         } else if ((scanxVersionCheck as any[]).length > 0) {
-            console.log('ℹ️  scanx_version column already exists');
+            systemLog.info('ℹ️  scanx_version column already exists');
         } else {
-            console.log('ℹ️  agent_version column does not exist, nothing to rename');
+            systemLog.info('ℹ️  agent_version column does not exist, nothing to rename');
         }
         
         // Check if osqueryi_version column exists
@@ -197,13 +198,13 @@ export const migration_004_split_agent_versions = async () => {
                 AFTER scanx_version
             `);
             
-            console.log('✅ Added osqueryi_version column');
+            systemLog.info('✅ Added osqueryi_version column');
         } else {
-            console.log('ℹ️  osqueryi_version column already exists');
+            systemLog.info('ℹ️  osqueryi_version column already exists');
         }
         
     } catch (err: any) {
-        console.error(`❌ Error splitting agent versions: ${err.message}`);
+        systemLog.error(`❌ Error splitting agent versions: ${err.message}`);
         throw err;
     }
     
@@ -215,11 +216,11 @@ export const migration_005_add_password_manager_names = async () => {
     const migrationName = '005_add_password_manager_names';
     
     if (await isMigrationExecuted(migrationName)) {
-        console.log(`⏭️  Migration '${migrationName}' already executed`);
+        systemLog.info(`⏭️  Migration '${migrationName}' already executed`);
         return;
     }
     
-    console.log(`🔧 Executing migration: ${migrationName}`);
+    systemLog.info(`🔧 Executing migration: ${migrationName}`);
     
     const connection = await getConnection();
     
@@ -229,11 +230,11 @@ export const migration_005_add_password_manager_names = async () => {
         // Since data is stored as JSON, we just need to ensure the column exists
         // The JSON data structure will be handled by the application code
         
-        console.log('✅ Password manager names will be stored in the JSON data column');
-        console.log('ℹ️  No schema changes needed - data structure handled by application');
+        systemLog.info('✅ Password manager names will be stored in the JSON data column');
+        systemLog.info('ℹ️  No schema changes needed - data structure handled by application');
         
     } catch (err: any) {
-        console.error(`❌ Error in password_manager_names migration: ${err.message}`);
+        systemLog.error(`❌ Error in password_manager_names migration: ${err.message}`);
         throw err;
     }
     
@@ -246,11 +247,11 @@ export const migration_006_composite_device_unique_key = async () => {
     const migrationName = '006_composite_device_unique_key';
     
     if (await isMigrationExecuted(migrationName)) {
-        console.log(`⏭️  Migration '${migrationName}' already executed`);
+        systemLog.info(`⏭️  Migration '${migrationName}' already executed`);
         return;
     }
     
-    console.log(`🔧 Executing migration: ${migrationName}`);
+    systemLog.info(`🔧 Executing migration: ${migrationName}`);
     
     const connection = await getConnection();
     
@@ -271,9 +272,9 @@ export const migration_006_composite_device_unique_key = async () => {
                 ALTER TABLE devices 
                 DROP INDEX serial_no
             `);
-            console.log('✅ Dropped UNIQUE constraint on serial_no');
+            systemLog.info('✅ Dropped UNIQUE constraint on serial_no');
         } else {
-            console.log('ℹ️  UNIQUE constraint on serial_no does not exist');
+            systemLog.info('ℹ️  UNIQUE constraint on serial_no does not exist');
         }
         
         // Step 2: Check if composite unique constraint already exists
@@ -292,13 +293,13 @@ export const migration_006_composite_device_unique_key = async () => {
                 ALTER TABLE devices 
                 ADD UNIQUE KEY idx_serial_computer_unique (serial_no, computer_name)
             `);
-            console.log('✅ Added composite UNIQUE constraint on (serial_no, computer_name)');
+            systemLog.info('✅ Added composite UNIQUE constraint on (serial_no, computer_name)');
         } else {
-            console.log('ℹ️  Composite unique constraint already exists');
+            systemLog.info('ℹ️  Composite unique constraint already exists');
         }
         
     } catch (err: any) {
-        console.error(`❌ Error in composite unique key migration: ${err.message}`);
+        systemLog.error(`❌ Error in composite unique key migration: ${err.message}`);
         throw err;
     }
     
@@ -310,11 +311,11 @@ export const migration_007_add_interval_info = async () => {
     const migrationName = '007_add_interval_info';
     
     if (await isMigrationExecuted(migrationName)) {
-        console.log(`⏭️  Migration '${migrationName}' already executed`);
+        systemLog.info(`⏭️  Migration '${migrationName}' already executed`);
         return;
     }
     
-    console.log(`🔧 Executing migration: ${migrationName}`);
+    systemLog.info(`🔧 Executing migration: ${migrationName}`);
     
     const connection = await getConnection();
     
@@ -335,13 +336,13 @@ export const migration_007_add_interval_info = async () => {
                 AFTER apps_info
             `);
             
-            console.log('✅ Added interval_info column to device_summary table');
+            systemLog.info('✅ Added interval_info column to device_summary table');
         } else {
-            console.log('ℹ️  interval_info column already exists');
+            systemLog.info('ℹ️  interval_info column already exists');
         }
         
     } catch (err: any) {
-        console.error(`❌ Error adding interval_info field: ${err.message}`);
+        systemLog.error(`❌ Error adding interval_info field: ${err.message}`);
         throw err;
     }
     
@@ -351,7 +352,7 @@ export const migration_007_add_interval_info = async () => {
 // Run all migrations
 export const runMigrations = async () => {
     try {
-        console.log("🚀 Running database migrations...");
+        systemLog.info("🚀 Running database migrations...");
         
         await createMigrationsTable();
         
@@ -364,10 +365,10 @@ export const runMigrations = async () => {
         await migration_006_composite_device_unique_key();
         await migration_007_add_interval_info();
         
-        console.log("🎯 All migrations completed successfully!");
+        systemLog.info("🎯 All migrations completed successfully!");
         
     } catch (err: any) {
-        console.error("❌ Migration error:", err.message);
+        systemLog.error('migration_run_failed', { error: err.message });
         throw new Error(`Migration failed: ${err.message}`);
     }
 };

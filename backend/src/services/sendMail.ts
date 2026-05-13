@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import { env } from '../env/env';
+import { systemLog } from '../logger/logger';
 
 const SMTP_HOST = env.SMTP_HOST || "localhost";
 const SMTP_PORT = env.SMTP_PORT ? parseInt(env.SMTP_PORT, 10) : 1025;
@@ -31,10 +32,10 @@ export const sendForgotPasswordOTPMail = async (to: string, otp: string) => {
         `,
         });
 
-        console.log(`📧 Forgot Password OTP Email sent to: ${to}, Response: ${info.response || info}`);
+        systemLog.info('email_forgot_password_sent', { to, response: info.response || String(info) });
         return info;
     } catch (err: any) {
-        console.error(`❌ Error while sending Forgot Password OTP Email to ${to}: ${err}`);
+        systemLog.error('email_forgot_password_failed', { to, error: String(err) });
         throw err;
     }
 }
@@ -61,10 +62,10 @@ export const sendRegistrationWelcomeMail = async (to: string, name: string) => {
         <h3 style="color: #000000; font-weight: bold;">ScanX</h3>
         `,
         });
-        console.log(`📧 Welcome Email sent to: ${to}, Response: ${info.response || info}`);
+        systemLog.info('email_welcome_sent', { to, response: info.response || String(info) });
         return info;
     } catch (err: any) {
-        console.error(`❌ Error while sending Welcome Email to ${to}: ${err}`);
+        systemLog.error('email_welcome_failed', { to, error: String(err) });
         throw err;
     }
 }

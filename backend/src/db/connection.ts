@@ -1,5 +1,6 @@
 import mysql from 'mysql2/promise';
 import { env } from '../env/env';
+import { systemLog } from '../logger/logger';
 
 // Use connection pool instead of single connection for better reliability
 const mysqlPool = mysql.createPool({
@@ -30,7 +31,7 @@ const ensureConnection = async (): Promise<mysql.PoolConnection> => {
                 return poolConnection;
             } catch (pingError) {
                 // Connection is dead, release it and get a new one
-                console.log("⚠️  Connection lost, reconnecting...");
+                systemLog.info("⚠️  Connection lost, reconnecting...");
                 try {
                     poolConnection.release();
                 } catch (e) {
@@ -42,11 +43,11 @@ const ensureConnection = async (): Promise<mysql.PoolConnection> => {
         
         // Get a new connection from the pool
         poolConnection = await mysqlPool.getConnection();
-        console.log("✅ Database connection established from pool");
+        systemLog.info("✅ Database connection established from pool");
         return poolConnection;
         
     } catch (err: any) {
-        console.error("❌ Failed to get connection from pool:", err.message);
+        systemLog.error('mysql_pool_connection_failed', { error: err.message });
         throw new Error(`Database connection failed: ${err.message}`);
     }
 };
@@ -61,11 +62,11 @@ export const connectDB = async () => {
         // Get a persistent connection from pool for compatibility
         poolConnection = await mysqlPool.getConnection();
         
-        console.log("✅ MySQL pool connected successfully");
+        systemLog.info("✅ MySQL pool connected successfully");
         return poolConnection;
         
     } catch (err: any) {
-        console.error("❌ MySQL Connection Error:", err.message);
+        systemLog.error('mysql_connect_failed', { error: err.message });
         throw new Error(`Database connection failed: ${err.message}`);
     }
 }
@@ -77,9 +78,9 @@ export const disconnectDB = async () => {
             poolConnection = null;
         }
         await mysqlPool.end();
-        console.log("🔌 MySQL pool disconnected");
+        systemLog.info("🔌 MySQL pool disconnected");
     } catch (err: any) {
-        console.error("❌ MySQL Disconnect Error:", err.message);
+        systemLog.error('mysql_disconnect_error', { error: err.message });
     }
 }
 
@@ -102,10 +103,10 @@ export const testConnection = async (): Promise<boolean> => {
     try {
         const conn = await ensureConnection();
         await conn.ping();
-        console.log("✅ Database connection test successful");
+        systemLog.info("✅ Database connection test successful");
         return true;
     } catch (err: any) {
-        console.error("❌ Database connection test failed:", err.message);
+        systemLog.error('mysql_connection_test_failed', { error: err.message });
         return false;
     }
 }
