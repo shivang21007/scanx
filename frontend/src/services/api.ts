@@ -272,9 +272,10 @@ class ApiService {
   }
 
   // User endpoints
-  async getTotalUsers(): Promise<TotalUsersResponse> {
+  async getTotalUsers(status?: 'active' | 'inactive'): Promise<TotalUsersResponse> {
     try {
-      const response: AxiosResponse<TotalUsersResponse> = await this.api.get('/users/totalusers');
+      const qs = status ? `?status=${encodeURIComponent(status)}` : '';
+      const response: AxiosResponse<TotalUsersResponse> = await this.api.get(`/users/totalusers${qs}`);
       return response.data;
     } catch (error: any) {
       throw this.handleError(error);
@@ -299,6 +300,12 @@ class ApiService {
       if (filters?.createdSort) {
         params.append('createdSort', filters.createdSort);
       }
+      if (filters?.status) {
+        params.append('status', filters.status);
+      }
+      if (filters?.account_type) {
+        params.append('account_type', filters.account_type);
+      }
       
       const url = `/users${params.toString() ? `?${params.toString()}` : ''}`;
       const response: AxiosResponse<UsersResponse> = await this.api.get(url);
@@ -311,6 +318,14 @@ class ApiService {
   async updateUserAccountType(gid: number, accountType: 'user' | 'service'): Promise<void> {
     try {
       await this.api.put(`/users/${gid}/account-type`, { account_type: accountType });
+    } catch (error: any) {
+      throw this.handleError(error);
+    }
+  }
+
+  async updateUserStatus(gid: number, status: 'active' | 'inactive'): Promise<void> {
+    try {
+      await this.api.patch(`/users/${gid}/status`, { status });
     } catch (error: any) {
       throw this.handleError(error);
     }

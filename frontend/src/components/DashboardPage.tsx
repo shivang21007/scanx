@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { LogOut, Monitor, Shield, Users, Activity, AlertTriangle } from 'lucide-react';
+import { LogOut, Monitor, Users, Activity, AlertTriangle, UserCheck, UserMinus } from 'lucide-react';
 import { apiService } from '../services/api';
 import { DashboardStats, Device } from '../types/device';
 
@@ -13,7 +13,7 @@ export function DashboardPage() {
   const { admin, logout } = useAuth();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [devices, setDevices] = useState<Device[]>([]);
-  const [totalUsers, setTotalUsers] = useState<number>(0);
+  const [userCounts, setUserCounts] = useState({ active: 0, inactive: 0, total: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,15 +24,21 @@ export function DashboardPage() {
         setError(null);
         
         // Fetch dashboard stats, devices, and total users in parallel
-        const [dashboardStats, devicesList, usersCount] = await Promise.all([
+        const [dashboardStats, devicesList, totalRes, activeRes, inactiveRes] = await Promise.all([
           apiService.getDashboardStats(),
           apiService.getDevices(),
-          apiService.getTotalUsers()
+          apiService.getTotalUsers(),
+          apiService.getTotalUsers('active'),
+          apiService.getTotalUsers('inactive'),
         ]);
-        
+
         setStats(dashboardStats);
         setDevices(devicesList);
-        setTotalUsers(usersCount.total);
+        setUserCounts({
+          total: totalRes.total,
+          active: activeRes.total,
+          inactive: inactiveRes.total,
+        });
       } catch (err: any) {
         console.error('Failed to fetch dashboard data:', err);
         setError(err.message || 'Failed to load dashboard data');
@@ -161,37 +167,60 @@ export function DashboardPage() {
               </div>
             </Link>
             
+            <Link to="/users?status=active" className="block">
+              <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-6 hover:shadow-md hover:border-emerald-300 transition-all cursor-pointer">
+                <div className="flex items-center">
+                  <UserCheck className="h-8 w-8 text-emerald-600" />
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Active Users</p>
+                    <p className="text-2xl font-bold text-gray-900">{userCounts.active}</p>
+                  </div>
+                </div>
+              </div>
+            </Link>
+
+            <Link to="/users?status=inactive" className="block">
+              <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-6 hover:shadow-md hover:border-gray-400 transition-all cursor-pointer">
+                <div className="flex items-center">
+                  <UserMinus className="h-8 w-8 text-gray-600" />
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Inactive Users</p>
+                    <p className="text-2xl font-bold text-gray-900">{userCounts.inactive}</p>
+                  </div>
+                </div>
+              </div>
+            </Link>
+
             <Link to="/users" className="block">
               <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-6 hover:shadow-md hover:border-purple-300 transition-all cursor-pointer">
                 <div className="flex items-center">
                   <Users className="h-8 w-8 text-purple-600" />
                   <div className="ml-4">
                     <p className="text-sm font-medium text-gray-600">Total Users</p>
-                    <p className="text-2xl font-bold text-gray-900">{totalUsers}</p>
+                    <p className="text-2xl font-bold text-gray-900">{userCounts.total}</p>
                   </div>
                 </div>
               </div>
             </Link>
+          </div>
+        )}
 
-            <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-6">
-              <div className="flex items-center">
-                <Activity className="h-8 w-8 text-green-600" />
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Online Devices</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.online}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-6">
-              <div className="flex items-center">
-                <Shield className="h-8 w-8 text-orange-600" />
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Recent Activity</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.recent_activity}</p>
-                </div>
-              </div>
-            </div>
+        {!loading && !error && stats && (
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-600 mb-8 px-1">
+            <span>
+              Online devices:{' '}
+              <span className="font-semibold text-gray-900">{stats.online}</span>
+            </span>
+            <span className="hidden sm:inline text-gray-300" aria-hidden>
+              |
+            </span>
+            <span>
+              Recent activity:{' '}
+              <span className="font-semibold text-gray-900">{stats.recent_activity}</span>
+            </span>
+            <Link to="/devices" className="text-blue-600 hover:text-blue-800 hover:underline sm:ml-2">
+              View devices
+            </Link>
           </div>
         )}
 

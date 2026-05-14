@@ -61,6 +61,7 @@ export const auth = (req: AuthRequest, res: Response, next: NextFunction) => {
     }
     
     req.admin = { id: decoded.id, email: decoded.email };
+    req.authenticatedEmail = decoded.email;
     next();
   } catch (err: any) {
     // console.log('Token verification failed:', err.message);

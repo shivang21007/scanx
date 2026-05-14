@@ -16,6 +16,8 @@ export function UsersPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [enrollmentFilter, setEnrollmentFilter] = useState<'enrolled' | 'un-enrolled' | ''>('');
+  const [statusFilter, setStatusFilter] = useState<'active' | 'inactive' | ''>('');
+  const [accountTypeFilter, setAccountTypeFilter] = useState<'user' | 'service' | ''>('');
   const [createdSort, setCreatedSort] = useState<'asc' | 'desc' | null>(null);
   const [filters, setFilters] = useState<UsersTableFilters>({
     page: 1,
@@ -81,6 +83,24 @@ export function UsersPage() {
     }));
   };
 
+  const handleStatusFilter = (filter: 'active' | 'inactive' | '') => {
+    setStatusFilter(filter);
+    setFilters((prev) => ({
+      ...prev,
+      status: filter ? filter : undefined,
+      page: 1,
+    }));
+  };
+
+  const handleAccountTypeFilter = (filter: 'user' | 'service' | '') => {
+    setAccountTypeFilter(filter);
+    setFilters((prev) => ({
+      ...prev,
+      account_type: filter ? filter : undefined,
+      page: 1,
+    }));
+  };
+
   const handlePageChange = (page: number) => {
     setFilters(prev => ({ ...prev, page }));
   };
@@ -106,6 +126,8 @@ export function UsersPage() {
   const handleClearFilters = () => {
     setSearchTerm('');
     setEnrollmentFilter('');
+    setStatusFilter('');
+    setAccountTypeFilter('');
     setCreatedSort(null);
     setFilters({ page: 1, pageSize: 10, createdSort: null });
   };
@@ -228,7 +250,8 @@ export function UsersPage() {
                 </div>
               </div>
 
-              {/* Enrollment Filter */}
+              {/* Enrollment + Status filters */}
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
               <div className="flex items-center space-x-2">
                 <Filter className="h-4 w-4 text-gray-400" />
                 <span className="text-sm text-gray-600 mr-2">Enrollment:</span>
@@ -263,6 +286,85 @@ export function UsersPage() {
                   )}
                 </div>
               </div>
+
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-600 mr-2">Status:</span>
+                <div className="flex space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => handleStatusFilter(statusFilter === 'active' ? '' : 'active')}
+                    className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                      statusFilter === 'active'
+                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    Active
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleStatusFilter(statusFilter === 'inactive' ? '' : 'inactive')}
+                    className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                      statusFilter === 'inactive'
+                        ? 'bg-gray-200 text-gray-800 border border-gray-300'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    Inactive
+                  </button>
+                  {statusFilter && (
+                    <button
+                      type="button"
+                      onClick={() => handleStatusFilter('')}
+                      className="px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-600 mr-2">Account type:</span>
+                <div className="flex space-x-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleAccountTypeFilter(accountTypeFilter === 'user' ? '' : 'user')
+                    }
+                    className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                      accountTypeFilter === 'user'
+                        ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    User
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleAccountTypeFilter(accountTypeFilter === 'service' ? '' : 'service')
+                    }
+                    className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                      accountTypeFilter === 'service'
+                        ? 'bg-purple-100 text-purple-800 border border-purple-200'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    Service
+                  </button>
+                  {accountTypeFilter && (
+                    <button
+                      type="button"
+                      onClick={() => handleAccountTypeFilter('')}
+                      className="px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
             </div>
 
             {/* Right side - Actions */}
@@ -282,7 +384,7 @@ export function UsersPage() {
               </button>
 
               {/* Clear All Filters */}
-              {(searchTerm || enrollmentFilter || createdSort) && (
+              {(searchTerm || enrollmentFilter || statusFilter || accountTypeFilter || createdSort) && (
                 <button
                   onClick={handleClearFilters}
                   className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
@@ -344,6 +446,68 @@ export function UsersPage() {
                   </div>
                 )}
                 
+                {/* Status filter badge */}
+                {statusFilter && (
+                  <div
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 border rounded-md ${
+                      statusFilter === 'active'
+                        ? 'bg-emerald-50 border-emerald-200'
+                        : 'bg-gray-100 border-gray-300'
+                    }`}
+                  >
+                    <span
+                      className={`text-sm ${
+                        statusFilter === 'active' ? 'text-emerald-800' : 'text-gray-800'
+                      }`}
+                    >
+                      Status: {statusFilter === 'active' ? 'Active' : 'Inactive'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleStatusFilter('')}
+                      className={`rounded p-0.5 transition-colors ${
+                        statusFilter === 'active'
+                          ? 'text-emerald-600 hover:text-emerald-800 hover:bg-emerald-100'
+                          : 'text-gray-600 hover:text-gray-800 hover:bg-gray-200'
+                      }`}
+                      title="Clear status filter"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
+
+                {/* Account type filter badge */}
+                {accountTypeFilter && (
+                  <div
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 border rounded-md ${
+                      accountTypeFilter === 'user'
+                        ? 'bg-blue-50 border-blue-200'
+                        : 'bg-purple-50 border-purple-200'
+                    }`}
+                  >
+                    <span
+                      className={`text-sm ${
+                        accountTypeFilter === 'user' ? 'text-blue-800' : 'text-purple-800'
+                      }`}
+                    >
+                      Account: {accountTypeFilter === 'user' ? 'User' : 'Service'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleAccountTypeFilter('')}
+                      className={`rounded p-0.5 transition-colors ${
+                        accountTypeFilter === 'user'
+                          ? 'text-blue-600 hover:text-blue-800 hover:bg-blue-100'
+                          : 'text-purple-600 hover:text-purple-800 hover:bg-purple-100'
+                      }`}
+                      title="Clear account type filter"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
+
                 {/* Created Sort Badge */}
                 {createdSort && (
                   <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 border border-purple-200 rounded-md">
@@ -486,6 +650,22 @@ export function UsersPage() {
             } catch (err: any) {
               console.error('Failed to update user account type:', err);
               toast.error(err.message || 'Failed to update account type');
+            }
+          }}
+          onUpdateStatus={async (gid, status) => {
+            try {
+              await apiService.updateUserStatus(gid, status);
+              toast.success(
+                status === 'inactive'
+                  ? 'User marked inactive. Device data purge is queued.'
+                  : 'User marked active.'
+              );
+              const response = await apiService.getUsers(filters);
+              setUsers(response.items);
+              setTotalUsers(response.total);
+            } catch (err: any) {
+              console.error('Failed to update user status:', err);
+              toast.error(err.message || 'Failed to update status');
             }
           }}
           onDeleteUser={async (gid) => {

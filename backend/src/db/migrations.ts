@@ -349,6 +349,47 @@ export const migration_007_add_interval_info = async () => {
     await markMigrationExecuted(migrationName);
 };
 
+// Migration: Add users.status (active / inactive) for directory sync
+export const migration_008_user_status = async () => {
+    const migrationName = '008_user_status';
+
+    if (await isMigrationExecuted(migrationName)) {
+        systemLog.info(`⏭️  Migration '${migrationName}' already executed`);
+        return;
+    }
+
+    systemLog.info(`🔧 Executing migration: ${migrationName}`);
+    const connection = await getConnection();
+
+    try {
+        const [columns] = await connection.execute(
+            `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+             WHERE TABLE_SCHEMA = DATABASE() 
+             AND TABLE_NAME = 'users' 
+             AND COLUMN_NAME = 'status'`
+        );
+
+        if ((columns as any[]).length === 0) {
+            await connection.execute(`
+                ALTER TABLE users 
+                ADD COLUMN status ENUM('active', 'inactive') NOT NULL DEFAULT 'active' 
+                AFTER account_type
+            `);
+            await connection.execute(`
+                ALTER TABLE users ADD INDEX idx_status (status)
+            `);
+            systemLog.info('✅ Added users.status column');
+        } else {
+            systemLog.info('ℹ️  users.status column already exists');
+        }
+    } catch (err: any) {
+        systemLog.error(`❌ Error in user_status migration: ${err.message}`);
+        throw err;
+    }
+
+    await markMigrationExecuted(migrationName);
+};
+
 // Run all migrations
 export const runMigrations = async () => {
     try {
@@ -364,6 +405,7 @@ export const runMigrations = async () => {
         await migration_005_add_password_manager_names();
         await migration_006_composite_device_unique_key();
         await migration_007_add_interval_info();
+        await migration_008_user_status();
         
         systemLog.info("🎯 All migrations completed successfully!");
         

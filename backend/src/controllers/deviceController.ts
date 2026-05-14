@@ -98,6 +98,9 @@ export const receiveAgentData = async (req: Request, res: Response) => {
     if (userRec.account_type !== 'user') {
       return res.status(401).json({ message: 'service account cannot send data' });
     }
+    if (userRec.status !== 'active') {
+      return res.status(403).json({ message: 'user is not active' });
+    }
 
     // Check if device exists BEFORE creating/updating (to know if it's new)
     // Pass computer_name for proper identification of Windows devices with generic serial numbers

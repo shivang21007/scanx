@@ -4,6 +4,7 @@ export interface User {
   name: string;
   created_at: string;
   account_type: 'user' | 'service';
+  status: 'active' | 'inactive';
   device_id?: number[] | null;
   updated_at: string;
 }
@@ -24,5 +25,8 @@ export interface UsersTableFilters {
   page?: number;
   pageSize?: number;
   enrollment?: 'enrolled' | 'un-enrolled';
+  status?: 'active' | 'inactive';
+  /** Match query param `account_type` */
+  account_type?: 'user' | 'service';
   createdSort?: 'asc' | 'desc' | null;
 }

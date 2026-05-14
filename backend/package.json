@@ -9,7 +9,8 @@
     "migrate": "ts-node src/scripts/migrate.ts",
     "reset": "ts-node src/scripts/reset.ts",
     "db:migrate": "node dist/scripts/migrate.js",
-    "db:reset": "node dist/scripts/reset.js"
+    "db:reset": "node dist/scripts/reset.js",
+    "worker:purge": "bun dist/workers/devicePurgeWorker.js"
   },
   "keywords": [
     "scanx",

@@ -78,6 +78,23 @@ services:
       - SMTP_SECURE=${SMTP_SECURE:-}
     command: ["/bin/sh", "/app/entrypoint.sh"]
 
+  device-purge-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: device-purge-worker-scanx-1
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - scanx-network
+    env_file:
+      - ./backend/.env.docker
+    command: ["bun", "run", "worker:purge"]
+
   agent:
     build:
       context: ./agent

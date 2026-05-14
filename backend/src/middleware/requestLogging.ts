@@ -37,9 +37,11 @@ export function requestContextMiddleware(req: Request, res: Response, next: Next
   const start = Date.now();
   res.on('finish', () => {
     const durationMs = Date.now() - start;
+    const email = req.authenticatedEmail?.trim();
     logger.info('http_request', {
       client: req.clientChannel,
       requestId: req.requestId,
+      ...(email ? { user: email } : {}),
       method: req.method,
       path: req.originalUrl || req.url,
       statusCode: res.statusCode,

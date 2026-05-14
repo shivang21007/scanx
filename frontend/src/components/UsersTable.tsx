@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User } from '../types/user';
-import { Trash2, ChevronDown, ChevronUp, User as UserIcon, Settings, CheckCircle2 } from 'lucide-react';
+import { Trash2, ChevronDown, ChevronUp, User as UserIcon, Settings, CheckCircle2, Activity } from 'lucide-react';
 
 interface UsersTableProps {
     users: User[];
@@ -9,26 +9,31 @@ interface UsersTableProps {
     createdSort?: 'asc' | 'desc' | null;
     onCreatedSort?: () => void;
     onUpdateAccountType: (gid: number, accountType: 'user' | 'service') => Promise<void>;
+    onUpdateStatus: (gid: number, status: 'active' | 'inactive') => Promise<void>;
     onDeleteUser: (gid: number) => Promise<void>;
 }
 
-export function UsersTable({ users, loading, createdSort, onCreatedSort, onUpdateAccountType, onDeleteUser }: UsersTableProps) {
+export function UsersTable({ users, loading, createdSort, onCreatedSort, onUpdateAccountType, onUpdateStatus, onDeleteUser }: UsersTableProps) {
     const navigate = useNavigate();
     const [updatingUser, setUpdatingUser] = useState<number | null>(null);
+    const [updatingStatusGid, setUpdatingStatusGid] = useState<number | null>(null);
     const [deletingUser, setDeletingUser] = useState<number | null>(null);
     const [openDropdown, setOpenDropdown] = useState<number | null>(null);
+    const [openStatusDropdown, setOpenStatusDropdown] = useState<number | null>(null);
     const dropdownRefs = useRef<{ [key: number]: HTMLDivElement | null }>({});
+    const statusDropdownRefs = useRef<{ [key: number]: HTMLDivElement | null }>({});
 
     // Close dropdown when clicking outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             const clickedElement = event.target as Node;
-            const isOutsideAllDropdowns = Object.values(dropdownRefs.current).every(
-                ref => !ref || !ref.contains(clickedElement)
-            );
+            const isOutsideAllDropdowns =
+                Object.values(dropdownRefs.current).every((ref) => !ref || !ref.contains(clickedElement)) &&
+                Object.values(statusDropdownRefs.current).every((ref) => !ref || !ref.contains(clickedElement));
 
             if (isOutsideAllDropdowns) {
                 setOpenDropdown(null);
+                setOpenStatusDropdown(null);
             }
         };
 
@@ -60,6 +65,71 @@ export function UsersTable({ users, loading, createdSort, onCreatedSort, onUpdat
             } finally {
                 setDeletingUser(null);
             }
+        }
+    };
+
+    const effectiveStatus = (user: User): 'active' | 'inactive' =>
+        user.status === 'inactive' ? 'inactive' : 'active';
+
+    const handleStatusChange = async (gid: number, next: 'active' | 'inactive') => {
+        const u = users.find((user) => user.gid === gid);
+        if (!u) return;
+        const cur = effectiveStatus(u);
+        if (cur === next) {
+            setOpenStatusDropdown(null);
+            return;
+        }
+        if (next === 'inactive') {
+            if (
+                !window.confirm(
+                    'Mark this user as inactive? All linked devices will be removed from this user and device telemetry will be permanently deleted by a background worker. This cannot be undone.'
+                )
+            ) {
+                setOpenStatusDropdown(null);
+                return;
+            }
+        } else if (cur === 'inactive') {
+            if (
+                !window.confirm(
+                    'Mark this user as active? They will be allowed to enroll devices and send agent data again.'
+                )
+            ) {
+                setOpenStatusDropdown(null);
+                return;
+            }
+        }
+        setUpdatingStatusGid(gid);
+        try {
+            await onUpdateStatus(gid, next);
+        } catch (error) {
+            console.error('Failed to update user status:', error);
+        } finally {
+            setUpdatingStatusGid(null);
+            setOpenStatusDropdown(null);
+        }
+    };
+
+    const getStatusBadge = (status: 'active' | 'inactive') => {
+        switch (status) {
+            case 'active':
+                return (
+                    <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800">
+                        <Activity className="h-3 w-3" />
+                        Active
+                    </span>
+                );
+            case 'inactive':
+                return (
+                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-200 text-gray-700">
+                        Inactive
+                    </span>
+                );
+            default:
+                return (
+                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                        Unknown
+                    </span>
+                );
         }
     };
 
@@ -132,6 +202,9 @@ export function UsersTable({ users, loading, createdSort, onCreatedSort, onUpdat
                             </th>
                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Account Type
+                            </th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Status
                             </th>
                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 <div className="flex items-center space-x-1">
@@ -229,7 +302,10 @@ export function UsersTable({ users, loading, createdSort, onCreatedSort, onUpdat
                                         {getAccountTypeIcon(user.account_type)}
                                         <div className="relative inline-block" ref={(el) => { dropdownRefs.current[user.gid] = el; }}>
                                             <button
-                                                onClick={() => setOpenDropdown(openDropdown === user.gid ? null : user.gid)}
+                                                onClick={() => {
+                                                    setOpenStatusDropdown(null);
+                                                    setOpenDropdown(openDropdown === user.gid ? null : user.gid);
+                                                }}
                                                 className="flex items-center space-x-1 text-sm text-gray-900 hover:text-gray-700 focus:outline-none cursor-pointer active:scale-75 hover:scale-110"
                                                 disabled={updatingUser === user.gid}
                                             >
@@ -271,6 +347,76 @@ export function UsersTable({ users, loading, createdSort, onCreatedSort, onUpdat
 
                                     {/* Loading indicator */}
                                     {updatingUser === user.gid && (
+                                        <div className="mt-1 text-xs text-gray-500">Updating...</div>
+                                    )}
+                                </td>
+
+                                {/* Status Column */}
+                                <td className="px-4 py-4 whitespace-nowrap relative overflow-visible">
+                                    <div className="flex items-center space-x-2">
+                                        <div
+                                            className="relative inline-block"
+                                            ref={(el) => {
+                                                statusDropdownRefs.current[user.gid] = el;
+                                            }}
+                                        >
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setOpenDropdown(null);
+                                                    setOpenStatusDropdown(
+                                                        openStatusDropdown === user.gid ? null : user.gid
+                                                    );
+                                                }}
+                                                className="flex items-center space-x-1 text-sm text-gray-900 hover:text-gray-700 focus:outline-none cursor-pointer active:scale-75 hover:scale-110"
+                                                disabled={updatingStatusGid === user.gid}
+                                            >
+                                                {getStatusBadge(effectiveStatus(user))}
+                                                <ChevronDown className="h-4 w-4" />
+                                            </button>
+
+                                            {openStatusDropdown === user.gid && (
+                                                <div className="absolute z-50 top-full left-0 mt-1 w-40 bg-white rounded-md shadow-lg border border-gray-200">
+                                                    <div className="py-1 flex flex-col">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleStatusChange(user.gid, 'active')}
+                                                            disabled={updatingStatusGid === user.gid}
+                                                            className={`w-full flex items-center space-x-2 px-4 py-2 text-sm text-left hover:bg-gray-100 ${
+                                                                effectiveStatus(user) === 'active'
+                                                                    ? 'bg-emerald-50 text-emerald-800'
+                                                                    : 'text-gray-700'
+                                                            } ${
+                                                                updatingStatusGid === user.gid
+                                                                    ? 'opacity-50 cursor-not-allowed'
+                                                                    : 'cursor-pointer'
+                                                            }`}
+                                                        >
+                                                            <Activity className="h-4 w-4" />
+                                                            <span>Active</span>
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleStatusChange(user.gid, 'inactive')}
+                                                            disabled={updatingStatusGid === user.gid}
+                                                            className={`w-full flex items-center space-x-2 px-4 py-2 text-sm text-left hover:bg-gray-100 ${
+                                                                effectiveStatus(user) === 'inactive'
+                                                                    ? 'bg-gray-100 text-gray-800'
+                                                                    : 'text-gray-700'
+                                                            } ${
+                                                                updatingStatusGid === user.gid
+                                                                    ? 'opacity-50 cursor-not-allowed'
+                                                                    : 'cursor-pointer'
+                                                            }`}
+                                                        >
+                                                            <span>Inactive</span>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                    {updatingStatusGid === user.gid && (
                                         <div className="mt-1 text-xs text-gray-500">Updating...</div>
                                     )}
                                 </td>

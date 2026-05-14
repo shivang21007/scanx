@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
-import { UsersModel } from '../models/Users';
+import { UsersModel, UserStatus, AccountType } from '../models/Users';
 import { getRequestLogger } from '../logger/logger';
+import { enqueueDevicePurgeJobs } from '../queues/devicePurgeQueue';
 
 export async function getUsers(req: Request, res: Response) {
   const page = Math.max(1, parseInt(String(req.query.page || '1'), 10));
@@ -9,11 +10,17 @@ export async function getUsers(req: Request, res: Response) {
   const enrollment = req.query.enrollment as 'enrolled' | 'un-enrolled' | undefined;
   const createdSortParam = req.query.createdSort;
   const createdSort = (createdSortParam === 'asc' || createdSortParam === 'desc') ? createdSortParam : null;
+  const statusParam = req.query.status;
+  const status: UserStatus | undefined =
+    statusParam === 'active' || statusParam === 'inactive' ? statusParam : undefined;
+  const accountTypeParam = req.query.account_type;
+  const account_type: AccountType | undefined =
+    accountTypeParam === 'user' || accountTypeParam === 'service' ? accountTypeParam : undefined;
   const offset = (page - 1) * pageSize;
 
   const [items, total] = await Promise.all([
-    UsersModel.list({ search, limit: pageSize, offset, enrollment, createdSort }),
-    UsersModel.count({ search, enrollment }),
+    UsersModel.list({ search, limit: pageSize, offset, enrollment, createdSort, status, account_type }),
+    UsersModel.count({ search, enrollment, status, account_type }),
   ]);
 
   res.json({ items, total, page, pageSize });
@@ -63,7 +70,10 @@ export async function createUser(req: Request, res: Response) {
 export async function getTotalUsers(req: Request, res: Response) {
   const log = getRequestLogger(req);
   try {
-    const total = await UsersModel.count();
+    const statusParam = req.query.status;
+    const status: UserStatus | undefined =
+      statusParam === 'active' || statusParam === 'inactive' ? statusParam : undefined;
+    const total = await UsersModel.count({ status });
     res.json({ total });
   } catch (error) {
     log.error('users_total_count_failed', { error: String(error) });
@@ -110,4 +120,58 @@ export async function deleteUser(req: Request, res: Response) {
   }
 }
 
+export async function updateUserStatus(req: Request, res: Response) {
+  const log = getRequestLogger(req);
+  try {
+    const gid = parseInt(req.params.gid, 10);
+    if (!Number.isFinite(gid)) {
+      return res.status(400).json({ message: 'Invalid gid' });
+    }
+
+    const { status } = req.body as { status?: string };
+    if (status !== 'active' && status !== 'inactive') {
+      return res.status(400).json({ message: 'status must be "active" or "inactive"' });
+    }
+
+    const user = await UsersModel.findByGid(gid);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const current: UserStatus = user.status === 'inactive' ? 'inactive' : 'active';
+    if (current === status) {
+      return res.json({ message: 'No change', user });
+    }
+
+    if (status === 'inactive') {
+      const deviceIds = Array.isArray(user.device_id) ? [...user.device_id] : [];
+      await UsersModel.setInactiveAndClearDevices(gid);
+      const purgeJobsPushed = await enqueueDevicePurgeJobs([
+        {
+          deviceIds,
+          userEmail: user.email,
+          gid,
+          source: 'manual_admin',
+        },
+      ]);
+      log.info('users_manual_inactive', {
+        gid,
+        email: user.email,
+        deviceCount: deviceIds.length,
+        purgeJobsPushed,
+      });
+      return res.json({
+        message: 'User marked inactive; devices cleared and purge jobs queued',
+        purgeJobsPushed,
+      });
+    }
+
+    await UsersModel.setActive(gid);
+    log.info('users_manual_active', { gid, email: user.email });
+    return res.json({ message: 'User marked active' });
+  } catch (error) {
+    log.error('users_update_status_failed', { error: String(error) });
+    res.status(500).json({ message: 'Failed to update user status' });
+  }
+}
 

@@ -1,9 +1,11 @@
 import fs from 'fs';
-import path from 'path';
 import { UsersModel, AccountType } from '../models/Users';
 import { google } from 'googleapis';
 import { getCurrentIST, istToUTC, formatForDisplay } from '../utils/timezone';
 import { systemLog } from '../logger/logger';
+import { enqueueDevicePurgeJobs } from '../queues/devicePurgeQueue';
+import { env } from '../env/env';
+import { getProtectedEmailDomains } from '../utils/userSyncProtected';
 
 // Target sync time: 12:00 PM IST (noon) every day
 const SYNC_HOUR_IST = 12; // 12 PM
@@ -72,23 +74,87 @@ export class GoogleApiDirectoryClient implements GoogleDirectoryClient {
   }
 }
 
-export async function syncUsersFromGoogle(client: GoogleDirectoryClient): Promise<number> {
-  let upserts = 0;
+export interface SyncUsersSummary {
+  upserts: number;
+  activatedRows: number;
+  deactivatedCount: number;
+  purgeJobsQueued: number;
+  directoryUserCount: number;
+}
+
+export async function syncUsersFromGoogle(client: GoogleDirectoryClient): Promise<SyncUsersSummary> {
+  const allRecords: Array<{
+    email: string;
+    name: string;
+    createdAt: Date | string | null;
+    account_type: AccountType;
+  }> = [];
+
   let pageToken: string | undefined = undefined;
   do {
     const { users, nextPageToken } = await client.listUsers(pageToken);
     pageToken = nextPageToken;
-    const records = users
-      .filter(u => (u.primaryEmail || '').includes('@'))
-      .map(u => ({
+    for (const u of users) {
+      if (!(u.primaryEmail || '').includes('@')) continue;
+      allRecords.push({
         email: u.primaryEmail as string,
         name: (u.name?.fullName || '').trim() || (u.primaryEmail as string),
         createdAt: u.creationTime || null,
         account_type: 'user' as AccountType,
-      }));
-    upserts += await UsersModel.upsertMany(records);
+      });
+    }
   } while (pageToken);
-  return upserts;
+
+  const directoryLower = new Set(allRecords.map((r) => r.email.toLowerCase()));
+  const uniqueCanonical = [
+    ...new Map(allRecords.map((r) => [r.email.toLowerCase(), r.email])).values(),
+  ];
+
+  const configuredDomains = (env.USER_SYNC_PROTECTED_EMAIL_DOMAINS || '').trim();
+  const protectedDomains = getProtectedEmailDomains();
+  if (!configuredDomains) {
+    systemLog.info('user_sync_protected_domains_default', { domains: protectedDomains });
+  } else {
+    systemLog.info('user_sync_protected_domains_env', { domains: protectedDomains });
+  }
+
+  const upserts = await UsersModel.upsertMany(allRecords);
+  const activatedRows = await UsersModel.activateUsersPresentInDirectory(uniqueCanonical);
+  const { deactivated, skippedProtected } =
+    await UsersModel.deactivateUsersMissingFromDirectory(directoryLower);
+
+  const jobs = deactivated
+    .filter((d) => d.deviceIds.length > 0)
+    .map((d) => ({
+      deviceIds: d.deviceIds,
+      userEmail: d.email,
+      gid: d.gid,
+      source: 'directory_sync' as const,
+    }));
+
+  const purgeJobsQueued = await enqueueDevicePurgeJobs(jobs);
+
+  systemLog.info('user_sync_directory_summary', {
+    directory_user_count: directoryLower.size,
+    upsert_rows_touched: upserts,
+    activate_query_rows: activatedRows,
+    deactivated_users: deactivated.length,
+    skipped_protected_emails: skippedProtected,
+    purge_jobs_queued: purgeJobsQueued,
+    deactivated_detail: deactivated.map((d) => ({
+      email: d.email,
+      gid: d.gid,
+      device_ids: d.deviceIds,
+    })),
+  });
+
+  return {
+    upserts,
+    activatedRows,
+    deactivatedCount: deactivated.length,
+    purgeJobsQueued,
+    directoryUserCount: directoryLower.size,
+  };
 }
 
 /**
@@ -133,9 +199,11 @@ function scheduleNextSync(client: GoogleDirectoryClient): void {
   
   setTimeout(() => {
     syncUsersFromGoogle(client)
-      .then(count => {
-        systemLog.info(`👥 Users sync completed at 12 PM IST. Upserted ${count} records`);
-        // Schedule next sync for tomorrow at 12 PM IST
+      .then((summary) => {
+        systemLog.info('users_sync_completed', {
+          scheduleNote: '12 PM IST',
+          ...summary,
+        });
         scheduleNextSync(client);
       })
       .catch(err => {
@@ -149,7 +217,7 @@ function scheduleNextSync(client: GoogleDirectoryClient): void {
 export function startUsersSyncScheduler(client: GoogleDirectoryClient) {
   // Initial kick - sync immediately on startup
   syncUsersFromGoogle(client)
-    .then(count => systemLog.info(`Initial users sync completed. Upserted ${count} records`))
+    .then((summary) => systemLog.info('initial_users_sync_completed', summary))
     .catch(err => systemLog.error('initial_users_sync_failed', { error: String(err?.message || err) }));
 
   // Schedule recurring syncs at 12 PM IST every day

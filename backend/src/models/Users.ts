@@ -1,14 +1,17 @@
 import { getConnection } from '../db/connection';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
+import { isEmailProtectedFromSync } from '../utils/userSyncProtected';
 
 export type AccountType = 'user' | 'service';
+export type UserStatus = 'active' | 'inactive';
 
 export interface UserRecord {
-  gid: number; 
+  gid: number;
   email: string;
   name: string;
   created_at?: Date | string | null;
   account_type: AccountType;
+  status?: UserStatus;
   device_id?: number[] | null;
   updated_at?: Date;
 }
@@ -18,10 +21,42 @@ export class UsersModel {
     if (!value) return null;
     const d = value instanceof Date ? value : new Date(value);
     if (isNaN(d.getTime())) return null;
-    const iso = d.toISOString(); // 2024-06-07T08:44:33.000Z
+    const iso = d.toISOString();
     const trimmed = iso.replace('T', ' ').replace('Z', '');
-    return trimmed.substring(0, 19); // 2024-06-07 08:44:33
+    return trimmed.substring(0, 19);
   }
+
+  private static parseDeviceIdJson(raw: unknown): number[] {
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw.filter((n) => typeof n === 'number');
+    if (typeof raw === 'string') {
+      try {
+        const arr = JSON.parse(raw);
+        return Array.isArray(arr) ? arr.filter((n: unknown) => typeof n === 'number') : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  }
+
+  private static rowToUserRecord(row: any): UserRecord {
+    const device_id = this.parseDeviceIdJson(row.device_id);
+    const status: UserStatus =
+      row.status === 'inactive' ? 'inactive' : 'active';
+    return { ...row, device_id, status } as UserRecord;
+  }
+
+  static async findByGid(gid: number): Promise<UserRecord | null> {
+    const conn = await getConnection();
+    const [rows] = await conn.execute<RowDataPacket[]>(
+      'SELECT * FROM users WHERE gid = ? LIMIT 1',
+      [gid]
+    );
+    if (rows.length === 0) return null;
+    return this.rowToUserRecord(rows[0]);
+  }
+
   static async findByEmail(email: string): Promise<UserRecord | null> {
     const conn = await getConnection();
     const [rows] = await conn.execute<RowDataPacket[]>(
@@ -29,19 +64,7 @@ export class UsersModel {
       [email]
     );
     if (rows.length === 0) return null;
-    
-    const row = rows[0] as any;
-    // Parse device_id JSON if it exists
-    let device_id: number[] | null = null;
-    if (row.device_id) {
-      try {
-        device_id = typeof row.device_id === 'string' ? JSON.parse(row.device_id) : row.device_id;
-      } catch {
-        device_id = null;
-      }
-    }
-    
-    return { ...row, device_id } as UserRecord;
+    return this.rowToUserRecord(rows[0]);
   }
 
   static async emailExists(email: string): Promise<boolean> {
@@ -49,13 +72,22 @@ export class UsersModel {
     return !!rec;
   }
 
-  // No custom id generation; gid is AUTO_INCREMENT
-
   static normalizeAccountType(v?: string | null): AccountType {
     return v === 'service' ? 'service' : 'user';
   }
 
-  static async upsertMany(records: Array<{ email: string; name: string; createdAt?: Date | string | null; account_type: AccountType }>): Promise<number> {
+  static normalizeStatus(v?: string | null): UserStatus {
+    return v === 'inactive' ? 'inactive' : 'active';
+  }
+
+  static async upsertMany(
+    records: Array<{
+      email: string;
+      name: string;
+      createdAt?: Date | string | null;
+      account_type: AccountType;
+    }>
+  ): Promise<number> {
     if (!records.length) return 0;
     const conn = await getConnection();
     let upserted = 0;
@@ -65,23 +97,22 @@ export class UsersModel {
       const existing = await this.findByEmail(rec.email);
       const accountType = this.normalizeAccountType(rec.account_type);
       if (existing) {
-        // Update only if changed (diff-only update)
         const needsUpdate =
           existing.name !== rec.name ||
           ((existing as any).created_at || null) !== createdAt ||
-          existing.account_type !== accountType;
+          existing.account_type !== accountType ||
+          (existing.status || 'active') !== 'active';
         if (needsUpdate) {
           await conn.execute<ResultSetHeader>(
-            'UPDATE users SET name = ?, created_at = ?, account_type = ? WHERE email = ?',
-            [rec.name, createdAt, accountType, rec.email]
+            'UPDATE users SET name = ?, created_at = ?, account_type = ?, status = ? WHERE email = ?',
+            [rec.name, createdAt, accountType, 'active', rec.email]
           );
           upserted++;
         }
       } else {
-        // Insert new (gid auto-increment)
         await conn.execute<ResultSetHeader>(
-          'INSERT INTO users (email, name, created_at, account_type, device_id) VALUES (?, ?, ?, ?, ?)',
-          [rec.email, rec.name, createdAt, accountType, JSON.stringify([])]
+          'INSERT INTO users (email, name, created_at, account_type, status, device_id) VALUES (?, ?, ?, ?, ?, ?)',
+          [rec.email, rec.name, createdAt, accountType, 'active', JSON.stringify([])]
         );
         upserted++;
       }
@@ -90,37 +121,111 @@ export class UsersModel {
     return upserted;
   }
 
-  static async list(params: { search?: string; limit?: number; offset?: number; enrollment?: 'enrolled' | 'un-enrolled'; createdSort?: 'asc' | 'desc' | null } = {}): Promise<UserRecord[]> {
+  /** Mark every user whose email appears in the directory snapshot as active (re-hires). */
+  static async activateUsersPresentInDirectory(canonicalEmails: string[]): Promise<number> {
+    if (!canonicalEmails.length) return 0;
+    const conn = await getConnection();
+    let total = 0;
+    const chunk = 150;
+    for (let i = 0; i < canonicalEmails.length; i += chunk) {
+      const slice = canonicalEmails.slice(i, i + chunk);
+      const placeholders = slice.map(() => '?').join(',');
+      const [result] = await conn.execute<ResultSetHeader>(
+        `UPDATE users SET status = 'active', updated_at = CURRENT_TIMESTAMP WHERE email IN (${placeholders})`,
+        slice
+      );
+      total += result.affectedRows;
+    }
+    return total;
+  }
+
+  /**
+   * Active users not in directory (by lowercase email) and not protected → inactive, device_id cleared, purge jobs returned for enqueue.
+   */
+  static async deactivateUsersMissingFromDirectory(
+    directoryEmailsLower: Set<string>
+  ): Promise<{
+    deactivated: Array<{ gid: number; email: string; deviceIds: number[] }>;
+    skippedProtected: string[];
+  }> {
+    const conn = await getConnection();
+    const [rows] = await conn.execute<RowDataPacket[]>(
+      "SELECT gid, email, device_id, status FROM users WHERE status = 'active'"
+    );
+
+    const deactivated: Array<{ gid: number; email: string; deviceIds: number[] }> = [];
+    const skippedProtected: string[] = [];
+
+    for (const row of rows as any[]) {
+      const email = String(row.email);
+      const lower = email.toLowerCase();
+      if (directoryEmailsLower.has(lower)) continue;
+      if (isEmailProtectedFromSync(email)) {
+        skippedProtected.push(email);
+        continue;
+      }
+      const deviceIds = this.parseDeviceIdJson(row.device_id);
+      await conn.execute<ResultSetHeader>(
+        "UPDATE users SET status = 'inactive', device_id = ?, updated_at = CURRENT_TIMESTAMP WHERE gid = ?",
+        [JSON.stringify([]), row.gid]
+      );
+      deactivated.push({ gid: row.gid, email, deviceIds });
+    }
+
+    return { deactivated, skippedProtected };
+  }
+
+  static async list(
+    params: {
+      search?: string;
+      limit?: number;
+      offset?: number;
+      enrollment?: 'enrolled' | 'un-enrolled';
+      createdSort?: 'asc' | 'desc' | null;
+      status?: UserStatus | 'all';
+      account_type?: AccountType;
+    } = {}
+  ): Promise<UserRecord[]> {
     const conn = await getConnection();
     const limit = Math.max(0, Math.min(params.limit ?? 50, 200));
     const offset = Math.max(0, params.offset ?? 0);
     const search = (params.search || '').trim();
     const enrollment = params.enrollment;
     const createdSort = params.createdSort;
+    const statusFilter = params.status;
+    const accountTypeFilter = params.account_type;
 
     let whereConditions: string[] = [];
     let queryParams: any[] = [];
 
-    // Search filter
     if (search) {
       whereConditions.push('(email LIKE ? OR name LIKE ?)');
       queryParams.push(`%${search}%`, `%${search}%`);
     }
 
-    // Enrollment filter
     if (enrollment === 'enrolled') {
-      // Users with devices (device_id is not null and has values)
-      whereConditions.push('(device_id IS NOT NULL AND JSON_LENGTH(COALESCE(device_id, JSON_ARRAY())) > 0)');
+      whereConditions.push(
+        '(device_id IS NOT NULL AND JSON_LENGTH(COALESCE(device_id, JSON_ARRAY())) > 0)'
+      );
     } else if (enrollment === 'un-enrolled') {
-      // Users without devices (device_id is null or empty array)
-      whereConditions.push('(device_id IS NULL OR JSON_LENGTH(COALESCE(device_id, JSON_ARRAY())) = 0)');
+      whereConditions.push(
+        '(device_id IS NULL OR JSON_LENGTH(COALESCE(device_id, JSON_ARRAY())) = 0)'
+      );
     }
 
-    const whereClause = whereConditions.length > 0 
-      ? `WHERE ${whereConditions.join(' AND ')}` 
-      : '';
+    if (statusFilter === 'active' || statusFilter === 'inactive') {
+      whereConditions.push('status = ?');
+      queryParams.push(statusFilter);
+    }
 
-    // Sorting: created_at if createdSort is provided (asc/desc), otherwise email (default/alphabetical)
+    if (accountTypeFilter === 'user' || accountTypeFilter === 'service') {
+      whereConditions.push('account_type = ?');
+      queryParams.push(accountTypeFilter);
+    }
+
+    const whereClause =
+      whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
+
     let orderByClause = 'ORDER BY email ASC';
     if (createdSort === 'asc' || createdSort === 'desc') {
       orderByClause = `ORDER BY created_at ${createdSort.toUpperCase()}`;
@@ -128,47 +233,54 @@ export class UsersModel {
 
     const sql = `SELECT * FROM users ${whereClause} ${orderByClause} LIMIT ${limit} OFFSET ${offset}`;
     const [rows] = await conn.execute<RowDataPacket[]>(sql, queryParams);
-    
-    // Parse device_id JSON for each row
-    return rows.map((row: any) => {
-      let device_id: number[] | null = null;
-      if (row.device_id) {
-        try {
-          device_id = typeof row.device_id === 'string' ? JSON.parse(row.device_id) : row.device_id;
-        } catch {
-          device_id = null;
-        }
-      }
-      return { ...row, device_id } as UserRecord;
-    });
+
+    return (rows as any[]).map((row) => this.rowToUserRecord(row));
   }
 
-  static async count(params: { search?: string; enrollment?: 'enrolled' | 'un-enrolled' } = {}): Promise<number> {
+  static async count(
+    params: {
+      search?: string;
+      enrollment?: 'enrolled' | 'un-enrolled';
+      status?: UserStatus | 'all';
+      account_type?: AccountType;
+    } = {}
+  ): Promise<number> {
     const conn = await getConnection();
     const search = (params.search || '').trim();
     const enrollment = params.enrollment;
+    const statusFilter = params.status;
+    const accountTypeFilter = params.account_type;
 
     let whereConditions: string[] = [];
     let queryParams: any[] = [];
 
-    // Search filter
     if (search) {
       whereConditions.push('(email LIKE ? OR name LIKE ?)');
       queryParams.push(`%${search}%`, `%${search}%`);
     }
 
-    // Enrollment filter
     if (enrollment === 'enrolled') {
-      // Users with devices (device_id is not null and has values)
-      whereConditions.push('(device_id IS NOT NULL AND JSON_LENGTH(COALESCE(device_id, JSON_ARRAY())) > 0)');
+      whereConditions.push(
+        '(device_id IS NOT NULL AND JSON_LENGTH(COALESCE(device_id, JSON_ARRAY())) > 0)'
+      );
     } else if (enrollment === 'un-enrolled') {
-      // Users without devices (device_id is null or empty array)
-      whereConditions.push('(device_id IS NULL OR JSON_LENGTH(COALESCE(device_id, JSON_ARRAY())) = 0)');
+      whereConditions.push(
+        '(device_id IS NULL OR JSON_LENGTH(COALESCE(device_id, JSON_ARRAY())) = 0)'
+      );
     }
 
-    const whereClause = whereConditions.length > 0 
-      ? `WHERE ${whereConditions.join(' AND ')}` 
-      : '';
+    if (statusFilter === 'active' || statusFilter === 'inactive') {
+      whereConditions.push('status = ?');
+      queryParams.push(statusFilter);
+    }
+
+    if (accountTypeFilter === 'user' || accountTypeFilter === 'service') {
+      whereConditions.push('account_type = ?');
+      queryParams.push(accountTypeFilter);
+    }
+
+    const whereClause =
+      whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
 
     const [rows] = await conn.execute<RowDataPacket[]>(
       `SELECT COUNT(1) as c FROM users ${whereClause}`,
@@ -180,23 +292,39 @@ export class UsersModel {
   static async updateAccountType(gid: number, accountType: AccountType): Promise<boolean> {
     const conn = await getConnection();
     const normalizedType = this.normalizeAccountType(accountType);
-    
+
     const [result] = await conn.execute<ResultSetHeader>(
       'UPDATE users SET account_type = ?, updated_at = CURRENT_TIMESTAMP WHERE gid = ?',
       [normalizedType, gid]
     );
-    
+
+    return result.affectedRows > 0;
+  }
+
+  /** Set status to inactive and clear device_id JSON (purge is enqueued separately). */
+  static async setInactiveAndClearDevices(gid: number): Promise<boolean> {
+    const conn = await getConnection();
+    const [result] = await conn.execute<ResultSetHeader>(
+      "UPDATE users SET status = 'inactive', device_id = ?, updated_at = CURRENT_TIMESTAMP WHERE gid = ?",
+      [JSON.stringify([]), gid]
+    );
+    return result.affectedRows > 0;
+  }
+
+  static async setActive(gid: number): Promise<boolean> {
+    const conn = await getConnection();
+    const [result] = await conn.execute<ResultSetHeader>(
+      "UPDATE users SET status = 'active', updated_at = CURRENT_TIMESTAMP WHERE gid = ?",
+      [gid]
+    );
     return result.affectedRows > 0;
   }
 
   static async delete(gid: number): Promise<boolean> {
     const conn = await getConnection();
-    
-    const [result] = await conn.execute<ResultSetHeader>(
-      'DELETE FROM users WHERE gid = ?',
-      [gid]
-    );
-    
+
+    const [result] = await conn.execute<ResultSetHeader>('DELETE FROM users WHERE gid = ?', [gid]);
+
     return result.affectedRows > 0;
   }
 
@@ -205,93 +333,99 @@ export class UsersModel {
     const createdAt = this.toMySQLDateTime(new Date());
     const normalizedType = this.normalizeAccountType(account_type);
     const [result] = await conn.execute<ResultSetHeader>(
-      'INSERT INTO users (name, email, account_type, created_at, device_id) VALUES (?, ?, ?, ?, ?)',
-      [name, email, normalizedType, createdAt, JSON.stringify([])]
+      'INSERT INTO users (name, email, account_type, created_at, status, device_id) VALUES (?, ?, ?, ?, ?, ?)',
+      [name, email, normalizedType, createdAt, 'active', JSON.stringify([])]
     );
-    return { gid: result.insertId, name, email, account_type, created_at: createdAt, device_id: [] };
+    return {
+      gid: result.insertId,
+      name,
+      email,
+      account_type: normalizedType,
+      status: 'active',
+      created_at: createdAt,
+      device_id: [],
+    };
   }
 
-  // Add device_id to user's device_id array
   static async addDevice(email: string, deviceId: number): Promise<boolean> {
     const conn = await getConnection();
     const user = await this.findByEmail(email);
-    
+
     if (!user) {
       return false;
     }
-    
-    // Parse existing device_id array or initialize empty array
+
+    if (user.status === 'inactive') {
+      return false;
+    }
+
     let device_ids: number[] = [];
     if (user.device_id && Array.isArray(user.device_id)) {
       device_ids = [...user.device_id];
     } else if (user.device_id) {
-      // Handle case where device_id might be a JSON string
       try {
-        device_ids = typeof user.device_id === 'string' ? JSON.parse(user.device_id) : user.device_id;
+        device_ids =
+          typeof user.device_id === 'string' ? JSON.parse(user.device_id) : user.device_id;
       } catch {
         device_ids = [];
       }
     }
-    
-    // Add device_id if not already present
+
     if (!device_ids.includes(deviceId)) {
       device_ids.push(deviceId);
-      
+
       await conn.execute<ResultSetHeader>(
         'UPDATE users SET device_id = ?, updated_at = CURRENT_TIMESTAMP WHERE email = ?',
         [JSON.stringify(device_ids), email]
       );
-      
+
       return true;
     }
-    
+
     return false;
   }
 
-  // Remove device_id from user's device_id array
   static async removeDevice(email: string, deviceId: number): Promise<boolean> {
     const conn = await getConnection();
     const user = await this.findByEmail(email);
-    
+
     if (!user) {
       return false;
     }
-    
-    // Parse existing device_id array
+
     let device_ids: number[] = [];
     if (user.device_id && Array.isArray(user.device_id)) {
       device_ids = [...user.device_id];
     } else if (user.device_id) {
       try {
-        device_ids = typeof user.device_id === 'string' ? JSON.parse(user.device_id) : user.device_id;
+        device_ids =
+          typeof user.device_id === 'string' ? JSON.parse(user.device_id) : user.device_id;
       } catch {
         device_ids = [];
       }
     }
-    
-    // Remove device_id if present
+
     const index = device_ids.indexOf(deviceId);
     if (index > -1) {
       device_ids.splice(index, 1);
-      
+
       await conn.execute<ResultSetHeader>(
         'UPDATE users SET device_id = ?, updated_at = CURRENT_TIMESTAMP WHERE email = ?',
         [JSON.stringify(device_ids), email]
       );
-      
+
       return true;
     }
-    
+
     return false;
   }
 
-  // Get device count for a user
   static async getDeviceCount(email: string): Promise<number> {
     const user = await this.findByEmail(email);
     if (!user || !user.device_id) {
       return 0;
     }
-    
+
     let device_ids: number[] = [];
     if (Array.isArray(user.device_id)) {
       device_ids = user.device_id;
@@ -302,9 +436,7 @@ export class UsersModel {
         return 0;
       }
     }
-    
+
     return device_ids.length;
   }
 }
-
-

@@ -342,6 +342,10 @@ export class DeviceModel {
             'DELETE FROM apps_info WHERE device_id = ?',
             [id]
         );
+        await connection.execute<ResultSetHeader>(
+            'DELETE FROM device_interval_requests WHERE device_id = ?',
+            [id]
+        );
     }
     
     // Search devices by user email
