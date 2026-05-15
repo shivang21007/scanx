@@ -366,13 +366,13 @@ export class DeviceModel {
             'SELECT COUNT(*) as total FROM devices'
         );
         
-        // Calculate online devices based on last_seen within 24 hours (dynamic status)
+        // Online / recent activity: last_seen within 48 hours (2 days)
         const [onlineDevices] = await connection.execute<RowDataPacket[]>(
-            'SELECT COUNT(*) as online FROM devices WHERE last_seen >= DATE_SUB(NOW(), INTERVAL 24 HOUR)'
+            'SELECT COUNT(*) as online FROM devices WHERE last_seen >= DATE_SUB(NOW(), INTERVAL 48 HOUR)'
         );
-        
+
         const [recentActivity] = await connection.execute<RowDataPacket[]>(
-            'SELECT COUNT(*) as recent FROM devices WHERE last_seen >= DATE_SUB(NOW(), INTERVAL 24 HOUR)'
+            'SELECT COUNT(*) as recent FROM devices WHERE last_seen >= DATE_SUB(NOW(), INTERVAL 48 HOUR)'
         );
         
         const [osByType] = await connection.execute<RowDataPacket[]>(

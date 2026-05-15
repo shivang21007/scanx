@@ -104,7 +104,7 @@ export function logWithIST(message: string, ...args: any[]): void {
 
 /**
  * Calculate device status based on last seen timestamp
- * Device is offline if last seen is older than 24 hours
+ * Device is offline if last seen is older than 48 hours (2 days)
  */
 export function getDeviceStatus(lastSeenTimestamp: Date | string | null): 'online' | 'offline' {
     if (!lastSeenTimestamp) {
@@ -116,6 +116,5 @@ export function getDeviceStatus(lastSeenTimestamp: Date | string | null): 'onlin
     const diffMs = now.getTime() - lastSeen.getTime();
     const diffHours = diffMs / (1000 * 60 * 60); // Convert to hours
     
-    // Device is offline if last seen is older than 24 hours
-    return diffHours > 24 ? 'offline' : 'online';
+    return diffHours > 48 ? 'offline' : 'online';
 }

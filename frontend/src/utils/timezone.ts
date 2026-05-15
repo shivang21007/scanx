@@ -62,6 +62,7 @@ export function formatDashboardTimestamp(timestampString: string): string {
   return `${day}/${month}/${year} ${hours}:${minutes}`;
 }
 
+/** Online when last report is within the last 48 hours (2 days). */
 export function getDeviceStatus(lastReportTimestamp: string | null): 'online' | 'offline' {
   if (!lastReportTimestamp) {
     return 'offline';
@@ -72,6 +73,6 @@ export function getDeviceStatus(lastReportTimestamp: string | null): 'online' | 
   const diffMs = now.getTime() - lastReport.getTime();
   const diffHours = diffMs / (1000 * 60 * 60); // Convert to hours
   
-  // Device is offline if last report is older than 24 hours
-  return diffHours > 24 ? 'offline' : 'online';
+  // Device is offline if last report is older than 48 hours (2 days)
+  return diffHours > 48 ? 'offline' : 'online';
 }
