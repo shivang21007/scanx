@@ -76,6 +76,8 @@ services:
       - SMTP_HOST=${SMTP_HOST:-}
       - SMTP_PORT=${SMTP_PORT:-}
       - SMTP_SECURE=${SMTP_SECURE:-}
+    volumes:
+      - scanx-backend-logs:/app/logs
     command: ["/bin/sh", "/app/entrypoint.sh"]
 
   device-purge-worker:
@@ -93,6 +95,8 @@ services:
       - scanx-network
     env_file:
       - ./backend/.env.docker
+    volumes:
+      - scanx-purge-worker-logs:/app/logs
     command: ["bun", "run", "worker:purge"]
 
   agent:
@@ -124,10 +128,18 @@ services:
       - backend
     networks:
       - scanx-network
+    volumes:
+      - scanx-frontend-logs:/var/log/nginx
 
 volumes:
   mysql-scanx:
   redis-scanx:
+  scanx-backend-logs:
+    name: scanx-backend-logs
+  scanx-purge-worker-logs:
+    name: scanx-purge-worker-logs
+  scanx-frontend-logs:
+    name: scanx-frontend-logs
 networks:
   scanx-network:
     driver: bridge  
