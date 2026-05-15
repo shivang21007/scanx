@@ -6,6 +6,7 @@ import { systemLog } from '../logger/logger';
 import { enqueueDevicePurgeJobs } from '../queues/devicePurgeQueue';
 import { env } from '../env/env';
 import { getProtectedEmailDomains } from '../utils/userSyncProtected';
+import { inferAccountTypeFromDirectoryUser } from '../utils/googleDirectoryAccountType';
 
 // Target sync time: 12:00 PM IST (noon) every day
 const SYNC_HOUR_IST = 12; // 12 PM
@@ -16,6 +17,7 @@ export interface GoogleDirectoryUser {
   primaryEmail?: string;
   name?: { fullName?: string };
   creationTime?: string;
+  orgUnitPath?: string;
 }
 
 export interface GoogleDirectoryClient {
@@ -68,6 +70,7 @@ export class GoogleApiDirectoryClient implements GoogleDirectoryClient {
       primaryEmail: u.primaryEmail,
       name: { fullName: u.name?.fullName },
       creationTime: u.creationTime,
+      orgUnitPath: u.orgUnitPath,
     }));
     const next = res.data.nextPageToken || undefined;
     return { users, nextPageToken: next };
@@ -75,11 +78,11 @@ export class GoogleApiDirectoryClient implements GoogleDirectoryClient {
 }
 
 export interface SyncUsersSummary {
-  upserts: number;
-  activatedRows: number;
+  directoryUserCount: number;
+  inserted: number;
+  existingUnchanged: number;
   deactivatedCount: number;
   purgeJobsQueued: number;
-  directoryUserCount: number;
 }
 
 export async function syncUsersFromGoogle(client: GoogleDirectoryClient): Promise<SyncUsersSummary> {
@@ -100,15 +103,12 @@ export async function syncUsersFromGoogle(client: GoogleDirectoryClient): Promis
         email: u.primaryEmail as string,
         name: (u.name?.fullName || '').trim() || (u.primaryEmail as string),
         createdAt: u.creationTime || null,
-        account_type: 'user' as AccountType,
+        account_type: inferAccountTypeFromDirectoryUser(u),
       });
     }
   } while (pageToken);
 
   const directoryLower = new Set(allRecords.map((r) => r.email.toLowerCase()));
-  const uniqueCanonical = [
-    ...new Map(allRecords.map((r) => [r.email.toLowerCase(), r.email])).values(),
-  ];
 
   const configuredDomains = (env.USER_SYNC_PROTECTED_EMAIL_DOMAINS || '').trim();
   const protectedDomains = getProtectedEmailDomains();
@@ -118,8 +118,7 @@ export async function syncUsersFromGoogle(client: GoogleDirectoryClient): Promis
     systemLog.info('user_sync_protected_domains_env', { domains: protectedDomains });
   }
 
-  const upserts = await UsersModel.upsertMany(allRecords);
-  const activatedRows = await UsersModel.activateUsersPresentInDirectory(uniqueCanonical);
+  const { inserted, skippedExisting } = await UsersModel.upsertManyFromDirectory(allRecords);
   const { deactivated, skippedProtected } =
     await UsersModel.deactivateUsersMissingFromDirectory(directoryLower);
 
@@ -136,8 +135,8 @@ export async function syncUsersFromGoogle(client: GoogleDirectoryClient): Promis
 
   systemLog.info('user_sync_directory_summary', {
     directory_user_count: directoryLower.size,
-    upsert_rows_touched: upserts,
-    activate_query_rows: activatedRows,
+    inserted,
+    existing_unchanged: skippedExisting,
     deactivated_users: deactivated.length,
     skipped_protected_emails: skippedProtected,
     purge_jobs_queued: purgeJobsQueued,
@@ -149,11 +148,11 @@ export async function syncUsersFromGoogle(client: GoogleDirectoryClient): Promis
   });
 
   return {
-    upserts,
-    activatedRows,
+    directoryUserCount: directoryLower.size,
+    inserted,
+    existingUnchanged: skippedExisting,
     deactivatedCount: deactivated.length,
     purgeJobsQueued,
-    directoryUserCount: directoryLower.size,
   };
 }
 

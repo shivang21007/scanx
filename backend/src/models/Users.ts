@@ -80,48 +80,45 @@ export class UsersModel {
     return v === 'inactive' ? 'inactive' : 'active';
   }
 
-  static async upsertMany(
+  /**
+   * Google directory sync upsert.
+   * - New email: insert with directory account_type and status active.
+   * - Existing email: no changes (preserve admin status, account_type, name, dates).
+   */
+  static async upsertManyFromDirectory(
     records: Array<{
       email: string;
       name: string;
       createdAt?: Date | string | null;
       account_type: AccountType;
     }>
-  ): Promise<number> {
-    if (!records.length) return 0;
+  ): Promise<{ inserted: number; skippedExisting: number }> {
+    if (!records.length) return { inserted: 0, skippedExisting: 0 };
     const conn = await getConnection();
-    let upserted = 0;
+    let inserted = 0;
+    let skippedExisting = 0;
 
     for (const rec of records) {
       const createdAt = this.toMySQLDateTime(rec.createdAt || null);
       const existing = await this.findByEmail(rec.email);
       const accountType = this.normalizeAccountType(rec.account_type);
+
       if (existing) {
-        const needsUpdate =
-          existing.name !== rec.name ||
-          ((existing as any).created_at || null) !== createdAt ||
-          existing.account_type !== accountType ||
-          (existing.status || 'active') !== 'active';
-        if (needsUpdate) {
-          await conn.execute<ResultSetHeader>(
-            'UPDATE users SET name = ?, created_at = ?, account_type = ?, status = ? WHERE email = ?',
-            [rec.name, createdAt, accountType, 'active', rec.email]
-          );
-          upserted++;
-        }
-      } else {
-        await conn.execute<ResultSetHeader>(
-          'INSERT INTO users (email, name, created_at, account_type, status, device_id) VALUES (?, ?, ?, ?, ?, ?)',
-          [rec.email, rec.name, createdAt, accountType, 'active', JSON.stringify([])]
-        );
-        upserted++;
+        skippedExisting++;
+        continue;
       }
+
+      await conn.execute<ResultSetHeader>(
+        'INSERT INTO users (email, name, created_at, account_type, status, device_id) VALUES (?, ?, ?, ?, ?, ?)',
+        [rec.email, rec.name, createdAt, accountType, 'active', JSON.stringify([])]
+      );
+      inserted++;
     }
 
-    return upserted;
+    return { inserted, skippedExisting };
   }
 
-  /** Mark every user whose email appears in the directory snapshot as active (re-hires). */
+  /** @deprecated Do not use for directory sync — admin inactive/service must be preserved. */
   static async activateUsersPresentInDirectory(canonicalEmails: string[]): Promise<number> {
     if (!canonicalEmails.length) return 0;
     const conn = await getConnection();
