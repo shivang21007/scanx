@@ -138,13 +138,13 @@ export function DevicesTable({
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Device
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Owner
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 <div className="flex items-center space-x-1">
                   <span>OS Version</span>
                   {onOsVersionSort && (
@@ -183,38 +183,38 @@ export function DevicesTable({
                   )}
                 </div>
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Monitoring
               </th>
               <th 
-                className={`px-6 py-3 text-center text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors ${getSecurityHeaderClass(passwordManagerFilter)}`}
+                className={`px-3 py-3 text-center text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors ${getSecurityHeaderClass(passwordManagerFilter)}`}
                 title="Password Manager - Click to filter"
                 onClick={() => onSecurityFilter?.('password_manager')}
               >
-                PW
+                Password Manager
               </th>
               <th 
-                className={`px-6 py-3 text-center text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors ${getSecurityHeaderClass(diskEncryptionFilter)}`}
+                className={`px-3 py-3 text-center text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors ${getSecurityHeaderClass(diskEncryptionFilter)}`}
                 title="Hard Disk Encryption - Click to filter"
                 onClick={() => onSecurityFilter?.('disk_encryption')}
               >
-                HD
+                Hard Disk Encryption
               </th>
               <th 
-                className={`px-6 py-3 text-center text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors ${getSecurityHeaderClass(antivirusFilter)}`}
+                className={`px-3 py-3 text-center text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors ${getSecurityHeaderClass(antivirusFilter)}`}
                 title="Antivirus - Click to filter"
                 onClick={() => onSecurityFilter?.('antivirus')}
               >
-                AV
+                Antivirus
               </th>
               <th 
-                className={`px-6 py-3 text-center text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors ${getSecurityHeaderClass(screenLockFilter)}`}
+                className={`px-3 py-3 text-center text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors ${getSecurityHeaderClass(screenLockFilter)}`}
                 title="Screen Lock - Click to filter"
                 onClick={() => onSecurityFilter?.('screen_lock')}
               >
-                SL
+                Screen Lock
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 <div className="flex items-center space-x-1">
                   <span>Last Check</span>
                   {onLastCheckSort && (
@@ -248,7 +248,7 @@ export function DevicesTable({
                   )}
                 </div>
               </th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Actions
               </th>
             </tr>
@@ -257,7 +257,7 @@ export function DevicesTable({
             {devices.map((device) => (
               <tr key={device.id} className="hover:bg-gray-50 transition-colors">
                 {/* Device Column */}
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-3 py-4 whitespace-nowrap">
                   <div>
                     <button
                       onClick={() => handleDeviceClick(device.id)}
@@ -272,7 +272,7 @@ export function DevicesTable({
                 </td>
 
                 {/* Owner Column */}
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-3 py-4 whitespace-nowrap">
                   <div>
                     <button
                       onClick={() => handleDeviceClick(device.id)}
@@ -287,7 +287,7 @@ export function DevicesTable({
                 </td>
 
                 {/* OS Version Column */}
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-3 py-4 whitespace-nowrap">
                   <div className="flex items-center">
                     <div className="mr-3">
                       {getOSIcon(device.os_type)}
@@ -304,7 +304,7 @@ export function DevicesTable({
                 </td>
 
                 {/* Monitoring Column */}
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-3 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-900">
                     <div>scanx: {device.scanx_version || 'Unknown'}</div>
                     <div className="text-gray-500 text-xs mt-0.5">osqueryi: {device.osqueryi_version || 'Unknown'}</div>
@@ -313,25 +313,25 @@ export function DevicesTable({
                 </td>
 
                 {/* Security Status Columns */}
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-3 py-4 whitespace-nowrap">
                   <SecurityIcon 
                     enabled={device.security_status.password_manager} 
                     label="Password Manager"
                   />
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-3 py-4 whitespace-nowrap">
                   <SecurityIcon 
                     enabled={device.security_status.disk_encryption} 
                     label="Disk Encryption"
                   />
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-3 py-4 whitespace-nowrap">
                   <SecurityIcon 
                     enabled={device.security_status.antivirus} 
                     label="Antivirus"
                   />
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-3 py-4 whitespace-nowrap">
                   <SecurityIcon 
                     enabled={device.security_status.screen_lock} 
                     label="Screen Lock"
@@ -339,7 +339,7 @@ export function DevicesTable({
                 </td>
 
                 {/* Last Check Column */}
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-3 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-900">
                     {device.last_report
                       ? lastCheckAbsolute
@@ -350,7 +350,7 @@ export function DevicesTable({
                 </td>
 
                 {/* Actions Column */}
-                <td className="px-6 py-4 whitespace-nowrap text-center">
+                <td className="px-3 py-4 whitespace-nowrap text-center">
                   <button
                     className="text-red-600 hover:text-red-900 transition-all duration-150 cursor-pointer active:scale-75 hover:scale-110"
                     onClick={async () => {
