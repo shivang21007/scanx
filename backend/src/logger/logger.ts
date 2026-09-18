@@ -5,6 +5,7 @@ import DailyRotateFile from 'winston-daily-rotate-file';
 import type { Request } from 'express';
 import { env } from '../env/env';
 import { formatLogTimestampIST } from '../utils/istLogTimestamp';
+import { createOtelTransport } from './otelTransport';
 
 const istTimestamp = winston.format((info) => {
   (info as Record<string, unknown>).timestamp = formatLogTimestampIST(new Date());
@@ -77,11 +78,17 @@ const transports: winston.transport[] = [
 ];
 
 // Same plain text as the log file. `colorize()` breaks non-TTY consumers (`docker logs`).
-transports.push(
-  new winston.transports.Console({
-    format: fileFormat,
-  })
-);
+if (env.LOG_CONSOLE_ENABLED) {
+  transports.push(
+    new winston.transports.Console({
+      format: fileFormat,
+    })
+  );
+}
+
+// Ships the same records to OpenObserve. Undefined when disabled/unconfigured.
+const otelTransport = createOtelTransport();
+if (otelTransport) transports.push(otelTransport);
 
 export const logger = winston.createLogger({
   level,

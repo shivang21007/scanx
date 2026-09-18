@@ -20,7 +20,8 @@ services:
       retries: 10
 
   redis:
-    image: redis:latest
+    # Pinned: see the mysql note above.
+    image: redis:8.4.0
     container_name: redis-scanx-1
     restart: unless-stopped
     command: redis-server --requirepass admin@123
@@ -35,7 +36,8 @@ services:
 
   # Conditional postfix service (only if host postfix not available)
   postfix:
-    image: boky/postfix:latest
+    # Pinned: see the mysql note above.
+    image: boky/postfix:v4.4.0
     container_name: postfix-scanx-1
     environment:
       - ALLOWED_SENDER_DOMAINS=${POSTFIX_ALLOWED_DOMAINS:-octro.com octrotalk.com localhost}
@@ -63,6 +65,9 @@ services:
         condition: service_healthy
        redis:
         condition: service_healthy
+       # Ordering only: the OTLP exporter retries, so a late collector is fine.
+       otel-collector:
+        condition: service_started
     networks:
       - scanx-network
     env_file:
@@ -133,9 +138,56 @@ services:
     volumes:
       - scanx-frontend-logs:/var/log/nginx
 
+  # ---------------------------------------------------------------------------
+  # Observability: OpenObserve stores logs/metrics; the OTel Collector is the
+  # single ingress that feeds it (backend logs via OTLP, plus container and host
+  # metrics it scrapes itself).
+  # ---------------------------------------------------------------------------
+  openobserve:
+    # Pinned: see the mysql note above.
+    image: public.ecr.aws/zinclabs/openobserve:v1.0.2
+    container_name: openobserve-scanx-1
+    restart: unless-stopped
+    environment:
+      - ZO_ROOT_USER_EMAIL=${OO_ROOT_USER_EMAIL:?set OO_ROOT_USER_EMAIL in .env}
+      - ZO_ROOT_USER_PASSWORD=${OO_ROOT_USER_PASSWORD:?set OO_ROOT_USER_PASSWORD in .env}
+      - ZO_LOCAL_MODE=true
+      - ZO_DATA_DIR=/data
+      - ZO_TELEMETRY=false
+      # Default retention is ~10 years, which would silently fill the disk.
+      - ZO_COMPACT_DATA_RETENTION_DAYS=${OO_RETENTION_DAYS:-30}
+    ports:
+      - "${OO_PORT:-5080}:5080"
+    networks:
+      - scanx-network
+    volumes:
+      - openobserve-scanx:/data
+
+  otel-collector:
+    # Pinned: see the mysql note above. `-contrib` is required for the
+    # docker_stats receiver; the core image does not ship it.
+    image: otel/opentelemetry-collector-contrib:0.111.0
+    container_name: otel-collector-scanx-1
+    restart: unless-stopped
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    environment:
+      - OO_ORG=${OO_ORG:-default}
+      - OO_AUTH_HEADER=${OO_AUTH_HEADER:?set OO_AUTH_HEADER in .env}
+    networks:
+      - scanx-network
+    depends_on:
+      - openobserve
+    volumes:
+      - ./otel/collector-config.yaml:/etc/otelcol-contrib/config.yaml:ro
+      # Read-only docker socket: the docker_stats receiver reads container stats.
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # hostmetrics reads the host's /proc and /sys through this mount.
+      - /:/hostfs:ro
+
 volumes:
   mysql-scanx:
   redis-scanx:
+  openobserve-scanx:
   scanx-backend-logs:
     name: scanx-backend-logs
   scanx-purge-worker-logs:

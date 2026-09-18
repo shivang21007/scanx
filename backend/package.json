@@ -22,6 +22,12 @@
   "license": "ISC",
   "description": "ScanX Backend API for device management with TypeScript, Express, MySQL and JWT.",
   "dependencies": {
+    "@opentelemetry/api-logs": "^0.222.0",
+    "@opentelemetry/exporter-logs-otlp-http": "^0.222.0",
+    "@opentelemetry/resources": "^2.11.0",
+    "@opentelemetry/sdk-logs": "^0.222.0",
+    "@opentelemetry/semantic-conventions": "^1.43.0",
+    "@opentelemetry/winston-transport": "^0.32.0",
     "bcryptjs": "^3.0.2",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",

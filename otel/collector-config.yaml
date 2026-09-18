@@ -1,0 +1,108 @@
+# OpenTelemetry Collector — the single ingress into OpenObserve.
+#
+# Three sources feed it:
+#   otlp         <- the ScanX backend ships winston logs here over OTLP/HTTP
+#   docker_stats <- per-container CPU/memory/network/disk for every container
+#   hostmetrics  <- machine-level CPU/memory/disk/network/load
+#
+# Everything is exported to OpenObserve over OTLP/HTTP.
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+  docker_stats:
+    endpoint: unix:///var/run/docker.sock
+    collection_interval: 30s
+    timeout: 20s
+    # The receiver defaults to Docker API 1.25, which daemons >= 25 reject
+    # ("client version 1.25 is too old. Minimum supported API version is 1.40").
+    api_version: "1.44"
+    metrics:
+      container.cpu.utilization:
+        enabled: true
+      container.memory.percent:
+        enabled: true
+      container.network.io.usage.rx_bytes:
+        enabled: true
+      container.network.io.usage.tx_bytes:
+        enabled: true
+
+  hostmetrics:
+    # /hostfs is the host root, mounted read-only in docker-compose.yml.
+    root_path: /hostfs
+    collection_interval: 30s
+    scrapers:
+      cpu:
+      load:
+      memory:
+      disk:
+      network:
+      filesystem:
+        exclude_mount_points:
+          # Container layer mounts would otherwise swamp the real filesystems.
+          mount_points: ["/hostfs/var/lib/docker/*", "/hostfs/proc/*", "/hostfs/sys/*"]
+          match_type: regexp
+
+processors:
+  # Guards the collector against OOM if OpenObserve is slow or down.
+  memory_limiter:
+    check_interval: 5s
+    limit_percentage: 80
+    spike_limit_percentage: 20
+
+  batch:
+    send_batch_size: 1024
+    timeout: 5s
+
+  resourcedetection:
+    detectors: [env, system]
+    system:
+      hostname_sources: ["os"]
+    override: false
+
+exporters:
+  otlphttp/logs:
+    endpoint: http://openobserve:5080/api/${env:OO_ORG}
+    headers:
+      Authorization: ${env:OO_AUTH_HEADER}
+      stream-name: scanx_backend
+    retry_on_failure:
+      enabled: true
+      initial_interval: 5s
+      max_interval: 60s
+      max_elapsed_time: 300s
+    sending_queue:
+      enabled: true
+      queue_size: 5000
+
+  otlphttp/metrics:
+    endpoint: http://openobserve:5080/api/${env:OO_ORG}
+    headers:
+      Authorization: ${env:OO_AUTH_HEADER}
+    retry_on_failure:
+      enabled: true
+      initial_interval: 5s
+      max_interval: 60s
+      max_elapsed_time: 300s
+    sending_queue:
+      enabled: true
+      queue_size: 5000
+
+service:
+  telemetry:
+    logs:
+      level: info
+  pipelines:
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, resourcedetection, batch]
+      exporters: [otlphttp/logs]
+    metrics:
+      receivers: [docker_stats, hostmetrics, otlp]
+      processors: [memory_limiter, resourcedetection, batch]
+      exporters: [otlphttp/metrics]

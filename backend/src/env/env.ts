@@ -35,4 +35,15 @@ export const env = {
     DEVICE_PURGE_QUEUE_KEY: process.env.DEVICE_PURGE_QUEUE_KEY,
     DEVICE_PURGE_DEVICE_BATCH: process.env.DEVICE_PURGE_DEVICE_BATCH,
     DEVICE_PURGE_WORKER_POLL_MS: process.env.DEVICE_PURGE_WORKER_POLL_MS,
+    /** Ship winston records to OpenObserve over OTLP. Off unless explicitly enabled. */
+    OTEL_LOGS_ENABLED: (() => {
+      const value = process.env.OTEL_LOGS_ENABLED;
+      return value === 'true' || value === '1';
+    })(),
+    /** Base OTLP/HTTP URL of the collector, e.g. http://otel-collector:4318 */
+    OTEL_EXPORTER_OTLP_ENDPOINT: process.env.OTEL_EXPORTER_OTLP_ENDPOINT,
+    OTEL_SERVICE_NAME: process.env.OTEL_SERVICE_NAME,
+    SCANX_VERSION: process.env.SCANX_VERSION,
+    /** Keep plain-text console output (what `docker logs` shows). Defaults on. */
+    LOG_CONSOLE_ENABLED: process.env.LOG_CONSOLE_ENABLED !== 'false',
 }

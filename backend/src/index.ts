@@ -11,6 +11,7 @@ import { connectRedis } from './utils/redisClient';
 import { env } from './env/env';
 import { getCurrentISTString } from './utils/timezone';
 import { systemLog, getRequestLogger } from './logger/logger';
+import { shutdownOtelLogs } from './logger/otelTransport';
 import { requestContextMiddleware } from './middleware/requestLogging';
 
 const app = express();
@@ -149,3 +150,10 @@ app.listen(PORT, () => {
   }
 });
 
+// Flush buffered telemetry before exit so `docker stop` does not drop the last batch.
+for (const signal of ['SIGTERM', 'SIGINT'] as const) {
+  process.on(signal, () => {
+    systemLog.info('shutdown_signal_received', { signal });
+    void shutdownOtelLogs().finally(() => process.exit(0));
+  });
+}
