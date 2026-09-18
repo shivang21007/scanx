@@ -16,10 +16,14 @@ ENV_FILE="${SCANX_ENV_FILE:-/home/octro/scanx/.env}"
 [ -f "$ENV_FILE" ] || { echo "container-health: no env file at $ENV_FILE" >&2; exit 1; }
 
 # shellcheck disable=SC1090
-OO_ENDPOINT="$(sed -n 's/^OO_ENDPOINT=//p' "$ENV_FILE")"
+# Deliberately NOT OO_ENDPOINT: that one is consumed by docker-compose and must
+# stay the in-network name (http://openobserve:5080), because the backend
+# resolves it from inside a container. This script runs on the host, where
+# OpenObserve is reachable on the published port instead.
+OO_HOST_ENDPOINT="$(sed -n 's/^OO_HOST_ENDPOINT=//p' "$ENV_FILE")"
 OO_ORG="$(sed -n 's/^OO_ORG=//p' "$ENV_FILE")"
 OO_AUTH_HEADER="$(sed -n 's/^OO_AUTH_HEADER=//p' "$ENV_FILE")"
-OO_ENDPOINT="${OO_ENDPOINT:-http://localhost:5080}"
+OO_ENDPOINT="${OO_HOST_ENDPOINT:-http://localhost:5080}"
 OO_ORG="${OO_ORG:-default}"
 STREAM="${SCANX_HEALTH_STREAM:-container_health}"
 
