@@ -5,7 +5,7 @@ import DailyRotateFile from 'winston-daily-rotate-file';
 import type { Request } from 'express';
 import { env } from '../env/env';
 import { formatLogTimestampIST } from '../utils/istLogTimestamp';
-import { createOtelTransport } from './otelTransport';
+import { createOpenObserveTransport } from './openobserveTransport';
 
 const istTimestamp = winston.format((info) => {
   (info as Record<string, unknown>).timestamp = formatLogTimestampIST(new Date());
@@ -86,9 +86,10 @@ if (env.LOG_CONSOLE_ENABLED) {
   );
 }
 
-// Ships the same records to OpenObserve. Undefined when disabled/unconfigured.
-const otelTransport = createOtelTransport();
-if (otelTransport) transports.push(otelTransport);
+// Ships the same records to OpenObserve under a strict schema. Undefined when
+// disabled/unconfigured. Console and file output above are unaffected.
+const openobserveTransport = createOpenObserveTransport();
+if (openobserveTransport) transports.push(openobserveTransport);
 
 export const logger = winston.createLogger({
   level,

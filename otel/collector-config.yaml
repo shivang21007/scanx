@@ -1,20 +1,13 @@
 # OpenTelemetry Collector — the single ingress into OpenObserve.
 #
-# Three sources feed it:
-#   otlp         <- the ScanX backend ships winston logs here over OTLP/HTTP
+# Metrics only. Backend logs bypass the collector and POST straight to
+# OpenObserve's _json endpoint, because OTLP lowercases and flattens attribute
+# names and the log stream needs an exact, stable column set.
+#
 #   docker_stats <- per-container CPU/memory/network/disk for every container
 #   hostmetrics  <- machine-level CPU/memory/disk/network/load
-#
-# Everything is exported to OpenObserve over OTLP/HTTP.
 
 receivers:
-  otlp:
-    protocols:
-      grpc:
-        endpoint: 0.0.0.0:4317
-      http:
-        endpoint: 0.0.0.0:4318
-
   docker_stats:
     endpoint: unix:///var/run/docker.sock
     collection_interval: 30s
@@ -30,6 +23,10 @@ receivers:
       container.network.io.usage.rx_bytes:
         enabled: true
       container.network.io.usage.tx_bytes:
+        enabled: true
+      # Emitted only while a container is running, so "no datapoint for N
+      # minutes" is the alert condition for a container being down.
+      container.uptime:
         enabled: true
 
   hostmetrics:
@@ -66,20 +63,6 @@ processors:
     override: false
 
 exporters:
-  otlphttp/logs:
-    endpoint: http://openobserve:5080/api/${env:OO_ORG}
-    headers:
-      Authorization: ${env:OO_AUTH_HEADER}
-      stream-name: scanx_backend
-    retry_on_failure:
-      enabled: true
-      initial_interval: 5s
-      max_interval: 60s
-      max_elapsed_time: 300s
-    sending_queue:
-      enabled: true
-      queue_size: 5000
-
   otlphttp/metrics:
     endpoint: http://openobserve:5080/api/${env:OO_ORG}
     headers:
@@ -98,11 +81,7 @@ service:
     logs:
       level: info
   pipelines:
-    logs:
-      receivers: [otlp]
-      processors: [memory_limiter, resourcedetection, batch]
-      exporters: [otlphttp/logs]
     metrics:
-      receivers: [docker_stats, hostmetrics, otlp]
+      receivers: [docker_stats, hostmetrics]
       processors: [memory_limiter, resourcedetection, batch]
       exporters: [otlphttp/metrics]
