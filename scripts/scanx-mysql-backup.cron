@@ -1,0 +1,18 @@
+# ScanX weekly MySQL backup.
+#
+# Install on the deployment host with:
+#   sudo cp scripts/scanx-mysql-backup.cron /etc/cron.d/scanx-mysql-backup
+#   sudo chown root:root /etc/cron.d/scanx-mysql-backup
+#   sudo chmod 644 /etc/cron.d/scanx-mysql-backup
+#
+# Runs every Sunday at 03:00 server time. The script handles its own logging
+# and retention; see scripts/mysql-backup.sh.
+#
+# Note: files in /etc/cron.d must be owned by root, must not be world-writable,
+# and their filename must not contain a dot, or cron silently ignores them.
+
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+
+# m  h  dom mon dow  user  command
+  0  3   *   *   0   root  /home/octro/scanx/scripts/mysql-backup.sh >> /var/backups/scanx/cron.log 2>&1

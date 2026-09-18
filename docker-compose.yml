@@ -1,6 +1,8 @@
 services:
   mysql:
-    image: mysql:latest
+    # Pinned deliberately. An unpinned `latest` will silently jump major versions
+    # on any pull, which can leave the existing datadir unreadable.
+    image: mysql:9.5.0
     container_name: mysql-scanx-1
     restart: unless-stopped
     environment:
