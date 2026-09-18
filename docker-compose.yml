@@ -93,7 +93,7 @@ services:
       - scanx-backend-logs:/app/logs
     command: ["/bin/sh", "/app/entrypoint.sh"]
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:5000/api/health >/dev/null 2>&1 || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:5000/api/health >/dev/null 2>&1 || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -138,8 +138,10 @@ services:
       - backend
     networks:
       - scanx-network
+    # 127.0.0.1, not localhost: nginx binds IPv4 only here and busybox wget
+    # resolves localhost to ::1 first, which refuses.
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost/health >/dev/null 2>&1 || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/health >/dev/null 2>&1 || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -162,8 +164,10 @@ services:
       - scanx-network
     volumes:
       - scanx-frontend-logs:/var/log/nginx
+    # 127.0.0.1, not localhost: nginx binds IPv4 only here and busybox wget
+    # resolves localhost to ::1 first, which refuses.
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost/health >/dev/null 2>&1 || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/health >/dev/null 2>&1 || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
