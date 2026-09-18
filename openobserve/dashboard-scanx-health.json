@@ -1,0 +1,290 @@
+{
+  "version": 5,
+  "title": "ScanX - containers & backend health",
+  "description": "Container up/down (container_health, polled every 2 min), resource usage (docker_stats) and backend failures.",
+  "role": "",
+  "owner": "",
+  "created": "2026-09-18T00:00:00.000Z",
+  "tabs": [
+    {
+      "tabId": "default",
+      "name": "Default",
+      "panels": [
+        {
+          "id": "p_down",
+          "type": "table",
+          "title": "Containers DOWN right now",
+          "description": "Any row here means a container is stopped or failing its healthcheck.",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": null,
+            "unit_custom": null,
+            "decimals": 2
+          },
+          "queryType": "sql",
+          "queries": [
+            {
+              "query": "SELECT container_name, state, health, up, ok FROM container_health WHERE ok = 0 ORDER BY _timestamp DESC",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "container_health",
+                "stream_type": "logs",
+                "x": [],
+                "y": [],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": "",
+                "layer_type": "scatter",
+                "weight_fixed": 1
+              }
+            }
+          ],
+          "layout": {
+            "x": 0,
+            "y": 0,
+            "w": 24,
+            "h": 6,
+            "i": 1
+          }
+        },
+        {
+          "id": "p_status",
+          "type": "table",
+          "title": "All containers - latest status",
+          "description": "",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": null,
+            "unit_custom": null,
+            "decimals": 2
+          },
+          "queryType": "sql",
+          "queries": [
+            {
+              "query": "SELECT container_name, state, health, up, ok FROM container_health ORDER BY _timestamp DESC",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "container_health",
+                "stream_type": "logs",
+                "x": [],
+                "y": [],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": "",
+                "layer_type": "scatter",
+                "weight_fixed": 1
+              }
+            }
+          ],
+          "layout": {
+            "x": 0,
+            "y": 6,
+            "w": 24,
+            "h": 8,
+            "i": 2
+          }
+        },
+        {
+          "id": "p_uptl",
+          "type": "line",
+          "title": "Up/down over time (1 = up)",
+          "description": "Drops to 0 while a container is down; a gap means the probe itself stopped.",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": null,
+            "unit_custom": null,
+            "decimals": 2
+          },
+          "queryType": "sql",
+          "queries": [
+            {
+              "query": "SELECT histogram(_timestamp) AS x_axis, container_name, min(up) AS y_axis FROM container_health GROUP BY x_axis, container_name ORDER BY x_axis",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "container_health",
+                "stream_type": "logs",
+                "x": [],
+                "y": [],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": "",
+                "layer_type": "scatter",
+                "weight_fixed": 1
+              }
+            }
+          ],
+          "layout": {
+            "x": 0,
+            "y": 14,
+            "w": 24,
+            "h": 9,
+            "i": 3
+          }
+        },
+        {
+          "id": "p_cpu",
+          "type": "line",
+          "title": "Container CPU %",
+          "description": "",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": null,
+            "unit_custom": null,
+            "decimals": 2
+          },
+          "queryType": "sql",
+          "queries": [
+            {
+              "query": "SELECT histogram(_timestamp) AS x_axis, container_name, avg(value) AS y_axis FROM container_cpu_utilization GROUP BY x_axis, container_name ORDER BY x_axis",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "container_cpu_utilization",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": "",
+                "layer_type": "scatter",
+                "weight_fixed": 1
+              }
+            }
+          ],
+          "layout": {
+            "x": 0,
+            "y": 23,
+            "w": 12,
+            "h": 9,
+            "i": 4
+          }
+        },
+        {
+          "id": "p_mem",
+          "type": "line",
+          "title": "Container memory %",
+          "description": "",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": null,
+            "unit_custom": null,
+            "decimals": 2
+          },
+          "queryType": "sql",
+          "queries": [
+            {
+              "query": "SELECT histogram(_timestamp) AS x_axis, container_name, avg(value) AS y_axis FROM container_memory_percent GROUP BY x_axis, container_name ORDER BY x_axis",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "container_memory_percent",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": "",
+                "layer_type": "scatter",
+                "weight_fixed": 1
+              }
+            }
+          ],
+          "layout": {
+            "x": 12,
+            "y": 23,
+            "w": 12,
+            "h": 9,
+            "i": 5
+          }
+        },
+        {
+          "id": "p_errs",
+          "type": "line",
+          "title": "Backend failures per interval",
+          "description": "",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": null,
+            "unit_custom": null,
+            "decimals": 2
+          },
+          "queryType": "sql",
+          "queries": [
+            {
+              "query": "SELECT histogram(_timestamp) AS x_axis, count(*) AS y_axis FROM scanx_backend_logs WHERE outcome = 'failure' GROUP BY x_axis ORDER BY x_axis",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "scanx_backend_logs",
+                "stream_type": "logs",
+                "x": [],
+                "y": [],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": "",
+                "layer_type": "scatter",
+                "weight_fixed": 1
+              }
+            }
+          ],
+          "layout": {
+            "x": 0,
+            "y": 32,
+            "w": 24,
+            "h": 8,
+            "i": 6
+          }
+        }
+      ]
+    }
+  ],
+  "variables": {
+    "list": [],
+    "showDynamicFilters": false
+  }
+}

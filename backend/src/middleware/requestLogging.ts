@@ -26,6 +26,15 @@ export function resolveClientChannel(req: Request): 'frontend' | 'agent' {
   return 'frontend';
 }
 
+/**
+ * Liveness probes are polled every 30s by the container healthcheck. Logging
+ * them buries real traffic; container up/down is tracked as a metric instead.
+ */
+function isHealthProbe(req: Request): boolean {
+  const pathname = (req.originalUrl || req.url || '').split('?')[0];
+  return pathname === '/api/health' || pathname === '/health';
+}
+
 export function requestContextMiddleware(req: Request, res: Response, next: NextFunction): void {
   const incoming = req.headers['x-request-id'];
   req.requestId =
@@ -33,6 +42,11 @@ export function requestContextMiddleware(req: Request, res: Response, next: Next
       ? normalizeRequestIdHeader(incoming.trim())
       : generateShortRequestId();
   req.clientChannel = resolveClientChannel(req);
+
+  if (isHealthProbe(req)) {
+    next();
+    return;
+  }
 
   const start = Date.now();
   res.on('finish', () => {

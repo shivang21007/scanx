@@ -1,0 +1,14 @@
+# ScanX container up/down probe -> OpenObserve `container_health` stream.
+#
+# Install on the deployment host with:
+#   sudo cp scripts/scanx-container-health.cron /etc/cron.d/scanx-container-health
+#   sudo chown root:root /etc/cron.d/scanx-container-health
+#   sudo chmod 644 /etc/cron.d/scanx-container-health
+#
+# Every 2 minutes. Only failures print, so cron stays quiet when all is well.
+
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+
+# m        h dom mon dow  user  command
+  */2      * *   *   *    root  /home/octro/scanx/scripts/container-health.sh >> /var/backups/scanx/container-health.log 2>&1
