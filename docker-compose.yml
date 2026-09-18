@@ -173,6 +173,11 @@ services:
     environment:
       - OO_ORG=${OO_ORG:-default}
       - OO_AUTH_HEADER=${OO_AUTH_HEADER:?set OO_AUTH_HEADER in .env}
+    # The image runs as uid 10001, but /var/run/docker.sock is root:docker 0660
+    # on Linux hosts, so docker_stats gets EACCES without the docker group.
+    # Set DOCKER_GID in .env to the host's docker gid (`getent group docker`).
+    group_add:
+      - "${DOCKER_GID:-0}"
     networks:
       - scanx-network
     depends_on:
