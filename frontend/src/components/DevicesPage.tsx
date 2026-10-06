@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Link, useSearchParams } from 'react-router-dom';
-import { LogOut, Search, Filter, Monitor, ChevronLeft, X, Clock } from 'lucide-react';
+import { LogOut, Search, Filter, Monitor, ChevronLeft, X, Clock, Package } from 'lucide-react';
 import { apiService } from '../services/api';
 import { DevicesTableResponse, DevicesTableFilters } from '../types/device';
 import { LoadingSpinner } from './LoadingSpinner';
@@ -23,6 +23,10 @@ export function DevicesPage() {
 
   // Debounced search state - initialize from URL
   const [searchInput, setSearchInput] = useState(initialSearch);
+
+  // 'device' searches serial/email/computer/os; 'app' matches an application
+  // name in each device's latest installed-apps report.
+  const [searchMode, setSearchMode] = useState<'device' | 'app'>('device');
 
   // OS version sort state: null = no sort, 'asc' = ascending, 'desc' = descending
   const [osVersionSort, setOsVersionSort] = useState<'asc' | 'desc' | null>(null);
@@ -54,11 +58,15 @@ export function DevicesPage() {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      setFilters(prev => ({ ...prev, search: searchInput }));
+      setFilters(prev => ({
+        ...prev,
+        search: searchMode === 'device' ? searchInput : '',
+        app_search: searchMode === 'app' ? searchInput : '',
+      }));
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [searchInput]);
+  }, [searchInput, searchMode]);
 
   useEffect(() => {
     fetchDevicesData();
@@ -336,17 +344,61 @@ export function DevicesPage() {
         <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
           <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
             {/* Search Bar */}
-            <div className="flex-1 max-w-md">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search by serial number, email, os version or computer name..."
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
+            <div className="flex-1 max-w-xl">
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  {searchMode === 'device' ? (
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  ) : (
+                    <Package className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-indigo-500" />
+                  )}
+                  <input
+                    type="text"
+                    placeholder={
+                      searchMode === 'device'
+                        ? 'Search by serial number, email, os version or computer name...'
+                        : 'Search by installed application, e.g. Unity, Chrome, Docker...'
+                    }
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
+                    className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 ${
+                      searchMode === 'app'
+                        ? 'border-indigo-300 focus:ring-indigo-500 focus:border-indigo-500'
+                        : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                    }`}
+                  />
+                </div>
+
+                {/* Toggle: which field the search box queries */}
+                <div className="flex items-center rounded-lg border border-gray-300 p-0.5 bg-gray-50 shrink-0">
+                  {(['device', 'app'] as const).map((mode) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => setSearchMode(mode)}
+                      title={
+                        mode === 'device'
+                          ? 'Search devices by serial, email, OS or computer name'
+                          : 'Search devices by an application in their latest installed-apps report'
+                      }
+                      className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                        searchMode === mode
+                          ? mode === 'app'
+                            ? 'bg-indigo-600 text-white'
+                            : 'bg-blue-600 text-white'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      {mode === 'device' ? 'Device' : 'App'}
+                    </button>
+                  ))}
+                </div>
               </div>
+              {searchMode === 'app' && (
+                <p className="mt-1.5 text-xs text-gray-500">
+                  Matches the most recent installed-apps report for each device.
+                </p>
+              )}
             </div>
 
             {/* OS Type + Last check display (stacked on wide screens, below OS Type) */}
@@ -448,6 +500,23 @@ export function DevicesPage() {
                       </div>
                     )}
                     
+                    {/* Application Filter */}
+                    {filters.app_search && (
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 border border-indigo-200 rounded-md">
+                        <Package className="h-3.5 w-3.5 text-indigo-600" />
+                        <span className="text-indigo-700 text-sm">
+                          App: "{filters.app_search}"
+                        </span>
+                        <button
+                          onClick={() => setSearchInput('')}
+                          className="text-indigo-600 hover:text-indigo-800 hover:bg-indigo-100 rounded p-0.5 transition-colors"
+                          title="Clear application filter"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    )}
+
                     {/* OS Type Filter */}
                     {filters.os_type && (
                       <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-md">

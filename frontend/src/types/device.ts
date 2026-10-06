@@ -110,6 +110,8 @@ export interface DevicesTableResponse {
 // Filter parameters for devices table
 export interface DevicesTableFilters {
   search?: string;
+  /** Matches an app name in the device's latest installed-apps report. */
+  app_search?: string;
   os_type?: string;
   sort_by?: string;
   sort_order?: 'asc' | 'desc';

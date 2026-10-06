@@ -158,7 +158,8 @@ export class DeviceModel {
         passwordManagerFilter?: 'true' | 'false',
         diskEncryptionFilter?: 'true' | 'false',
         antivirusFilter?: 'true' | 'false',
-        screenLockFilter?: 'true' | 'false'
+        screenLockFilter?: 'true' | 'false',
+        appSearchTerm?: string
     ): Promise<any[]> {
         const connection = await getConnection();
         
@@ -192,6 +193,38 @@ export class DeviceModel {
             params.push(searchPattern, searchPattern, searchPattern, searchPattern);
         }
         
+        // Filter by an application present in the device's most recent apps_info
+        // report. The agent sends the whole installed-app list each run, so only
+        // the newest row per device describes what is installed right now.
+        // JSON_SEARCH matches inside the array; `name` is the only key both the
+        // darwin and windows payload shapes share.
+        if (appSearchTerm && appSearchTerm.trim() !== '') {
+            // Match on a word boundary rather than a bare substring: searching
+            // "unity" must not return every machine with Visual Studio
+            // *Community* installed. Anchoring only at the start still matches
+            // "Unity", "Unity Hub" and "UnityLicensing".
+            const escaped = appSearchTerm
+                .trim()
+                .toLowerCase()
+                .replace(/[\\^$.|?*+()[\]{}]/g, '\\$&');
+
+            query += ` AND EXISTS (
+                SELECT 1
+                FROM apps_info ai
+                JOIN (
+                    SELECT device_id, MAX(timestamp) AS mt
+                    FROM apps_info
+                    GROUP BY device_id
+                ) latest ON latest.device_id = ai.device_id AND latest.mt = ai.timestamp,
+                JSON_TABLE(ai.data, '$[*]' COLUMNS (
+                    app_name VARCHAR(512) PATH '$.name'
+                )) jt
+                WHERE ai.device_id = d.id
+                  AND LOWER(jt.app_name) REGEXP ?
+            )`;
+            params.push(`\\b${escaped}`);
+        }
+
         // Add OS type filter
         if (osTypeFilter && osTypeFilter.trim() !== '') {
             query += ` AND d.os_type = ?`;

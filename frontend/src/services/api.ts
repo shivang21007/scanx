@@ -181,6 +181,9 @@ class ApiService {
       if (filters?.search) {
         params.append('search', filters.search);
       }
+      if (filters?.app_search) {
+        params.append('app_search', filters.app_search);
+      }
       if (filters?.os_type) {
         params.append('os_type', filters.os_type);
       }

@@ -263,6 +263,7 @@ export const getDevicesTable = async (req: Request, res: Response) => {
   try {
     const { 
       search, 
+      app_search,
       os_type, 
       sort_by, 
       sort_order,
@@ -274,6 +275,7 @@ export const getDevicesTable = async (req: Request, res: Response) => {
     
     log.info('devices_table_query', { 
       search, 
+      app_search,
       os_type, 
       sort_by, 
       sort_order,
@@ -291,7 +293,8 @@ export const getDevicesTable = async (req: Request, res: Response) => {
       password_manager as 'true' | 'false' | undefined,
       disk_encryption as 'true' | 'false' | undefined,
       antivirus as 'true' | 'false' | undefined,
-      screen_lock as 'true' | 'false' | undefined
+      screen_lock as 'true' | 'false' | undefined,
+      app_search as string
     );
     
     log.info('devices_table_result', { count: devices.length });
@@ -301,6 +304,7 @@ export const getDevicesTable = async (req: Request, res: Response) => {
       total: devices.length,
       filters: {
         search: search || '',
+        app_search: app_search || '',
         os_type: os_type || ''
       }
     });
