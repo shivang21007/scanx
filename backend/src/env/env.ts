@@ -32,6 +32,8 @@ export const env = {
     REDIS_PASSWORD: process.env.REDIS_PASSWORD,
     /** Comma-separated email domains excluded from directory-sync deactivation (default: octro.com only) */
     USER_SYNC_PROTECTED_EMAIL_DOMAINS: process.env.USER_SYNC_PROTECTED_EMAIL_DOMAINS,
+    /** Comma-separated username prefixes excluded from directory-sync deactivation (default: server. only) */
+    USER_SYNC_PROTECTED_LOCAL_PREFIXES: process.env.USER_SYNC_PROTECTED_LOCAL_PREFIXES,
     DEVICE_PURGE_QUEUE_KEY: process.env.DEVICE_PURGE_QUEUE_KEY,
     DEVICE_PURGE_DEVICE_BATCH: process.env.DEVICE_PURGE_DEVICE_BATCH,
     DEVICE_PURGE_WORKER_POLL_MS: process.env.DEVICE_PURGE_WORKER_POLL_MS,

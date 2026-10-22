@@ -5,7 +5,7 @@ import { getCurrentIST, istToUTC, formatForDisplay } from '../utils/timezone';
 import { systemLog } from '../logger/logger';
 import { enqueueDevicePurgeJobs } from '../queues/devicePurgeQueue';
 import { env } from '../env/env';
-import { getProtectedEmailDomains } from '../utils/userSyncProtected';
+import { getProtectedEmailDomains, getProtectedLocalPrefixes } from '../utils/userSyncProtected';
 import { inferAccountTypeFromDirectoryUser } from '../utils/googleDirectoryAccountType';
 
 // Target sync time: 12:00 PM IST (noon) every day
@@ -112,10 +112,17 @@ export async function syncUsersFromGoogle(client: GoogleDirectoryClient): Promis
 
   const configuredDomains = (env.USER_SYNC_PROTECTED_EMAIL_DOMAINS || '').trim();
   const protectedDomains = getProtectedEmailDomains();
+  const protectedLocalPrefixes = getProtectedLocalPrefixes();
   if (!configuredDomains) {
-    systemLog.info('user_sync_protected_domains_default', { domains: protectedDomains });
+    systemLog.info('user_sync_protected_domains_default', {
+      domains: protectedDomains,
+      local_prefixes: protectedLocalPrefixes,
+    });
   } else {
-    systemLog.info('user_sync_protected_domains_env', { domains: protectedDomains });
+    systemLog.info('user_sync_protected_domains_env', {
+      domains: protectedDomains,
+      local_prefixes: protectedLocalPrefixes,
+    });
   }
 
   const { inserted, skippedExisting } = await UsersModel.upsertManyFromDirectory(allRecords);
